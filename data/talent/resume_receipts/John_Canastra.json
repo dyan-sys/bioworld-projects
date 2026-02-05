@@ -1,0 +1,56 @@
+{
+  "parsed": {
+    "candidate_name": "John V. Canastra",
+    "final_score": 46.25,
+    "tier": "Tier 3 Below",
+    "recommendation": "PROCEED WITH CAUTION",
+    "threshold_assessment": {
+      "experience_raw": 10.0,
+      "experience_pass": true,
+      "skills_raw": 6.0,
+      "skills_pass": true,
+      "communication_raw": 2.0,
+      "communication_pass": true,
+      "thresholds_passed": "3/3"
+    },
+    "bucket_scores": {
+      "education": {
+        "raw": 1.5,
+        "max": 6.0,
+        "equivalent_0_4": 2.0
+      },
+      "experience_trajectory": {
+        "raw": 10.0,
+        "max": 19.0,
+        "equivalent_0_4": 2.0
+      },
+      "skills": {
+        "raw": 6.0,
+        "max": 14.0,
+        "equivalent_0_4": 2.0
+      },
+      "communication": {
+        "raw": 2.0,
+        "max": 4.0,
+        "equivalent_0_4": 2.0
+      },
+      "context_knowledge": {
+        "raw": 0.5,
+        "max": 4.0,
+        "equivalent_0_4": 1.0
+      },
+      "other_factors": {
+        "raw": 0.0,
+        "max": 8.0,
+        "equivalent_0_4": 0.0
+      }
+    },
+    "rationale_detailed": {
+      "key_strengths": "John has extensive technical support experience spanning nearly 9 years at Synnex Concentrix where he progressed to Technical Support Specialist (Manager) and served as an SME providing Tier-3 support. He demonstrates solid systems thinking through workflow automation and process improvement initiatives at The Moving Software. His EA role at The Moving Software (1.5 years) shows genuine executive assistant responsibilities including calendar management, email prioritization, onboarding new employees, and streamlining office processes. He has experience managing high-volume communications and has worked with cross-functional teams. His technical background provides strong troubleshooting and problem-solving capabilities that could benefit an executive who needs technical competency in their assistant.",
+      "key_gaps": "Limited direct EA experience - only approximately 1.5 years in a true EA role at The Moving Software, with the remaining experience being primarily technical support and administrative assistant work. The companies he worked for (The Moving Software, Home Instead Senior Care, Cre8tive Labs) appear to be smaller organizations, likely Tier C, without evidence of supporting C-suite executives at high-pressure, fast-paced companies. His career trajectory shows a shift from technical support to EA/admin roles rather than progressive advancement within EA specifically. No honors or awards mentioned from education. University of Southeastern Philippines is a regional state university (Tier 2/Other). Resume lacks visual engagement - standard text-heavy format without distinctive design elements. No age information provided, no references listed (just contact info), and no evidence of AI tool familiarity or recent professional development certifications. The Client Success Manager role at Cre8tive Labs is not an EA role but rather customer service focused.",
+      "recommendation_reasoning": "Despite passing all three thresholds at the minimum level, John scores in the 40-49 range (46.25) which places him in Tier 3 Below. While he has transferable skills from technical support management and some genuine EA experience, his limited time in actual EA roles (approximately 1.5 years), work at smaller/lower-tier companies, and lack of evidence supporting high-level executives in fast-paced environments are significant concerns. The recommendation is PROCEED WITH CAUTION rather than DO NOT PROCEED because he does meet all thresholds and has demonstrated organizational skills, process improvement capabilities, and technical competency that could be valuable. However, he should only be interviewed if stronger candidates are unavailable.",
+      "interview_focus": "1) Probe deeply into the scope and complexity of his EA work at The Moving Software - what level executive did he support, what was the pace and pressure of the environment, and what strategic decisions did he influence? 2) Assess his ability to transition from technical support mindset to true executive partnership - can he anticipate needs, exercise judgment on behalf of an executive, and handle ambiguous situations? 3) Explore his experience with fast-paced, high-stakes environments - his background appears more methodical/process-oriented, so test his adaptability to dynamic startup or executive environments. 4) Understand why he left each role and what he's looking for in terms of growth and career trajectory."
+    }
+  },
+  "raw_output": "{\"candidate_name\":\"John V. Canastra\",\"final_score\":46.25,\"tier\":\"Tier 3 Below\",\"recommendation\":\"PROCEED WITH CAUTION\",\"threshold_assessment\":{\"experience_raw\":10.0,\"experience_pass\":true,\"skills_raw\":6.0,\"skills_pass\":true,\"communication_raw\":2.0,\"communication_pass\":true,\"thresholds_passed\":\"3/3\"},\"bucket_scores\":{\"education\":{\"raw\":1.5,\"max\":6.0,\"equivalent_0_4\":2.0},\"experience_trajectory\":{\"raw\":10.0,\"max\":19.0,\"equivalent_0_4\":2.0},\"skills\":{\"raw\":6.0,\"max\":14.0,\"equivalent_0_4\":2.0},\"communication\":{\"raw\":2.0,\"max\":4.0,\"equivalent_0_4\":2.0},\"context_knowledge\":{\"raw\":0.5,\"max\":4.0,\"equivalent_0_4\":1.0},\"other_factors\":{\"raw\":0.0,\"max\":8.0,\"equivalent_0_4\":0.0}},\"rationale_detailed\":{\"key_strengths\":\"John has extensive technical support experience spanning nearly 9 years at Synnex Concentrix where he progressed to Technical Support Specialist (Manager) and served as an SME providing Tier-3 support. He demonstrates solid systems thinking through workflow automation and process improvement initiatives at The Moving Software. His EA role at The Moving Software (1.5 years) shows genuine executive assistant responsibilities including calendar management, email prioritization, onboarding new employees, and streamlining office processes. He has experience managing high-volume communications and has worked with cross-functional teams. His technical background provides strong troubleshooting and problem-solving capabilities that could benefit an executive who needs technical competency in their assistant.\",\"key_gaps\":\"Limited direct EA experience - only approximately 1.5 years in a true EA role at The Moving Software, with the remaining experience being primarily technical support and administrative assistant work. The companies he worked for (The Moving Software, Home Instead Senior Care, Cre8tive Labs) appear to be smaller organizations, likely Tier C, without evidence of supporting C-suite executives at high-pressure, fast-paced companies. His career trajectory shows a shift from technical support to EA/admin roles rather than progressive advancement within EA specifically. No honors or awards mentioned from education. University of Southeastern Philippines is a regional state university (Tier 2/Other). Resume lacks visual engagement - standard text-heavy format without distinctive design elements. No age information provided, no references listed (just contact info), and no evidence of AI tool familiarity or recent professional development certifications. The Client Success Manager role at Cre8tive Labs is not an EA role but rather customer service focused.\",\"recommendation_reasoning\":\"Despite passing all three thresholds at the minimum level, John scores in the 40-49 range (46.25) which places him in Tier 3 Below. While he has transferable skills from technical support management and some genuine EA experience, his limited time in actual EA roles (approximately 1.5 years), work at smaller/lower-tier companies, and lack of evidence supporting high-level executives in fast-paced environments are significant concerns. The recommendation is PROCEED WITH CAUTION rather than DO NOT PROCEED because he does meet all thresholds and has demonstrated organizational skills, process improvement capabilities, and technical competency that could be valuable. However, he should only be interviewed if stronger candidates are unavailable.\",\"interview_focus\":\"1) Probe deeply into the scope and complexity of his EA work at The Moving Software - what level executive did he support, what was the pace and pressure of the environment, and what strategic decisions did he influence? 2) Assess his ability to transition from technical support mindset to true executive partnership - can he anticipate needs, exercise judgment on behalf of an executive, and handle ambiguous situations? 3) Explore his experience with fast-paced, high-stakes environments - his background appears more methodical/process-oriented, so test his adaptability to dynamic startup or executive environments. 4) Understand why he left each role and what he's looking for in terms of growth and career trajectory.\"}}"
+}

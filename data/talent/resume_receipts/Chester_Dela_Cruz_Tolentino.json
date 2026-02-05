@@ -1,0 +1,66 @@
+{
+  "parsed": {
+    "candidate_name": "Chester Dela Cruz Tolentino",
+    "final_score": 23.75,
+    "tier": "Tier 3 Below",
+    "recommendation": "DO NOT PROCEED",
+    "threshold_assessment": {
+      "experience_raw": 2.0,
+      "experience_pass": false,
+      "skills_raw": 4.0,
+      "skills_pass": false,
+      "communication_raw": 2.0,
+      "communication_pass": true,
+      "thresholds_passed": "1/3"
+    },
+    "bucket_scores": {
+      "education": {
+        "raw": 1.0,
+        "max": 6.0,
+        "equivalent_0_4": 1.0
+      },
+      "experience_trajectory": {
+        "raw": 2.0,
+        "max": 19.0,
+        "equivalent_0_4": 0
+      },
+      "skills": {
+        "raw": 4.0,
+        "max": 14.0,
+        "equivalent_0_4": 1.0
+      },
+      "communication": {
+        "raw": 2.0,
+        "max": 4.0,
+        "equivalent_0_4": 2.0
+      },
+      "context_knowledge": {
+        "raw": 0,
+        "max": 4.0,
+        "equivalent_0_4": 0
+      },
+      "other_factors": {
+        "raw": 0,
+        "max": 8.0,
+        "equivalent_0_4": 0
+      }
+    },
+    "strengths": [
+      "Experience at Fortune 500 company (Wells Fargo) shows exposure to high-rigor corporate environment",
+      "Clear written communication with professional resume presentation",
+      "Core VA skills mentioned including email/calendar management and appointment setting"
+    ],
+    "gaps": [
+      "No actual Executive Assistant experience - roles are customer support, technical support, and fraud analyst",
+      "Associate degree from lesser-known university with no honors mentioned",
+      "No evidence of strategic work, systems building, or business impact - purely transactional roles"
+    ],
+    "interview_focus": [
+      "Probe deeply into actual VA responsibilities in current freelance role",
+      "Assess ability to handle executive-level strategic support vs transactional tasks",
+      "Evaluate capacity to transition from call center environment to executive partnership"
+    ],
+    "rationale": "Chester has a background primarily in customer service and call center roles (Concentrix, Alorica, Wells Fargo) with only recent freelance VA work since 2021. While he lists administrative assistant as his title and mentions legal VA assistance, the work history shows no embedded EA experience supporting executives. The associate degree in Computer Technology from St. Paul University provides minimal academic foundation for this role. Significant gaps in executive-level experience and strategic capabilities make this candidate unsuitable for an Executive Partner position."
+  },
+  "raw_output": "{\"candidate_name\":\"Chester Dela Cruz Tolentino\",\"final_score\":23.75,\"tier\":\"Tier 3 Below\",\"recommendation\":\"DO NOT PROCEED\",\"threshold_assessment\":{\"experience_raw\":2.0,\"experience_pass\":false,\"skills_raw\":4.0,\"skills_pass\":false,\"communication_raw\":2.0,\"communication_pass\":true,\"thresholds_passed\":\"1/3\"},\"bucket_scores\":{\"education\":{\"raw\":1.0,\"max\":6.0,\"equivalent_0_4\":1.0},\"experience_trajectory\":{\"raw\":2.0,\"max\":19.0,\"equivalent_0_4\":0},\"skills\":{\"raw\":4.0,\"max\":14.0,\"equivalent_0_4\":1.0},\"communication\":{\"raw\":2.0,\"max\":4.0,\"equivalent_0_4\":2.0},\"context_knowledge\":{\"raw\":0,\"max\":4.0,\"equivalent_0_4\":0},\"other_factors\":{\"raw\":0,\"max\":8.0,\"equivalent_0_4\":0}},\"strengths\":[\"Experience at Fortune 500 company (Wells Fargo) shows exposure to high-rigor corporate environment\",\"Clear written communication with professional resume presentation\",\"Core VA skills mentioned including email/calendar management and appointment setting\"],\"gaps\":[\"No actual Executive Assistant experience - roles are customer support, technical support, and fraud analyst\",\"Associate degree from lesser-known university with no honors mentioned\",\"No evidence of strategic work, systems building, or business impact - purely transactional roles\"],\"interview_focus\":[\"Probe deeply into actual VA responsibilities in current freelance role\",\"Assess ability to handle executive-level strategic support vs transactional tasks\",\"Evaluate capacity to transition from call center environment to executive partnership\"],\"rationale\":\"Chester has a background primarily in customer service and call center roles (Concentrix, Alorica, Wells Fargo) with only recent freelance VA work since 2021. While he lists administrative assistant as his title and mentions legal VA assistance, the work history shows no embedded EA experience supporting executives. The associate degree in Computer Technology from St. Paul University provides minimal academic foundation for this role. Significant gaps in executive-level experience and strategic capabilities make this candidate unsuitable for an Executive Partner position.\"}"
+}
