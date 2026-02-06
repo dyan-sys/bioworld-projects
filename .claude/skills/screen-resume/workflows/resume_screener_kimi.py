@@ -1,29 +1,30 @@
 """
-Resume Screener Workflow (Codex CLI Version)
+Resume Screener Workflow (Kimi / Moonshot AI Version)
 
 Screens candidates from Notion by:
-1. Querying for candidates without a Claude Rating (most recent first)
+1. Querying for candidates without a Kimi Rating (most recent first)
 2. Extracting resume text from PDF URLs
-3. Scoring resumes using Codex CLI (piped via stdin)
+3. Scoring resumes using Moonshot AI API (kimi-k2.5)
 4. Saving artifacts and updating Notion with scores
 """
 
+import argparse
 import json
 import os
 import re
-import subprocess
 import sys
 from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
+from openai import OpenAI
 
-# Add project root to path for library imports
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
+# Add skill root to path for library imports
 SKILL_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT))
+PROJECT_ROOT = Path(__file__).resolve().parents[4]  # .claude/skills/screen-resume/workflows -> project root
+sys.path.insert(0, str(SKILL_ROOT))
 
-from skills.screen_resume.libraries.pdf_tools import extract_text_from_url
+from libraries.pdf_tools import extract_text_from_url
 
 # Load .env file if present
 load_dotenv(PROJECT_ROOT / ".env")
@@ -34,22 +35,28 @@ RAW_TEXT_DIR = DATA_DIR / "resume_raw_txt"
 RECEIPTS_DIR = DATA_DIR / "resume_receipts"
 RUBRIC_PATH = SKILL_ROOT / "templates" / "resume-scorer-v4.md"
 
+# Moonshot AI configuration
+MOONSHOT_MODEL = "kimi-k2.5"  # Using thinking mode with HTTP/2 for VPN resilience
 
-def load_env_keys() -> tuple[str, str]:
+
+def load_env_keys() -> tuple[str, str, str]:
     """Load required environment variables."""
     notion_key = os.environ.get("NOTION_KEY")
     notion_db_id = os.environ.get("NOTION_DB_ID")
+    moonshot_key = os.environ.get("MOONSHOT_API_KEY")
 
     missing = []
     if not notion_key:
         missing.append("NOTION_KEY")
     if not notion_db_id:
         missing.append("NOTION_DB_ID")
+    if not moonshot_key:
+        missing.append("MOONSHOT_API_KEY")
 
     if missing:
         raise EnvironmentError(f"Missing required environment variables: {', '.join(missing)}")
 
-    return notion_key, notion_db_id
+    return notion_key, notion_db_id, moonshot_key
 
 
 def clean_name_for_filename(name: str) -> str:
@@ -60,10 +67,22 @@ def clean_name_for_filename(name: str) -> str:
     return cleaned
 
 
+def fetch_notion_page(notion_key: str, page_id: str) -> dict:
+    """Fetch a single Notion page by ID."""
+    url = f"https://api.notion.com/v1/pages/{page_id}"
+    headers = {
+        "Authorization": f"Bearer {notion_key}",
+        "Notion-Version": "2022-06-28",
+    }
+    response = requests.get(url, headers=headers, timeout=30)
+    response.raise_for_status()
+    return response.json()
+
+
 def query_notion_candidates(notion_key: str, db_id: str, limit: int = 5) -> list[dict]:
     """
-    Query Notion for candidates where Status is "New Application"
-    and "Manus Rating" is empty, sorted by Date Created (most recent first).
+    Query Notion for candidates where "Kimi Rating" is empty,
+    sorted by Date Created (most recent first).
     """
     url = f"https://api.notion.com/v1/databases/{db_id}/query"
     headers = {
@@ -73,16 +92,8 @@ def query_notion_candidates(notion_key: str, db_id: str, limit: int = 5) -> list
     }
     payload = {
         "filter": {
-            "and": [
-                {
-                    "property": "Status",
-                    "status": {"equals": "New Application"},
-                },
-                {
-                    "property": "Manus Rating",
-                    "rich_text": {"is_empty": True},
-                },
-            ]
+            "property": "Kimi Rating",
+            "rich_text": {"is_empty": True},
         },
         "sorts": [
             {
@@ -139,7 +150,7 @@ def load_rubric() -> str:
 
 
 def build_prompt(rubric: str, resume_text: str, candidate_name: str) -> str:
-    """Build the full prompt for Codex CLI (piped via stdin)."""
+    """Build the user message for Moonshot AI API."""
     return f"""You are an expert recruiter screening Executive Partner candidates.
 
 Use the following scoring rubric to evaluate the candidate's resume. Follow the rubric exactly and calculate all scores as specified.
@@ -192,39 +203,70 @@ Please score the following resume for candidate: {candidate_name}
 Remember: Respond with ONLY the JSON object, no other text."""
 
 
-def score_resume_via_codex(prompt: str) -> str:
+def score_resume_via_moonshot(prompt: str, moonshot_key: str) -> str:
     """
-    Call Codex CLI with the prompt piped via stdin.
+    Call Moonshot AI API using OpenAI SDK with streaming.
 
-    Uses --full-auto to bypass confirmation prompts.
+    Uses thinking mode (reasoning enabled) with HTTP/2 for better VPN resilience.
+    Handles both reasoning_content (thinking) and content (final answer) streams.
     """
-    result = subprocess.run(
-        [
-            "codex",
-            "exec",
-            "--model", "gpt-5.1",
-            "--full-auto",
-        ],
-        input=prompt,  # Pipe the prompt via stdin
-        text=True,
-        capture_output=True,
-        timeout=300,  # 5 minute timeout
+    import httpx
+
+    # Create custom transport with HTTP/2 for better VPN resilience
+    transport = httpx.HTTPTransport(
+        retries=3,
+        http2=True,  # HTTP/2 is much more resilient to VPN timeouts
     )
 
-    if result.returncode != 0:
-        raise RuntimeError(f"Codex CLI failed: {result.stderr}")
+    # Configure httpx client with HTTP/2 transport
+    http_client = httpx.Client(
+        timeout=600.0,  # 10 minute timeout
+        transport=transport,
+        trust_env=False,  # Bypass system proxy/VPN for direct connection
+    )
 
-    return result.stdout.strip()
+    # Initialize OpenAI client with Moonshot base URL
+    client = OpenAI(
+        api_key=moonshot_key,
+        base_url="https://api.moonshot.ai/v1",
+        http_client=http_client,
+    )
+
+    # Stream response with thinking mode enabled (no extra_body parameter)
+    stream = client.chat.completions.create(
+        model=MOONSHOT_MODEL,
+        messages=[
+            {"role": "system", "content": "You are an expert recruiter. Respond with ONLY valid JSON, no markdown or extra text."},
+            {"role": "user", "content": prompt}
+        ],
+        stream=True,
+    )
+
+    # Collect streamed chunks, handling both reasoning and content
+    print("  [Thinking", end="", flush=True)
+    content_parts = []
+
+    for chunk in stream:
+        # Print dot for thinking activity (reasoning_content)
+        if hasattr(chunk.choices[0].delta, 'reasoning_content') and chunk.choices[0].delta.reasoning_content:
+            print("·", end="", flush=True)
+
+        # Collect the actual final JSON (content)
+        if chunk.choices[0].delta.content:
+            content_parts.append(chunk.choices[0].delta.content)
+            print(".", end="", flush=True)
+
+    print("]")
+
+    return "".join(content_parts).strip()
 
 
 def clean_json_output(text: str) -> str:
-    """Strip markdown code blocks from Codex output."""
+    """Strip markdown code blocks from API output."""
     text = text.strip()
     if text.startswith("```"):
         lines = text.splitlines()
-        # Remove first line (```json)
         lines = lines[1:]
-        # Remove last line if it is ```
         if lines and lines[-1].strip() == "```":
             lines = lines[:-1]
         text = "\n".join(lines)
@@ -232,17 +274,14 @@ def clean_json_output(text: str) -> str:
 
 
 def parse_json_response(response: str) -> dict:
-    """Parse JSON from Codex's response, handling potential extra text."""
-    # Clean markdown code blocks first
+    """Parse JSON from Moonshot's response, handling potential extra text."""
     cleaned = clean_json_output(response)
 
-    # Try direct parse first
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError:
         pass
 
-    # Try to extract JSON object from response
     json_match = re.search(r"\{.*\}", cleaned, re.DOTALL)
     if json_match:
         try:
@@ -300,7 +339,6 @@ def format_detailed_rationale(score_result: dict) -> str:
     reasoning = detailed.get("recommendation_reasoning", "N/A")
     interview = detailed.get("interview_focus", "N/A")
 
-    # Build the full rationale text
     lines = [
         f"FINAL SCORE: {final_score}/100 | THRESHOLDS: {thresh_passed} ({thresh_str})",
         "",
@@ -325,7 +363,7 @@ def update_notion_rating(
     recommendation: str,
     rationale: str,
 ) -> None:
-    """Update Notion page with rating, recommendation, and rationale."""
+    """Update Notion page with Kimi rating, recommendation, and rationale."""
     url = f"https://api.notion.com/v1/pages/{page_id}"
     headers = {
         "Authorization": f"Bearer {notion_key}",
@@ -334,13 +372,13 @@ def update_notion_rating(
     }
     payload = {
         "properties": {
-            "Manus Rating": {
+            "Kimi Rating": {
                 "rich_text": [{"text": {"content": str(round(score, 1))}}]
             },
-            "Manus Recommendation": {
+            "Kimi Recommendation": {
                 "select": {"name": recommendation}
             },
-            "Manus Rationale": {
+            "Kimi Rationale": {
                 "rich_text": [{"text": {"content": rationale[:2000]}}]
             },
         }
@@ -350,7 +388,7 @@ def update_notion_rating(
     response.raise_for_status()
 
 
-def process_candidate(candidate: dict, rubric: str, notion_key: str) -> dict:
+def process_candidate(candidate: dict, rubric: str, notion_key: str, moonshot_key: str) -> dict:
     """Process a single candidate: extract, score, save, update."""
     name = candidate["name"]
     page_id = candidate["page_id"]
@@ -376,21 +414,21 @@ def process_candidate(candidate: dict, rubric: str, notion_key: str) -> dict:
             f.write(resume_text)
         print(f"  [SAVE] Raw text -> {text_path.name}")
 
-        # Build prompt and score via Codex CLI
-        print(f"  [SCORE] Calling Codex CLI...")
+        # Build prompt and score via Moonshot AI
+        print(f"  [SCORE] Calling Moonshot AI ({MOONSHOT_MODEL})...")
         prompt = build_prompt(rubric, resume_text, name)
-        raw_output = score_resume_via_codex(prompt)
+        raw_output = score_resume_via_moonshot(prompt, moonshot_key)
 
         # Parse JSON response
         score_result = parse_json_response(raw_output)
 
-        # Save receipt (include raw output for debugging)
+        # Save receipt
         receipt_data = {
-            "model": "Codex (gpt-5.1)",
+            "model": f"Kimi ({MOONSHOT_MODEL})",
             "parsed": score_result,
             "raw_output": raw_output,
         }
-        receipt_path = RECEIPTS_DIR / f"{clean_name}_Codex.json"
+        receipt_path = RECEIPTS_DIR / f"{clean_name}_Kimi.json"
         with open(receipt_path, "w", encoding="utf-8") as f:
             json.dump(receipt_data, f, indent=2)
         print(f"  [SAVE] Receipt -> {receipt_path.name}")
@@ -406,26 +444,38 @@ def process_candidate(candidate: dict, rubric: str, notion_key: str) -> dict:
         result["score"] = final_score
         result["recommendation"] = recommendation
 
-    except subprocess.TimeoutExpired:
-        result["status"] = "error"
-        result["error"] = "Codex CLI timed out (5 min)"
-        print(f"  [ERROR] Timeout")
     except requests.RequestException as e:
         result["status"] = "error"
-        result["error"] = f"Network error: {e}"
+        result["error"] = f"API/Network error: {e}"
         print(f"  [ERROR] {e}")
     except Exception as e:
         result["status"] = "error"
         result["error"] = str(e)
-        print(f"  [ERROR] {e}")
+        print(f"  [ERROR] {type(e).__name__}: {e}")
 
     return result
 
 
 def main():
     """Main workflow entry point."""
+    # Parse CLI arguments
+    parser = argparse.ArgumentParser(
+        description="Score candidate resumes using Kimi AI (Moonshot)"
+    )
+    parser.add_argument(
+        '--page-id',
+        help='Score a single candidate by Notion page ID'
+    )
+    parser.add_argument(
+        '--limit',
+        type=int,
+        default=5,
+        help='Number of candidates to process in batch mode (default: 5)'
+    )
+    args = parser.parse_args()
+
     print("=" * 60)
-    print("RESUME SCREENER WORKFLOW (Codex CLI)")
+    print("RESUME SCREENER WORKFLOW (Kimi / Moonshot AI)")
     print("=" * 60)
 
     # Ensure directories exist
@@ -435,8 +485,8 @@ def main():
     # Load environment
     print("\n[1/4] Loading environment...")
     try:
-        notion_key, notion_db_id = load_env_keys()
-        print("  NOTION_KEY and NOTION_DB_ID loaded.")
+        notion_key, notion_db_id, moonshot_key = load_env_keys()
+        print("  NOTION_KEY, NOTION_DB_ID, and MOONSHOT_API_KEY loaded.")
     except EnvironmentError as e:
         print(f"  ERROR: {e}")
         sys.exit(1)
@@ -446,10 +496,19 @@ def main():
     rubric = load_rubric()
     print(f"  Rubric loaded ({len(rubric):,} characters)")
 
-    # Query Notion
-    print("\n[3/4] Querying Notion for candidates...")
-    candidates_raw = query_notion_candidates(notion_key, notion_db_id, limit=5)
-    candidates = [get_candidate_info(c) for c in candidates_raw]
+    # Get candidates (single or batch mode)
+    print("\n[3/4] Fetching candidates...")
+    if args.page_id:
+        # Single candidate mode
+        print(f"  Mode: Single candidate (page_id={args.page_id})")
+        page = fetch_notion_page(notion_key, args.page_id)
+        candidates = [get_candidate_info(page)]
+    else:
+        # Batch mode
+        print(f"  Mode: Batch (limit={args.limit})")
+        candidates_raw = query_notion_candidates(notion_key, notion_db_id, limit=args.limit)
+        candidates = [get_candidate_info(c) for c in candidates_raw]
+
     print(f"  Found {len(candidates)} candidates to process")
 
     if not candidates:
@@ -463,7 +522,7 @@ def main():
     results = []
     for i, candidate in enumerate(candidates, 1):
         print(f"\n[{i}/{len(candidates)}] {candidate['name']}")
-        result = process_candidate(candidate, rubric, notion_key)
+        result = process_candidate(candidate, rubric, notion_key, moonshot_key)
         results.append(result)
 
     # Summary

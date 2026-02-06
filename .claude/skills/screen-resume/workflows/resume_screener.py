@@ -8,6 +8,7 @@ Screens candidates from Notion by:
 4. Saving artifacts and updating Notion with scores
 """
 
+import argparse
 import json
 import os
 import re
@@ -18,12 +19,12 @@ from pathlib import Path
 import requests
 from dotenv import load_dotenv
 
-# Add project root to path for library imports
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
+# Add skill root to path for library imports
 SKILL_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT))
+PROJECT_ROOT = Path(__file__).resolve().parents[4]  # .claude/skills/screen-resume/workflows -> project root
+sys.path.insert(0, str(SKILL_ROOT))
 
-from skills.screen_resume.libraries.pdf_tools import extract_text_from_url
+from libraries.pdf_tools import extract_text_from_url
 
 # Load .env file if present
 load_dotenv(PROJECT_ROOT / ".env")
@@ -60,9 +61,21 @@ def clean_name_for_filename(name: str) -> str:
     return cleaned
 
 
+def fetch_notion_page(notion_key: str, page_id: str) -> dict:
+    """Fetch a single Notion page by ID."""
+    url = f"https://api.notion.com/v1/pages/{page_id}"
+    headers = {
+        "Authorization": f"Bearer {notion_key}",
+        "Notion-Version": "2022-06-28",
+    }
+    response = requests.get(url, headers=headers, timeout=30)
+    response.raise_for_status()
+    return response.json()
+
+
 def query_notion_candidates(notion_key: str, db_id: str, limit: int = 5) -> list[dict]:
     """
-    Query Notion for candidates where "Manus Rating" is empty,
+    Query Notion for candidates where "Claude Rating" is empty,
     sorted by Date Created (most recent first).
     """
     url = f"https://api.notion.com/v1/databases/{db_id}/query"
@@ -397,6 +410,22 @@ def process_candidate(candidate: dict, rubric: str, notion_key: str) -> dict:
 
 def main():
     """Main workflow entry point."""
+    # Parse CLI arguments
+    parser = argparse.ArgumentParser(
+        description="Score candidate resumes using Claude CLI"
+    )
+    parser.add_argument(
+        '--page-id',
+        help='Score a single candidate by Notion page ID'
+    )
+    parser.add_argument(
+        '--limit',
+        type=int,
+        default=5,
+        help='Number of candidates to process in batch mode (default: 5)'
+    )
+    args = parser.parse_args()
+
     print("=" * 60)
     print("RESUME SCREENER WORKFLOW (Claude CLI)")
     print("=" * 60)
@@ -415,10 +444,19 @@ def main():
     rubric = load_rubric()
     print(f"  Rubric loaded ({len(rubric):,} characters)")
 
-    # Query Notion
-    print("\n[3/4] Querying Notion for candidates...")
-    candidates_raw = query_notion_candidates(notion_key, notion_db_id, limit=5)
-    candidates = [get_candidate_info(c) for c in candidates_raw]
+    # Get candidates (single or batch mode)
+    print("\n[3/4] Fetching candidates...")
+    if args.page_id:
+        # Single candidate mode
+        print(f"  Mode: Single candidate (page_id={args.page_id})")
+        page = fetch_notion_page(notion_key, args.page_id)
+        candidates = [get_candidate_info(page)]
+    else:
+        # Batch mode
+        print(f"  Mode: Batch (limit={args.limit})")
+        candidates_raw = query_notion_candidates(notion_key, notion_db_id, limit=args.limit)
+        candidates = [get_candidate_info(c) for c in candidates_raw]
+
     print(f"  Found {len(candidates)} candidates to process")
 
     if not candidates:
