@@ -1,10 +1,10 @@
 """
-Resume Screener Workflow (Claude CLI Version)
+Resume Screener Workflow (Codex CLI Version)
 
 Screens candidates from Notion by:
-1. Querying for candidates without a Manus Rating (most recent first)
+1. Querying for candidates without a Claude Rating (most recent first)
 2. Extracting resume text from PDF URLs
-3. Scoring resumes using Claude CLI
+3. Scoring resumes using Codex CLI (piped via stdin)
 4. Saving artifacts and updating Notion with scores
 """
 
@@ -61,8 +61,8 @@ def clean_name_for_filename(name: str) -> str:
 
 def query_notion_candidates(notion_key: str, db_id: str, limit: int = 5) -> list[dict]:
     """
-    Query Notion for candidates where "Manus Rating" is empty,
-    sorted by Date Created (most recent first).
+    Query Notion for candidates where Status is "New Application"
+    and "Manus Rating" is empty, sorted by Date Created (most recent first).
     """
     url = f"https://api.notion.com/v1/databases/{db_id}/query"
     headers = {
@@ -72,8 +72,16 @@ def query_notion_candidates(notion_key: str, db_id: str, limit: int = 5) -> list
     }
     payload = {
         "filter": {
-            "property": "Claude Rating",
-            "rich_text": {"is_empty": True},
+            "and": [
+                {
+                    "property": "Status",
+                    "status": {"equals": "New Application"},
+                },
+                {
+                    "property": "Manus Rating",
+                    "rich_text": {"is_empty": True},
+                },
+            ]
         },
         "sorts": [
             {
@@ -130,7 +138,7 @@ def load_rubric() -> str:
 
 
 def build_prompt(rubric: str, resume_text: str, candidate_name: str) -> str:
-    """Build the full prompt for Claude CLI."""
+    """Build the full prompt for Codex CLI (piped via stdin)."""
     return f"""You are an expert recruiter screening Executive Partner candidates.
 
 Use the following scoring rubric to evaluate the candidate's resume. Follow the rubric exactly and calculate all scores as specified.
@@ -183,27 +191,65 @@ Please score the following resume for candidate: {candidate_name}
 Remember: Respond with ONLY the JSON object, no other text."""
 
 
-def score_resume_via_cli(prompt: str) -> str:
+def score_resume_via_codex(prompt: str) -> str:
     """
-    Call Claude CLI with the prompt and return stdout.
+    Call Codex CLI with the prompt piped via stdin.
 
-    Uses --dangerously-skip-permissions to avoid manual approval.
+    Uses --full-auto to bypass confirmation prompts.
     """
     result = subprocess.run(
         [
-            "claude",
-            "-p", prompt,
-            "--dangerously-skip-permissions",
+            "codex",
+            "exec",
+            "--model", "gpt-5.1",
+            "--full-auto",
         ],
-        capture_output=True,
+        input=prompt,  # Pipe the prompt via stdin
         text=True,
+        capture_output=True,
         timeout=300,  # 5 minute timeout
     )
 
     if result.returncode != 0:
-        raise RuntimeError(f"Claude CLI failed: {result.stderr}")
+        raise RuntimeError(f"Codex CLI failed: {result.stderr}")
 
     return result.stdout.strip()
+
+
+def clean_json_output(text: str) -> str:
+    """Strip markdown code blocks from Codex output."""
+    text = text.strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        # Remove first line (```json)
+        lines = lines[1:]
+        # Remove last line if it is ```
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines)
+    return text.strip()
+
+
+def parse_json_response(response: str) -> dict:
+    """Parse JSON from Codex's response, handling potential extra text."""
+    # Clean markdown code blocks first
+    cleaned = clean_json_output(response)
+
+    # Try direct parse first
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        pass
+
+    # Try to extract JSON object from response
+    json_match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+    if json_match:
+        try:
+            return json.loads(json_match.group())
+        except json.JSONDecodeError:
+            pass
+
+    raise ValueError(f"Could not parse JSON from response: {cleaned[:500]}...")
 
 
 def format_detailed_rationale(score_result: dict) -> str:
@@ -271,25 +317,6 @@ def format_detailed_rationale(score_result: dict) -> str:
     return "\n".join(lines)
 
 
-def parse_json_response(response: str) -> dict:
-    """Parse JSON from Claude's response, handling potential extra text."""
-    # Try direct parse first
-    try:
-        return json.loads(response)
-    except json.JSONDecodeError:
-        pass
-
-    # Try to extract JSON object from response
-    json_match = re.search(r"\{.*\}", response, re.DOTALL)
-    if json_match:
-        try:
-            return json.loads(json_match.group())
-        except json.JSONDecodeError:
-            pass
-
-    raise ValueError(f"Could not parse JSON from response: {response[:500]}...")
-
-
 def update_notion_rating(
     notion_key: str,
     page_id: str,
@@ -306,13 +333,13 @@ def update_notion_rating(
     }
     payload = {
         "properties": {
-            "Claude Rating": {
+            "Manus Rating": {
                 "rich_text": [{"text": {"content": str(round(score, 1))}}]
             },
-            "Claude Recommendation": {
+            "Manus Recommendation": {
                 "select": {"name": recommendation}
             },
-            "Claude Rationale": {
+            "Manus Rationale": {
                 "rich_text": [{"text": {"content": rationale[:2000]}}]
             },
         }
@@ -348,21 +375,21 @@ def process_candidate(candidate: dict, rubric: str, notion_key: str) -> dict:
             f.write(resume_text)
         print(f"  [SAVE] Raw text -> {text_path.name}")
 
-        # Build prompt and score via CLI
-        print(f"  [SCORE] Calling Claude CLI...")
+        # Build prompt and score via Codex CLI
+        print(f"  [SCORE] Calling Codex CLI...")
         prompt = build_prompt(rubric, resume_text, name)
-        raw_output = score_resume_via_cli(prompt)
+        raw_output = score_resume_via_codex(prompt)
 
         # Parse JSON response
         score_result = parse_json_response(raw_output)
 
         # Save receipt (include raw output for debugging)
         receipt_data = {
-            "model": "Claude CLI",
+            "model": "Codex (gpt-5.1)",
             "parsed": score_result,
             "raw_output": raw_output,
         }
-        receipt_path = RECEIPTS_DIR / f"{clean_name}_Claude.json"
+        receipt_path = RECEIPTS_DIR / f"{clean_name}_Codex.json"
         with open(receipt_path, "w", encoding="utf-8") as f:
             json.dump(receipt_data, f, indent=2)
         print(f"  [SAVE] Receipt -> {receipt_path.name}")
@@ -380,7 +407,7 @@ def process_candidate(candidate: dict, rubric: str, notion_key: str) -> dict:
 
     except subprocess.TimeoutExpired:
         result["status"] = "error"
-        result["error"] = "Claude CLI timed out (5 min)"
+        result["error"] = "Codex CLI timed out (5 min)"
         print(f"  [ERROR] Timeout")
     except requests.RequestException as e:
         result["status"] = "error"
@@ -397,8 +424,12 @@ def process_candidate(candidate: dict, rubric: str, notion_key: str) -> dict:
 def main():
     """Main workflow entry point."""
     print("=" * 60)
-    print("RESUME SCREENER WORKFLOW (Claude CLI)")
+    print("RESUME SCREENER WORKFLOW (Codex CLI)")
     print("=" * 60)
+
+    # Ensure directories exist
+    RAW_TEXT_DIR.mkdir(parents=True, exist_ok=True)
+    RECEIPTS_DIR.mkdir(parents=True, exist_ok=True)
 
     # Load environment
     print("\n[1/4] Loading environment...")
