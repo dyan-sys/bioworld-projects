@@ -1,12 +1,14 @@
 # Executive Partner Candidate Screening - Comprehensive Scoring Instructions (V4)
-## For Manus Agent Execution
+## For AI Agent Execution
 ### Ally Recruiting - January 2026
 
 ---
 
 ## EXECUTIVE SUMMARY
 
-This document provides detailed instructions for Manus to screen Executive Partner candidates using a systematic, data-driven scoring methodology. Candidates receive a full score (0-100) based on all six buckets. Threshold failures are flagged separately as risk factors in the recommendation, rather than automatically disqualifying candidates.
+This document provides detailed instructions for AI agents to screen Executive Partner candidates using a systematic, data-driven scoring methodology. Candidates receive a full score (0-100) based on all six buckets. Threshold failures are flagged separately as risk factors in the recommendation, rather than automatically disqualifying candidates.
+
+**CRITICAL AGE REQUIREMENT:** All candidates estimated to be >36 years old (as of 2026) must have their recommendation capped at "PROCEED WITH CAUTION" regardless of other strengths. Age must be estimated from graduation dates or stated age, and the override must be explicitly mentioned in the rationale.
 
 ---
 
@@ -174,7 +176,7 @@ Evaluate the depth, quality, and progression of the candidate's professional exp
 **Critical Question:** Can this person perform under pressure and was this person trusted in a high-pressure environment?
 
 ### Important Note on Company Research
-**For 2.2 (Company Tier & Rigor), if it is not immediately clear to Manus what tier the company is, Manus MUST conduct research on the actual company to make this assessment.** Do not guess. Research the company size, industry, growth stage, and reputation.
+**For 2.2 (Company Tier & Rigor), if it is not immediately clear what tier the company is, you MUST conduct research on the actual company to make this assessment.** Do not guess. Research the company size, industry, growth stage, and reputation.
 
 ### Scoring Breakdown
 
@@ -454,6 +456,50 @@ Bonus points for candidates with direct experience in target industries.
 ### Purpose
 Kicker factors that can differentiate candidates at the margins.
 
+### Age Estimation Guidelines
+
+**IMPORTANT:** Age alignment is critical for this role. You MUST estimate candidate age and apply the override rule in Part 3.
+
+**Current Year for All Calculations: 2026**
+
+#### Method 1: Bachelor's Degree Graduation Year
+```
+Estimated Age = 22 + (2026 - Graduation Year)
+```
+
+**Examples:**
+- Graduated 2012 → 22 + (2026 - 2012) = 22 + 14 = **36 years old** ✓ Acceptable
+- Graduated 2010 → 22 + (2026 - 2010) = 22 + 16 = **38 years old** ✋ Age Override Applies
+- Graduated 2014 → 22 + (2026 - 2014) = 22 + 12 = **34 years old** ✓ Acceptable
+
+#### Method 2: Master's/MBA Graduation Year
+```
+Estimated Age = 24 + (2026 - Graduation Year)
+```
+Assume completion at age 24 (typical for 2-year Master's after Bachelor's at 22).
+
+**Examples:**
+- MBA graduated 2015 → 24 + (2026 - 2015) = 24 + 11 = **35 years old** ✓ Acceptable
+- MBA graduated 2012 → 24 + (2026 - 2012) = 24 + 14 = **38 years old** ✋ Age Override Applies
+
+#### Method 3: Explicitly Stated Age
+If the candidate states their age directly on the resume:
+```
+Estimated Age (as of 2026) = Stated Age + Years Since Resume Date
+```
+
+**Example:**
+- Resume states "28 years old" dated January 2024 → 28 + 2 = **30 years old** ✓ Acceptable
+- Resume states "35 years old" dated January 2024 → 35 + 2 = **37 years old** ✋ Age Override Applies
+
+#### Method 4: Work Experience Timeline
+If no graduation date or stated age, estimate conservatively based on first job year:
+```
+Estimated Age = 22 + (2026 - First Job Year)
+```
+
+**Scoring Rule:** Use the most reliable method available. If multiple signals conflict, note the discrepancy in the rationale.
+
 ### Scoring Breakdown
 
 #### 6.1 Age & Life Circumstances (Raw Points: 0-2)
@@ -562,6 +608,36 @@ Use the recommendation logic table from Part 1 to determine recommendation based
 1. Final Score (0-100)
 2. Number of thresholds passed (0/3, 1/3, 2/3, or 3/3)
 
+### Step 5a: Apply Age Override (CRITICAL)
+
+**Age Override Rule:**
+
+If the candidate's estimated age > 36 years (as of 2026), apply the following override:
+
+```
+IF Estimated Age > 36:
+  IF Base Recommendation is "STRONG PROCEED" OR "PROCEED" OR "PROCEED WITH QUESTIONS":
+    → DOWNGRADE to "PROCEED WITH CAUTION"
+    → MUST explicitly state age override in rationale
+
+  IF Base Recommendation is "PROCEED WITH CAUTION" OR "DO NOT PROCEED":
+    → KEEP original recommendation (already appropriately cautious)
+    → MUST mention age factor in rationale
+```
+
+**Rationale Requirement:**
+
+When age override applies, your rationale MUST include explicit language such as:
+- "While other factors are strong (score X/100), estimated age of Y (>36) caps recommendation at PROCEED WITH CAUTION per age alignment requirements."
+- "Candidate scores well on experience and skills, but estimated age of Y based on [graduation year/stated age] triggers age override to PROCEED WITH CAUTION."
+
+**No Age Information Available:**
+
+If you cannot estimate age from any available information:
+- Note in rationale: "Unable to estimate age - no graduation date or age information provided."
+- Do NOT apply age override
+- Proceed with base recommendation
+
 ### Step 6: Provide Detailed Assessment
 
 For each candidate, provide:
@@ -571,6 +647,10 @@ For each candidate, provide:
 **FINAL SCORE:** [X.XX]/100
 **TIER:** [Tier 1 Strong / Tier 2 Viable / Tier 3 Below]
 **RECOMMENDATION:** [STRONG PROCEED / PROCEED / PROCEED WITH QUESTIONS / PROCEED WITH CAUTION / DO NOT PROCEED]
+
+**AGE ASSESSMENT:**
+- Estimated Age (as of 2026): [X years old] | Method: [Graduation year / Stated age / Work timeline]
+- Age Override Applied: [YES / NO]
 
 **THRESHOLD ASSESSMENT:**
 - Experience & Trajectory: [X.X] raw - [PASS/FAIL]
@@ -615,7 +695,7 @@ For each candidate, provide:
 **Solution:** Score based on depth of tool use and business impact, not breadth of tools listed. Look for specific examples.
 
 ### Pitfall 3: Missing Company Research
-**Problem:** Company name is unfamiliar; Manus assigns random tier.
+**Problem:** Company name is unfamiliar; random tier is assigned.
 **Solution:** RESEARCH the company. Look up company size, funding stage, industry reputation. Use LinkedIn, Crunchbase, Google for research.
 
 ### Pitfall 4: Ignoring Job-Hopping Pattern
@@ -627,8 +707,12 @@ For each candidate, provide:
 **Solution:** Only count roles explicitly labeled as EA, Executive Assistant, or equivalent. Customer service is not EA experience.
 
 ### Pitfall 6: Underweighting Communication
-**Problem:** Candidate has great experience but sparse, unprofessional resume; Manus overlooks this.
+**Problem:** Candidate has great experience but sparse, unprofessional resume; this is overlooked.
 **Solution:** Communication is 20% weight AND a minimum threshold. Poor communication is a critical gap for EA role.
+
+### Pitfall 7: Forgetting Age Override
+**Problem:** Candidate scores 85/100 with excellent experience but is estimated to be 38 years old; age override is not applied.
+**Solution:** ALWAYS estimate age using graduation year or stated age. If age >36, cap recommendation at PROCEED WITH CAUTION and explicitly state this in the rationale. Age alignment is critical for this role.
 
 ---
 

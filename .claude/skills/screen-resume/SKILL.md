@@ -16,7 +16,6 @@ This project has an automated resume screening pipeline that scores Executive Pa
 | Model | Script | Notion Fields | API | Accuracy |
 |-------|--------|---------------|-----|----------|
 | **Kimi** ⭐ | `workflows/resume_screener_kimi.py` | `Kimi Rating`, `Kimi Recommendation`, `Kimi Rationale` | Moonshot AI (`kimi-k2.5` thinking mode) | **Most Accurate** |
-| **Codex** | `workflows/resume_screener_codex.py` | `Manus Rating`, `Manus Recommendation`, `Manus Rationale` | OpenAI Codex CLI (`gpt-5.1`) | 2nd Best |
 | **Claude** | `workflows/resume_screener.py` | `Claude Rating`, `Claude Recommendation`, `Claude Rationale` | Claude CLI (subprocess) | Most Conservative |
 
 ## Scoring Rubric
@@ -42,7 +41,6 @@ local-data/talent/
 │   └── {CandidateName}.txt
 └── resume_receipts/          # Full scoring JSON receipts
     ├── {CandidateName}_Claude.json
-    ├── {CandidateName}_Codex.json
     └── {CandidateName}_Kimi.json
 ```
 
@@ -56,7 +54,6 @@ local-data/talent/
 All screeners require `NOTION_KEY` and `NOTION_DB_ID`. Additionally:
 - Kimi screener requires `MOONSHOT_API_KEY`
 - Claude screener requires Claude CLI to be installed
-- Codex screener requires Codex CLI to be installed
 
 **Kimi Screener Configuration:**
 - Uses `kimi-k2.5` model in **thinking mode** (reasoning enabled for deeper analysis)
@@ -71,7 +68,7 @@ All screeners require `NOTION_KEY` and `NOTION_DB_ID`. Additionally:
 - ✅ Appropriate communication scoring (MEETS threshold = 2.0)
 - ✅ Recognizes marketing/e-commerce context knowledge
 - ✅ Complete scoring of age, MBA, and other factors
-- ✅ Balanced: not overly harsh (Claude) nor overly generous (Manus)
+- ✅ Balanced: not overly harsh like Claude
 
 ## How to Run
 
@@ -87,7 +84,6 @@ python3.11 workflows/resume_screener_kimi.py
 # Process specific number of candidates
 python3.11 workflows/resume_screener_kimi.py --limit 10
 python3.11 workflows/resume_screener.py --limit 3
-python3.11 workflows/resume_screener_codex.py --limit 1
 ```
 
 ### Single-Candidate Mode
@@ -97,7 +93,6 @@ Score a specific candidate by Notion page ID:
 # Score one candidate by page ID
 python3.11 workflows/resume_screener_kimi.py --page-id 2ff2b7ec-4597-8158-a012-ff2dcc2a252c
 python3.11 workflows/resume_screener.py --page-id abc123...
-python3.11 workflows/resume_screener_codex.py --page-id xyz789...
 ```
 
 Each script extracts resume text, scores against the rubric, saves a receipt JSON, and updates the Notion page.

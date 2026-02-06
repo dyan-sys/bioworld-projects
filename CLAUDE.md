@@ -38,10 +38,6 @@ Located in `.claude/skills/screen-resume/`:
 - Balanced evaluation across all buckets
 - Uses thinking mode with HTTP/2 for VPN resilience
 
-**Alternative: Manus (Codex)**
-- Slightly overvalues non-EA experience
-- Good for second opinions
-
 **Alternative: Claude CLI**
 - Tends to be overly strict across all criteria
 - May undervalue transferable skills
@@ -49,7 +45,6 @@ Located in `.claude/skills/screen-resume/`:
 
 **Performance Comparison (Tested Jan 2026):**
 - Kimi: Most balanced, closest to rubric intent
-- Manus: 2nd best, slightly generous on experience
 - Claude: Most conservative, may miss qualified candidates
 
 ### Workflows
@@ -72,22 +67,6 @@ python3.11 .claude/skills/screen-resume/workflows/resume_screener.py --limit 5
 
 # Single candidate
 python3.11 .claude/skills/screen-resume/workflows/resume_screener.py --page-id <notion_page_id>
-```
-
-#### Resume Screener (Codex CLI)
-**File:** `.claude/skills/screen-resume/workflows/resume_screener_codex.py`
-
-Scores candidates using OpenAI Codex CLI (gpt-5.1). Writes to Notion fields:
-- `Manus Rating` (rich_text)
-- `Manus Recommendation` (select)
-- `Manus Rationale` (rich_text)
-
-```bash
-# Batch mode
-python3.11 .claude/skills/screen-resume/workflows/resume_screener_codex.py --limit 5
-
-# Single candidate
-python3.11 .claude/skills/screen-resume/workflows/resume_screener_codex.py --page-id <notion_page_id>
 ```
 
 #### Resume Screener (Kimi AI)
@@ -124,7 +103,7 @@ python3.11 .claude/skills/screen-resume/workflows/resume_screener_kimi.py --page
 - Fair assessment of transferable skills (teaching, training, stakeholder management)
 - Appropriate communication scoring (neither too harsh nor too generous)
 - Recognizes context knowledge in marketing/e-commerce domains
-- Balanced scoring: not overly strict like Claude, not overly generous like Manus
+- Balanced scoring: not overly strict like Claude
 
 **Technical Details:**
 - Requires `h2` package for HTTP/2: `pip3.11 install h2`
@@ -158,7 +137,6 @@ local-data/talent/
 │   └── {CandidateName}.txt
 └── resume_receipts/          # Full scoring JSON
     ├── {CandidateName}_Claude.json
-    ├── {CandidateName}_Codex.json
     └── {CandidateName}_Kimi.json
 ```
 
@@ -170,11 +148,8 @@ Required properties for candidate database:
 - `Claude Rating` (rich_text)
 - `Claude Recommendation` (select)
 - `Claude Rationale` (rich_text)
-- `Manus Rating` (rich_text)
-- `Manus Recommendation` (select)
-- `Manus Rationale` (rich_text)
 - `Kimi Rating` (rich_text)
 - `Kimi Recommendation` (select)
 - `Kimi Rationale` (rich_text)
-- `Status` (status) - for Codex query filter
+- `Status` (status)
 - `Date Created` (created_time)

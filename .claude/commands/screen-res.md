@@ -11,7 +11,7 @@ Parse the following arguments: $ARGUMENTS
 ## Argument Parsing
 
 The argument can be:
-1. **A model name** (`kimi`, `claude`, or `codex`) — use that screener variant
+1. **A model name** (`kimi` or `claude`) — use that screener variant
 2. **A Notion URL** (contains `notion.so` or `notion.site`) — score that specific candidate using the default model (Kimi)
 3. **Both** a model name AND a Notion URL — score that specific candidate with the specified model
 4. **Empty** — run the default Kimi batch screener
@@ -22,7 +22,6 @@ The argument can be:
 |-------|--------|
 | `kimi` (default) | `workflows/talent/resume_screener_kimi.py` |
 | `claude` | `workflows/talent/resume_screener.py` |
-| `codex` | `workflows/talent/resume_screener_codex.py` |
 
 ## Execution
 

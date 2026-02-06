@@ -2,7 +2,7 @@
 Resume Screener Workflow (Claude CLI Version)
 
 Screens candidates from Notion by:
-1. Querying for candidates without a Manus Rating (most recent first)
+1. Querying for candidates without a Claude Rating (most recent first)
 2. Extracting resume text from PDF URLs
 3. Scoring resumes using Claude CLI
 4. Saving artifacts and updating Notion with scores
