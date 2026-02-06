@@ -1,1 +1,0 @@
-"""Ally OS shared libraries."""
