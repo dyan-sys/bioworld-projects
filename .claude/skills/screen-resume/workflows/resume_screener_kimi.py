@@ -25,6 +25,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[4]  # .claude/skills/screen-resu
 sys.path.insert(0, str(SKILL_ROOT))
 
 from libraries.pdf_tools import extract_text_from_url
+from libraries.rubric_registry import get_rubric_path
 
 # Load .env file if present
 load_dotenv(PROJECT_ROOT / ".env")
@@ -33,7 +34,6 @@ load_dotenv(PROJECT_ROOT / ".env")
 DATA_DIR = PROJECT_ROOT / "local-data" / "talent"
 RAW_TEXT_DIR = DATA_DIR / "resume_raw_txt"
 RECEIPTS_DIR = DATA_DIR / "resume_receipts"
-RUBRIC_PATH = SKILL_ROOT / "templates" / "resume-scorer-v4.md"
 
 # Moonshot AI configuration
 MOONSHOT_MODEL = "kimi-k2.5"  # Using thinking mode with HTTP/2 for VPN resilience
@@ -136,17 +136,76 @@ def get_candidate_info(page: dict) -> dict:
             elif file_obj.get("type") == "file":
                 resume_url = file_obj.get("file", {}).get("url")
 
+    # Get Post relation ID (job opening will be extracted from Post page)
+    post_relation_id = None
+    if "Post" in properties:
+        post_prop = properties["Post"]
+        if post_prop.get("type") == "relation":
+            relations = post_prop.get("relation", [])
+            if relations:
+                # Get first related Post page ID
+                post_relation_id = relations[0].get("id")
+
     return {
         "page_id": page.get("id"),
         "name": name,
         "resume_url": resume_url,
+        "post_relation_id": post_relation_id,
     }
 
 
-def load_rubric() -> str:
-    """Load the scoring rubric from the template file."""
-    with open(RUBRIC_PATH, "r", encoding="utf-8") as f:
-        return f.read()
+def get_job_opening_from_post(notion_key: str, post_page_id: str) -> str:
+    """
+    Fetch the job opening ID from a related Post page.
+
+    Args:
+        notion_key: Notion API key
+        post_page_id: ID of the related Post page
+
+    Returns:
+        Job opening ID (e.g., '251003-EP') or None if not found
+    """
+    url = f"https://api.notion.com/v1/pages/{post_page_id}"
+    headers = {
+        "Authorization": f"Bearer {notion_key}",
+        "Notion-Version": "2022-06-28",
+    }
+
+    try:
+        response = requests.get(url, headers=headers, timeout=30)
+        response.raise_for_status()
+
+        page = response.json()
+        properties = page.get("properties", {})
+
+        # Extract "Opening ID" formula field
+        if "Opening ID" in properties:
+            opening_id_prop = properties["Opening ID"]
+            if opening_id_prop.get("type") == "formula":
+                formula = opening_id_prop.get("formula", {})
+                if formula.get("type") == "string":
+                    return formula.get("string")
+
+        return None
+
+    except requests.RequestException as e:
+        print(f"  [WARNING] Failed to fetch Post page: {e}")
+        return None
+
+
+def load_rubric(opening_id: str = None) -> tuple[str, str]:
+    """
+    Load the appropriate rubric based on Opening ID.
+
+    Args:
+        opening_id: Opening ID from Post (e.g., "251003-EP")
+
+    Returns:
+        Tuple of (rubric_content, job_title)
+    """
+    rubric_path, job_title = get_rubric_path(opening_id)
+    with open(rubric_path, "r", encoding="utf-8") as f:
+        return f.read(), job_title
 
 
 def build_prompt(rubric: str, resume_text: str, candidate_name: str) -> str:
@@ -388,11 +447,12 @@ def update_notion_rating(
     response.raise_for_status()
 
 
-def process_candidate(candidate: dict, rubric: str, notion_key: str, moonshot_key: str) -> dict:
+def process_candidate(candidate: dict, notion_key: str, moonshot_key: str) -> dict:
     """Process a single candidate: extract, score, save, update."""
     name = candidate["name"]
     page_id = candidate["page_id"]
     resume_url = candidate["resume_url"]
+    post_relation_id = candidate.get("post_relation_id")
     clean_name = clean_name_for_filename(name)
 
     result = {"name": name, "status": "pending", "error": None}
@@ -404,6 +464,23 @@ def process_candidate(candidate: dict, rubric: str, notion_key: str, moonshot_ke
         return result
 
     try:
+        # Get job opening from Post relation
+        job_opening = None
+        if post_relation_id:
+            print(f"  [POST] Fetching job opening from Post relation...")
+            job_opening = get_job_opening_from_post(notion_key, post_relation_id)
+            if job_opening:
+                print(f"  [POST] Found job opening: {job_opening}")
+            else:
+                print(f"  [POST] No Opening ID found in Post")
+        else:
+            print(f"  [POST] No Post relation set")
+
+        # Load rubric based on Opening ID
+        print(f"  [RUBRIC] Opening ID: {job_opening or 'Not specified (using default)'}")
+        rubric, job_title = load_rubric(job_opening)
+        print(f"  [RUBRIC] Job Title: {job_title}")
+
         # Extract text from PDF
         print(f"  [EXTRACT] Downloading and extracting PDF...")
         resume_text = extract_text_from_url(resume_url)
@@ -483,7 +560,7 @@ def main():
     RECEIPTS_DIR.mkdir(parents=True, exist_ok=True)
 
     # Load environment
-    print("\n[1/4] Loading environment...")
+    print("\n[1/3] Loading environment...")
     try:
         notion_key, notion_db_id, moonshot_key = load_env_keys()
         print("  NOTION_KEY, NOTION_DB_ID, and MOONSHOT_API_KEY loaded.")
@@ -491,13 +568,8 @@ def main():
         print(f"  ERROR: {e}")
         sys.exit(1)
 
-    # Load rubric
-    print("\n[2/4] Loading scoring rubric...")
-    rubric = load_rubric()
-    print(f"  Rubric loaded ({len(rubric):,} characters)")
-
     # Get candidates (single or batch mode)
-    print("\n[3/4] Fetching candidates...")
+    print("\n[2/3] Fetching candidates...")
     if args.page_id:
         # Single candidate mode
         print(f"  Mode: Single candidate (page_id={args.page_id})")
@@ -516,13 +588,13 @@ def main():
         return
 
     # Process candidates
-    print("\n[4/4] Processing candidates...")
+    print("\n[3/3] Processing candidates...")
     print("-" * 60)
 
     results = []
     for i, candidate in enumerate(candidates, 1):
         print(f"\n[{i}/{len(candidates)}] {candidate['name']}")
-        result = process_candidate(candidate, rubric, notion_key, moonshot_key)
+        result = process_candidate(candidate, notion_key, moonshot_key)
         results.append(result)
 
     # Summary

@@ -18,9 +18,42 @@ This project has an automated resume screening pipeline that scores Executive Pa
 | **Kimi** ⭐ | `workflows/resume_screener_kimi.py` | `Kimi Rating`, `Kimi Recommendation`, `Kimi Rationale` | Moonshot AI (`kimi-k2.5` thinking mode) | **Most Accurate** |
 | **Claude** | `workflows/resume_screener.py` | `Claude Rating`, `Claude Recommendation`, `Claude Rationale` | Claude CLI (subprocess) | Most Conservative |
 
-## Scoring Rubric
+## Scoring Rubrics
 
-The rubric lives at `templates/resume-scorer-v4.md`. Six weighted buckets scored 0-100:
+### Job-Specific Rubrics
+
+The Kimi screener automatically selects the appropriate rubric based on the Opening ID from the Post relation:
+
+| Job Type Code | Job Title | Rubric File |
+|---------------|-----------|-------------|
+| EP | Executive Partner | `resume-scorer-v4.md` (default) |
+| EPP | EPP Product Associate | `resume-scorer-epp.md` (TBD) |
+
+**How it works:**
+1. Screener reads the "Post" relation from candidate
+2. Fetches the Post page and extracts "Opening ID" (e.g., "251003-EP")
+3. Extracts job type code (e.g., "EP") from Opening ID
+4. Looks up job type in `templates/job-type-mapping.json`
+5. Loads the corresponding rubric file
+
+**How to add new job types:**
+1. Create a new rubric file in `templates/` (e.g., `resume-scorer-newrole.md`)
+2. Edit `templates/job-type-mapping.json` to add the mapping:
+   ```json
+   "NEWTYPE": {
+     "title": "New Role Title",
+     "rubric": "resume-scorer-newrole.md"
+   }
+   ```
+3. Run screener - it will automatically use the correct rubric per candidate
+
+**Fallback behavior:**
+- Candidates without a Post relation use the Executive Partner rubric
+- Unknown job type codes trigger a warning and use the Executive Partner rubric
+
+### Executive Partner Rubric (resume-scorer-v4.md)
+
+Six weighted buckets scored 0-100:
 
 | Bucket | Weight | Threshold |
 |--------|--------|-----------|

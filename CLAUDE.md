@@ -110,6 +110,33 @@ python3.11 .claude/skills/screen-resume/workflows/resume_screener_kimi.py --page
 - Thinking mode provides deeper analysis than instant mode
 - Successfully completes via VPN with HTTP/2 transport (no timeouts)
 
+### Job-Specific Rubrics
+
+The Kimi screener supports multiple job-specific rubrics based on Opening ID from the Post relation:
+
+| Job Type Code | Job Title | Rubric File |
+|---------------|-----------|-------------|
+| EP | Executive Partner | resume-scorer-v4.md |
+| EPP | EPP Product Associate | resume-scorer-epp.md (TBD) |
+
+**How It Works:**
+1. Screener reads "Post" relation from candidate's Notion page
+2. Fetches the related Post page to extract "Opening ID" (e.g., "251003-EP")
+3. Extracts job type code from Opening ID (e.g., "EP" from "251003-EP")
+4. Maps job type to rubric using `job-type-mapping.json`
+5. Loads and applies job-specific scoring criteria
+6. Logs Opening ID and job title during processing
+
+**Fallback Behavior:**
+- Candidates without a Post relation use the Executive Partner rubric (default)
+- Unknown job type codes trigger a warning and fall back to Executive Partner rubric
+
+**Adding New Job Types:**
+1. Edit `templates/job-type-mapping.json` to add new mapping
+2. Create corresponding rubric file in `templates/` (e.g., `resume-scorer-newrole.md`)
+
+**Note:** This approach bypasses the "Job Opening" rollup field due to Notion API limitations with formula rollups.
+
 ### Libraries
 
 #### pdf_tools
@@ -139,6 +166,66 @@ local-data/talent/
     ├── {CandidateName}_Claude.json
     └── {CandidateName}_Kimi.json
 ```
+
+## Update Job Posts Skill
+
+Located in `.claude/skills/update-job-posts/`:
+
+Creates job post pages in the Job Posts DB for each Open opening in the Ally Openings DB, one per Post Channel (OLJ, Jobstreet, Facebook, Internal) with platform-specific template content.
+
+### Workflow
+
+**File:** `.claude/skills/update-job-posts/workflows/update_job_posts.py`
+
+```bash
+# Batch mode: all Open openings
+python3.11 .claude/skills/update-job-posts/workflows/update_job_posts.py
+
+# Single opening
+python3.11 .claude/skills/update-job-posts/workflows/update_job_posts.py --opening-id <notion_page_id>
+
+# Dry run (preview without creating)
+python3.11 .claude/skills/update-job-posts/workflows/update_job_posts.py --dry-run
+```
+
+**Required:**
+- Environment variable: `NOTION_KEY`
+- Python 3.11+
+- Dependencies: `requests`, `python-dotenv`
+
+### How It Works
+
+1. Queries Ally Openings DB for Status = "Open"
+2. Extracts job code from title prefix (e.g., "EP" from "251003-EP")
+3. For each Post Channel, loads template by (job_code, channel)
+4. Creates page in Job Posts DB with: relation, channel, status, body blocks
+5. Reads back GEN PostID formula and updates title to match
+6. Sets Post ID to page ID (no dashes)
+
+### Notion Databases
+
+**Ally Openings DB** (`28c2b7ec45978030be21e73d34d126a0`):
+- `Opening ID & Name` (title)
+- `Post Channels` (multi_select): OLJ, Jobstreet, Facebook, Internal
+- `Status` (status): filter for "Open"
+
+**Job Posts DB** (`28c2b7ec459780c6a4b6c047caf8c5fe`):
+- `Job Post Title` (title): set to GEN PostID formula value
+- `Opening` (relation): linked to opening
+- `Post Channel` (select): channel name
+- `Status` (status): set to "Drafting"
+- `Post ID` (rich_text): page ID without dashes
+
+### Templates
+
+Platform-specific markdown templates in `templates/`:
+- EP: `EP-OLJ.md`, `EP-Jobstreet.md`, `EP-Facebook.md`, `EP-Internal.md`
+- EPP: `EPP-OLJ.md`, `EPP-Jobstreet.md`, `EPP-Facebook.md`, `EPP-Internal.md`
+- Fallback: `_default.md`
+
+**Adding New Templates:**
+1. Create `{JOBCODE}-{Channel}.md` in `templates/`
+2. Add mapping in `libraries/template_registry.py`
 
 ## Notion Database Schema
 

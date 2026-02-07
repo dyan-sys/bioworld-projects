@@ -1,0 +1,18 @@
+{
+  "$schema": "Job type mapping schema",
+  "description": "Maps job type codes (from Opening ID) to job titles and scorer templates",
+  "mappings": {
+    "EP": {
+      "title": "Executive Partner",
+      "rubric": "resume-scorer-v4.md"
+    },
+    "EPP": {
+      "title": "EPP Product Associate",
+      "rubric": "resume-scorer-epp.md"
+    }
+  },
+  "default": {
+    "title": "Executive Partner (Default)",
+    "rubric": "resume-scorer-v4.md"
+  }
+}
