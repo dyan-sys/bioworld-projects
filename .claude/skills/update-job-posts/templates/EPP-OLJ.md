@@ -1,12 +1,29 @@
-# EPP Product Associate — OnlineJobs.ph
+# Platform Metadata — OnlineJobs.ph
+
+- Job title: {{job_title}}
+- Category: Virtual Assistant
+- Salary: {{advertised_range}}
+- Employment type: {{employment_type}}
+- Schedule: {{target_collab_window}}
+- Location: Remote (Philippines)
 
 ---
 
-## About the Role
+# EXTERNAL JOB POST
 
-We are looking for an EPP Product Associate to support product operations. This is a remote position posted on OnlineJobs.ph.
+## EPP Product Associate
 
-## Responsibilities
+{{employment_type}} | Remote | Starting rate {{advertised_range}} per month
+
+## About Ally
+
+Ally helps founders and leaders scale themselves before they scale their companies. We match partners with fast-growing e-commerce and creative businesses to bring structure, clarity, and execution leverage -- blending human judgment with modern AI systems.
+
+## The Role
+
+As a Product Associate, you'll support product development and operations workflows, working closely with cross-functional teams to drive execution and maintain quality.
+
+## What You'll Do
 
 - Support product development and operations workflows
 - Assist with project coordination and stakeholder communication
@@ -14,7 +31,7 @@ We are looking for an EPP Product Associate to support product operations. This 
 - Conduct research and analysis to support product decisions
 - Collaborate with cross-functional teams
 
-## Requirements
+## What We're Looking For
 
 - 2+ years of experience in product operations, project management, or related role
 - Strong analytical and problem-solving skills
@@ -22,6 +39,14 @@ We are looking for an EPP Product Associate to support product operations. This 
 - Proficiency with productivity and project management tools
 - Detail-oriented with ability to manage multiple priorities
 
-## How to Apply
+## What You'll Get
 
-Submit your resume and a brief cover letter describing your relevant experience.
+- Starting at {{advertised_range}}/month
+- Direct access to global founders and operators
+- Mentorship and clear growth paths
+- Fully remote setup
+- {{target_collab_window}}
+
+### How to Apply
+
+Submit your resume and complete the screening questionnaire at {{submission_form_url}}.

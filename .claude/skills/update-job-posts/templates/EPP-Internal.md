@@ -1,10 +1,23 @@
-# EPP Product Associate — Internal Posting
+# Platform Metadata — Internal
+
+- Opening: {{prefix}}
+- Job title: {{job_title}}
+- Employment type: {{employment_type}}
+- Compensation: {{advertised_range}}
+- Distribution: Internal referral network
+- Referral bonus: Check with talent team
 
 ---
 
+# INTERNAL JOB POST
+
+## EPP Product Associate — Internal Referral
+
+{{employment_type}} | Remote | Starting at {{advertised_range}}/month
+
 ## Role Summary
 
-EPP Product Associate position — internal referral channel.
+We're looking for Product Associates to support product development and operations workflows, working closely with cross-functional teams.
 
 ## Key Responsibilities
 
@@ -24,4 +37,4 @@ EPP Product Associate position — internal referral channel.
 
 ## Referral Instructions
 
-Share this posting with qualified candidates. Direct applications to the talent team.
+Share this posting with qualified candidates. Interested applicants should complete the form at {{submission_form_url}}.

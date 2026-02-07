@@ -85,3 +85,19 @@ def update_page_properties(headers: dict, page_id: str, properties: dict) -> dic
     response = requests.patch(url, headers=headers, json=payload, timeout=REQUEST_TIMEOUT)
     response.raise_for_status()
     return response.json()
+
+
+def append_blocks(headers: dict, page_id: str, blocks: list[dict]) -> None:
+    """
+    Append children blocks to an existing Notion page.
+
+    Batches in groups of 100 (Notion API limit per request).
+    """
+    url = f"{NOTION_API_BASE}/blocks/{page_id}/children"
+    batch_size = 100
+
+    for i in range(0, len(blocks), batch_size):
+        batch = blocks[i : i + batch_size]
+        payload = {"children": batch}
+        response = requests.patch(url, headers=headers, json=payload, timeout=REQUEST_TIMEOUT)
+        response.raise_for_status()

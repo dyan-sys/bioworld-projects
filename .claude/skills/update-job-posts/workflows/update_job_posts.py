@@ -30,6 +30,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(SKILL_ROOT))
 
 from libraries.notion_helpers import (
+    append_blocks,
     create_page,
     fetch_page,
     notion_headers,
@@ -54,9 +55,19 @@ def load_env_keys() -> tuple[str]:
     return (notion_key,)
 
 
+def _get_rich_text(properties: dict, prop_name: str) -> str | None:
+    """Extract plain text from a rich_text property, or None if empty."""
+    prop = properties.get(prop_name, {})
+    if prop.get("type") == "rich_text":
+        items = prop.get("rich_text", [])
+        if items:
+            return items[0].get("plain_text", "").strip() or None
+    return None
+
+
 def extract_opening_info(page: dict) -> dict:
     """
-    Extract opening prefix, job code, and channels from an Openings DB page.
+    Extract opening prefix, job code, channels, and metadata from an Openings DB page.
 
     Title format: "251003-EP Executive Partner (Rolling)"
     Prefix: "251003-EP"
@@ -86,12 +97,13 @@ def extract_opening_info(page: dict) -> dict:
             channels.append(option.get("name", ""))
 
     # Get Opening Base In-Take Form URL (rich_text in DB1)
-    intake_form_url = None
-    intake_prop = properties.get("Opening Base In-Take Form", {})
-    if intake_prop.get("type") == "rich_text":
-        rt_items = intake_prop.get("rich_text", [])
-        if rt_items:
-            intake_form_url = rt_items[0].get("plain_text", "").strip() or None
+    intake_form_url = _get_rich_text(properties, "Opening Base In-Take Form")
+
+    # Additional fields for template variables
+    job_title = _get_rich_text(properties, "Job Title")
+    employment_type = _get_rich_text(properties, "Employment Type")
+    advertised_range = _get_rich_text(properties, "Advertised Range")
+    target_collab_window = _get_rich_text(properties, "Target Collaboration Window")
 
     return {
         "page_id": page.get("id"),
@@ -100,23 +112,32 @@ def extract_opening_info(page: dict) -> dict:
         "job_code": job_code,
         "channels": channels,
         "intake_form_url": intake_form_url,
+        "job_title": job_title,
+        "employment_type": employment_type,
+        "advertised_range": advertised_range,
+        "target_collab_window": target_collab_window,
     }
 
 
 def create_job_post(
     headers: dict,
-    opening_page_id: str,
+    opening_info: dict,
     channel: str,
-    prefix: str,
-    job_code: str,
-    intake_form_url: str = None,
     dry_run: bool = False,
 ) -> dict:
     """
     Create a single job post page in the Job Posts DB.
 
+    Sequence: create page (properties only) → set Post ID → compute
+    submission URL → load template with variables → append body blocks
+    → read GEN PostID → update title.
+
     Returns dict with status info.
     """
+    prefix = opening_info["prefix"]
+    job_code = opening_info["job_code"]
+    intake_form_url = opening_info.get("intake_form_url")
+
     result = {
         "channel": channel,
         "status": "pending",
@@ -131,15 +152,15 @@ def create_job_post(
         result["status"] = "dry_run"
         result["title"] = placeholder_title
         print(f"    [DRY RUN] Would create: {placeholder_title}")
+        # Show template variables that would be used
+        for field in ("job_title", "employment_type", "advertised_range", "target_collab_window"):
+            val = opening_info.get(field)
+            if val:
+                print(f"    [DRY RUN] {field}: {val}")
         return result
 
     try:
-        # Load template
-        template = get_template(job_code, channel)
-        body_blocks = template["body_blocks"]
-        print(f"    [TEMPLATE] Using: {template['source']}")
-
-        # Build page creation payload
+        # Step 1: Create page — properties only, NO children
         payload = {
             "parent": {"database_id": JOB_POSTS_DB_ID},
             "properties": {
@@ -147,7 +168,7 @@ def create_job_post(
                     "title": [{"text": {"content": placeholder_title}}],
                 },
                 "Opening": {
-                    "relation": [{"id": opening_page_id}],
+                    "relation": [{"id": opening_info["page_id"]}],
                 },
                 "Post Channel": {
                     "select": {"name": channel},
@@ -158,25 +179,19 @@ def create_job_post(
             },
         }
 
-        # Set intake form URL if available (url type in DB2)
         if intake_form_url:
             payload["properties"]["Opening Base In-take form"] = {
                 "url": intake_form_url,
             }
             print(f"    [INTAKE] Set form URL: {intake_form_url}")
 
-        # Add body blocks if template provided content
-        if body_blocks:
-            payload["children"] = body_blocks
-
-        # Create the page
         print(f"    [CREATE] Creating page...")
         created_page = create_page(headers, payload)
         new_page_id = created_page["id"]
         result["page_id"] = new_page_id
         print(f"    [CREATE] Page created: {new_page_id}")
 
-        # Set Post ID (page ID without dashes)
+        # Step 2: Set Post ID (page ID without dashes)
         post_id_value = new_page_id.replace("-", "")
         update_page_properties(headers, new_page_id, {
             "Post ID": {
@@ -185,7 +200,35 @@ def create_job_post(
         })
         print(f"    [POST ID] Set to: {post_id_value}")
 
-        # Read back page to get GEN PostID formula value
+        # Step 3: Compute submission form URL
+        submission_form_url = ""
+        if intake_form_url:
+            submission_form_url = f"{intake_form_url}?id={post_id_value}"
+            print(f"    [SUBMISSION] {submission_form_url}")
+
+        # Step 4: Build template variables
+        variables = {
+            "job_title": opening_info.get("job_title") or "",
+            "employment_type": opening_info.get("employment_type") or "",
+            "advertised_range": opening_info.get("advertised_range") or "",
+            "target_collab_window": opening_info.get("target_collab_window") or "",
+            "submission_form_url": submission_form_url,
+            "post_id": post_id_value,
+            "prefix": prefix,
+            "channel": channel,
+        }
+
+        # Step 5: Load template with variable substitution
+        template = get_template(job_code, channel, variables=variables)
+        body_blocks = template["body_blocks"]
+        print(f"    [TEMPLATE] Using: {template['source']}")
+
+        # Step 6: Append body blocks to page
+        if body_blocks:
+            append_blocks(headers, new_page_id, body_blocks)
+            print(f"    [BLOCKS] Appended {len(body_blocks)} blocks")
+
+        # Step 7: Read back page to get GEN PostID formula value
         gen_post_id = None
         for attempt in range(3):
             time.sleep(1)
@@ -203,7 +246,6 @@ def create_job_post(
             final_title = gen_post_id
             print(f"    [TITLE] Updating to GEN PostID: {final_title}")
         else:
-            # Fallback: construct manually
             short_id = post_id_value[:8]
             final_title = f"{prefix}-{channel}-{short_id}"
             print(f"    [TITLE] GEN PostID unavailable, using fallback: {final_title}")
@@ -237,6 +279,10 @@ def process_opening(headers: dict, opening: dict, dry_run: bool = False) -> list
     print(f"  Channels: {', '.join(info['channels']) or '(none)'}")
     if info.get("intake_form_url"):
         print(f"  Intake Form: {info['intake_form_url']}")
+    if info.get("job_title"):
+        print(f"  Job Title: {info['job_title']}")
+    if info.get("advertised_range"):
+        print(f"  Advertised Range: {info['advertised_range']}")
 
     if not info["channels"]:
         print(f"  [SKIP] No Post Channels configured")
@@ -247,11 +293,8 @@ def process_opening(headers: dict, opening: dict, dry_run: bool = False) -> list
         print(f"\n  --- Channel: {channel} ---")
         result = create_job_post(
             headers=headers,
-            opening_page_id=info["page_id"],
+            opening_info=info,
             channel=channel,
-            prefix=info["prefix"],
-            job_code=info["job_code"],
-            intake_form_url=info.get("intake_form_url"),
             dry_run=dry_run,
         )
         results.append(result)

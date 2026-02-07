@@ -254,7 +254,7 @@ See `.claude/skills/update-resume-screener/SKILL.md` for detailed step-by-step g
 
 Located in `.claude/skills/update-job-posts/`:
 
-Creates job post pages in the Job Posts DB for each Open opening in the Ally Openings DB, one per Post Channel (OLJ, Jobstreet, Facebook, Internal) with platform-specific template content.
+Creates job post pages in the Job Posts DB for each Open opening in the Ally Openings DB, one per Post Channel (OLJ, Jobstreet, Facebook, Internal) with platform-specific template content and `{{variable}}` substitution.
 
 ### Workflow
 
@@ -279,11 +279,27 @@ python3.11 .claude/skills/update-job-posts/workflows/update_job_posts.py --dry-r
 ### How It Works
 
 1. Queries Ally Openings DB for Status = "Open"
-2. Extracts job code from title prefix (e.g., "EP" from "251003-EP")
-3. For each Post Channel, loads template by (job_code, channel)
-4. Creates page in Job Posts DB with: relation, channel, status, body blocks
-5. Reads back GEN PostID formula and updates title to match
-6. Sets Post ID to page ID (no dashes)
+2. Extracts job code, metadata fields (job title, employment type, advertised range, collaboration window, intake form URL)
+3. For each Post Channel:
+   a. Creates page in Job Posts DB (properties only, no body)
+   b. Sets Post ID (page ID without dashes)
+   c. Computes submission form URL = intake_form_url + "?id=" + post_id
+   d. Loads template with `{{variable}}` substitution
+   e. Appends body blocks to the page
+   f. Reads back GEN PostID formula and updates title to match
+
+### Template Variables
+
+| Variable | Source |
+|----------|--------|
+| `{{job_title}}` | Openings DB "Job Title" |
+| `{{employment_type}}` | Openings DB "Employment Type" |
+| `{{advertised_range}}` | Openings DB "Advertised Range" |
+| `{{target_collab_window}}` | Openings DB "Target Collaboration Window" |
+| `{{submission_form_url}}` | Computed: intake_form_url + "?id=" + post_id |
+| `{{post_id}}` | Page ID without dashes |
+| `{{prefix}}` | Opening prefix (e.g., "251003-EP") |
+| `{{channel}}` | Channel name |
 
 ### Notion Databases
 
@@ -291,6 +307,11 @@ python3.11 .claude/skills/update-job-posts/workflows/update_job_posts.py --dry-r
 - `Opening ID & Name` (title)
 - `Post Channels` (multi_select): OLJ, Jobstreet, Facebook, Internal
 - `Status` (status): filter for "Open"
+- `Opening Base In-Take Form` (rich_text): base URL for intake form
+- `Job Title` (rich_text): advertised job title
+- `Employment Type` (rich_text): e.g., "Full-Time"
+- `Advertised Range` (rich_text): e.g., "$1,100 USD - $1,200 USD"
+- `Target Collaboration Window` (rich_text): e.g., "9:00 AM - 6:00 PM HKT"
 
 **Job Posts DB** (`28c2b7ec459780c6a4b6c047caf8c5fe`):
 - `Job Post Title` (title): set to GEN PostID formula value
@@ -298,10 +319,14 @@ python3.11 .claude/skills/update-job-posts/workflows/update_job_posts.py --dry-r
 - `Post Channel` (select): channel name
 - `Status` (status): set to "Drafting"
 - `Post ID` (rich_text): page ID without dashes
+- `Opening Base In-take form` (url): intake form URL
 
 ### Templates
 
-Platform-specific markdown templates in `templates/`:
+Platform-specific markdown templates in `templates/`, each with two sections:
+1. **Platform Metadata** — Form fields for the person posting
+2. **Job Post Copy** — The actual post content with `{{variable}}` placeholders
+
 - EP: `EP-OLJ.md`, `EP-Jobstreet.md`, `EP-Facebook.md`, `EP-Internal.md`
 - EPP: `EPP-OLJ.md`, `EPP-Jobstreet.md`, `EPP-Facebook.md`, `EPP-Internal.md`
 - Fallback: `_default.md`

@@ -92,13 +92,14 @@ def markdown_to_notion_blocks(md_text: str) -> list[dict]:
     return blocks
 
 
-def get_template(job_code: str, channel: str) -> dict:
+def get_template(job_code: str, channel: str, variables: dict = None) -> dict:
     """
     Load a template by (job_code, channel) and convert to Notion blocks.
 
     Args:
         job_code: Job type code (e.g., "EP", "EPP") — case-insensitive
         channel: Post channel name (e.g., "OLJ", "Jobstreet") — case-insensitive
+        variables: Optional dict of {{key}} -> value replacements
 
     Returns:
         dict with "body_blocks" (list of Notion block objects) and "source" (filename)
@@ -122,6 +123,12 @@ def get_template(job_code: str, channel: str) -> dict:
         return {"body_blocks": [], "source": "none"}
 
     md_text = filepath.read_text(encoding="utf-8")
+
+    # Replace {{variable}} placeholders
+    if variables:
+        for key_name, value in variables.items():
+            md_text = md_text.replace("{{" + key_name + "}}", value or "")
+
     blocks = markdown_to_notion_blocks(md_text)
 
     return {"body_blocks": blocks, "source": filename}

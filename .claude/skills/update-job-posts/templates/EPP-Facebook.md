@@ -1,17 +1,29 @@
-# EPP Product Associate — Facebook
+# Platform Metadata — Facebook
+
+- Job title: {{job_title}}
+- Post type: Job listing
+- Work location: Remote
+- Employment type: {{employment_type}}
+- Compensation: {{advertised_range}}
 
 ---
 
-## About the Role
+# EXTERNAL JOB POST
 
-We are hiring an EPP Product Associate to support product operations remotely.
+## EPP Product Associate
+
+{{employment_type}} | Remote | Starting at {{advertised_range}}/month
+
+## About Ally
+
+Ally helps founders and leaders scale themselves before they scale their companies. We match partners with fast-growing e-commerce and creative businesses -- blending human judgment with modern AI systems.
 
 ## What You'll Do
 
 - Support product development and operations workflows
 - Assist with project coordination and stakeholder communication
 - Maintain product documentation and process guides
-- Conduct research and analysis
+- Conduct research and analysis to support product decisions
 - Collaborate with cross-functional teams
 
 ## What We're Looking For
@@ -22,6 +34,13 @@ We are hiring an EPP Product Associate to support product operations remotely.
 - Proficiency with productivity and project management tools
 - Detail-oriented with ability to manage multiple priorities
 
-## How to Apply
+## What You'll Get
 
-Send your resume and a short message about your experience.
+- Starting at {{advertised_range}}/month
+- Fully remote setup
+- Mentorship and clear growth paths
+- {{target_collab_window}}
+
+### How to Apply
+
+Apply here: {{submission_form_url}}

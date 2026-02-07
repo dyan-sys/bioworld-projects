@@ -1,12 +1,22 @@
-# Job Post
+# Platform Metadata
 
-This is a placeholder job post. Replace this content with the actual job posting copy.
+- Opening: {{prefix}}
+- Job title: {{job_title}}
+- Channel: {{channel}}
+- Employment type: {{employment_type}}
+- Compensation: {{advertised_range}}
 
 ---
 
+# JOB POST
+
+## {{job_title}}
+
+{{employment_type}} | Remote | {{advertised_range}}
+
 ## About the Role
 
-[Role description goes here]
+[Replace this section with the actual job description for this role.]
 
 ## Responsibilities
 
@@ -22,4 +32,4 @@ This is a placeholder job post. Replace this content with the actual job posting
 
 ## How to Apply
 
-[Application instructions]
+Apply at {{submission_form_url}}
