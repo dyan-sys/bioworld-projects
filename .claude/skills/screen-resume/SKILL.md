@@ -5,7 +5,7 @@ description: Trigger when user mentions screening resumes, scoring candidates, r
 
 # Resume Screening Skill
 
-This project has an automated resume screening pipeline that scores Executive Partner candidates against a weighted rubric and writes results to Notion.
+This project has an automated resume screening pipeline that scores candidates against job-specific weighted rubrics and writes results to Notion. Supports multiple roles including Executive Partner, EPP Product Associate, and Client Partnership Lead.
 
 ## Recommended Screener
 
@@ -27,7 +27,8 @@ The Kimi screener automatically selects the appropriate rubric based on the Open
 | Job Type Code | Job Title | Rubric File |
 |---------------|-----------|-------------|
 | EP | Executive Partner | `resume-scorer-v4.md` (default) |
-| EPP | EPP Product Associate | `resume-scorer-epp.md` (TBD) |
+| EPP | EPP Product Associate | `resume-scorer-epp.md` |
+| CPL | Client Partnership Lead | `resume-scorer-cpl.md` |
 
 **How it works:**
 1. Screener reads the "Post" relation from candidate

@@ -117,7 +117,8 @@ The Kimi screener supports multiple job-specific rubrics based on Opening ID fro
 | Job Type Code | Job Title | Rubric File |
 |---------------|-----------|-------------|
 | EP | Executive Partner | resume-scorer-v4.md |
-| EPP | EPP Product Associate | resume-scorer-epp.md (TBD) |
+| EPP | EPP Product Associate | resume-scorer-epp.md |
+| CPL | Client Partnership Lead | resume-scorer-cpl.md |
 
 **How It Works:**
 1. Screener reads "Post" relation from candidate's Notion page
@@ -147,14 +148,37 @@ The Kimi screener supports multiple job-specific rubrics based on Opening ID fro
 
 ### Templates
 
-#### Resume Scorer V4
+#### Resume Scorer V4 (Executive Partner)
 **File:** `.claude/skills/screen-resume/templates/resume-scorer-v4.md`
 
 Comprehensive scoring rubric for Executive Partner candidates:
 - 6 buckets: Education, Experience, Skills, Communication, Context, Other
 - Weighted scoring (0-100 scale)
 - 3 thresholds: Experience ≥10, Skills ≥5, Communication ≥2
+- Age override: >36 caps recommendation at PROCEED WITH CAUTION
 - Recommendation tiers: STRONG PROCEED → DO NOT PROCEED
+
+#### Resume Scorer EPP (Product Associate)
+**File:** `.claude/skills/screen-resume/templates/resume-scorer-epp.md`
+
+Product Associate rubric focusing on eCommerce operations:
+- 6 buckets: Education, Experience, Skills, Communication, Context, Other
+- Weighted scoring (0-100 scale)
+- 3 thresholds: Experience ≥8, Skills ≥10, Communication ≥2
+- Key criteria: Mandarin fluency (0-3 pts), vendor management, eCommerce experience
+- Age override: >36 caps recommendation at PROCEED WITH CAUTION
+- Adapted for international universities (Philippines, Malaysia, etc.)
+
+#### Resume Scorer CPL (Client Partnership Lead)
+**File:** `.claude/skills/screen-resume/templates/resume-scorer-cpl.md`
+
+Client Partnership Lead rubric for operations leadership:
+- 6 buckets: Education, Experience, Skills, Communication, Context, Other
+- Weighted scoring (0-100 scale)
+- 3 thresholds: Experience ≥10, Skills ≥8, Communication ≥2
+- Priority: Brand name companies (Athena, TaskUs, etc.), people management depth
+- Key criteria: 2+ years coaching/management, client success operations, US/EU exposure
+- Target calibration: ~80-85 for strong Operations Manager with 10+ years at premium agencies
 
 ### Data Architecture
 
@@ -166,6 +190,65 @@ local-data/talent/
     ├── {CandidateName}_Claude.json
     └── {CandidateName}_Kimi.json
 ```
+
+## Update Resume Screener Skill
+
+Located in `.claude/skills/update-resume-screener/`:
+
+Documents the repeatable process for adding new job-specific scoring rubrics when Ally launches new roles. This is a process documentation skill, not an automated workflow.
+
+### When to Use
+
+Use this process when:
+- Launching a new job opening that requires different scoring criteria than existing roles (EP, EPP, CPL)
+- The new role has distinct requirements (different skills, experience, or context knowledge)
+- You want consistent, calibrated scoring for the new role
+
+### Process Overview
+
+**10-step process:**
+1. Gather requirements (JD, Opening ID, reference candidates, target score)
+2. Design rubric structure (adapt from existing EP/EPP/CPL rubrics)
+3. Set thresholds (experience, skills, communication minimums)
+4. Define overrides (age, company tier, special rules)
+5. Calibrate with reference candidates (target: 75-85 for strong fits)
+6. Create rubric file (`templates/resume-scorer-{code}.md`)
+7. Add job type mapping (`templates/job-type-mapping.json`)
+8. Test with Kimi screener (verify scoring and rubric loading)
+9. Test with diverse candidates (strong, weak, borderline)
+10. Update documentation (CLAUDE.md, SKILL.md)
+
+### Key Principles
+
+- **Start with reference candidates** - Easier to calibrate with real examples
+- **Adapt existing rubrics** - Copy structure from similar roles (EP for operations, EPP for product, CPL for leadership)
+- **Balance bucket weights** - Avoid over-weighting optional skills
+- **Test thoroughly** - Verify with 3+ candidates before production use
+- **Document calibration** - Add target scores and reference candidate details
+
+### Files Modified
+
+When adding a new rubric:
+- `templates/resume-scorer-{code}.md` - CREATE new rubric
+- `templates/job-type-mapping.json` - EDIT to add mapping
+- `CLAUDE.md` - EDIT to update documentation (2 sections)
+- `.claude/skills/screen-resume/SKILL.md` - EDIT to update skill docs
+
+No code changes needed - screening system auto-detects new rubrics.
+
+### Examples
+
+**CPL (Client Partnership Lead):**
+- Priority: Brand name companies (Athena, TaskUs)
+- Target: 80-85 for Operations Manager with 10+ years
+- Reference: Shariebel scored 84.03 ✅
+
+**EPP (Product Associate):**
+- Priority: Mandarin fluency (0-3 pts), eCommerce experience
+- Target: 75-85 for product coordinator with 5+ years
+- Reference: LOW KAH WEI scored 83.75 ✅
+
+See `.claude/skills/update-resume-screener/SKILL.md` for detailed step-by-step guide.
 
 ## Update Job Posts Skill
 

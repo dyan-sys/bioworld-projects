@@ -9,6 +9,10 @@
     "EPP": {
       "title": "EPP Product Associate",
       "rubric": "resume-scorer-epp.md"
+    },
+    "CPL": {
+      "title": "Client Partnership Lead",
+      "rubric": "resume-scorer-cpl.md"
     }
   },
   "default": {
