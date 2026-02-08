@@ -132,3 +132,29 @@ def get_template(job_code: str, channel: str, variables: dict = None) -> dict:
     blocks = markdown_to_notion_blocks(md_text)
 
     return {"body_blocks": blocks, "source": filename}
+
+
+def get_email_template(job_code: str, channel: str, variables: dict = None) -> dict:
+    """
+    Load an email reply template by (job_code, channel).
+
+    Looks for {JOBCODE}-{Channel}-email.md. Returns plain text (not blocks)
+    for writing to a Notion rich_text property.
+
+    Returns:
+        dict with "text" (rendered plain text) and "source" (filename),
+        or None if no email template exists for this combination.
+    """
+    filename = f"{job_code.upper()}-{channel.capitalize()}-email.md"
+    filepath = TEMPLATES_DIR / filename
+
+    if not filepath.exists():
+        return None
+
+    text = filepath.read_text(encoding="utf-8")
+
+    if variables:
+        for key_name, value in variables.items():
+            text = text.replace("{{" + key_name + "}}", value or "")
+
+    return {"text": text.strip(), "source": filename}

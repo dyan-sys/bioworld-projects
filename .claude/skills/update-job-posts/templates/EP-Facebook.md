@@ -12,7 +12,9 @@
 
 ## Virtual Executive Assistant
 
-Full-Time | Remote | Starting at {{advertised_range}}/month
+Full-Time | Remote | Starting at {{advertised_range}}
+
+Shortlisted candidates may be hired by {{hiring_target_date}}.
 
 Be the trusted partner who helps leaders scale with clarity, speed, and structure.
 
@@ -41,7 +43,7 @@ We're not a traditional VA agency. We're a modern operating partner helping glob
 
 ## What You'll Get
 
-- Starting at {{advertised_range}}/month
+- Starting at {{advertised_range}}
 - Direct access to global founders and operators
 - Mentorship and clear growth paths
 - Fully remote setup

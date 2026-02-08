@@ -14,6 +14,8 @@
 
 {{employment_type}} | Remote | {{advertised_range}}
 
+Shortlisted candidates may be hired by {{hiring_target_date}}.
+
 ## About the Role
 
 [Replace this section with the actual job description for this role.]

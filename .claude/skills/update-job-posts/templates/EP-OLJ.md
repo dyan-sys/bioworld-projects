@@ -13,9 +13,9 @@
 
 ## Virtual Executive Assistant
 
-Full-Time | Remote | Starting rate {{advertised_range}} per month
+Full-Time | Remote | Starting rate {{advertised_range}}
 
-Shortlisted candidates may be hired within 2 weeks.
+Shortlisted candidates may be hired by {{hiring_target_date}}.
 
 ## Fast-Track Hiring: Apply Now
 
@@ -58,7 +58,7 @@ This is not a typical admin VA role. You'll work closely with business leaders, 
 
 ## What You'll Get
 
-- Attractive starting rate and grow fast -- starting at {{advertised_range}}/month
+- Attractive starting rate and grow fast -- starting at {{advertised_range}}
 - Direct access to global founders and operators
 - Mentorship and clear growth paths
 - Fully remote setup

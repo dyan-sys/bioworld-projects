@@ -12,7 +12,9 @@
 
 ## EPP Product Associate
 
-{{employment_type}} | Remote | Starting at {{advertised_range}}/month
+{{employment_type}} | Remote | Starting at {{advertised_range}}
+
+Shortlisted candidates may be hired by {{hiring_target_date}}.
 
 ## About Ally
 
@@ -36,7 +38,7 @@ Ally helps founders and leaders scale themselves before they scale their compani
 
 ## What You'll Get
 
-- Starting at {{advertised_range}}/month
+- Starting at {{advertised_range}}
 - Fully remote setup
 - Mentorship and clear growth paths
 - {{target_collab_window}}

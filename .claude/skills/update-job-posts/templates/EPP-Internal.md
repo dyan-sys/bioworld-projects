@@ -13,7 +13,9 @@
 
 ## EPP Product Associate — Internal Referral
 
-{{employment_type}} | Remote | Starting at {{advertised_range}}/month
+{{employment_type}} | Remote | Starting at {{advertised_range}}
+
+Shortlisted candidates may be hired by {{hiring_target_date}}.
 
 ## Role Summary
 

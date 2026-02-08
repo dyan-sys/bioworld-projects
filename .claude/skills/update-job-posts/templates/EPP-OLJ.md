@@ -13,7 +13,9 @@
 
 ## EPP Product Associate
 
-{{employment_type}} | Remote | Starting rate {{advertised_range}} per month
+{{employment_type}} | Remote | Starting rate {{advertised_range}}
+
+Shortlisted candidates may be hired by {{hiring_target_date}}.
 
 ## About Ally
 
@@ -41,7 +43,7 @@ As a Product Associate, you'll support product development and operations workfl
 
 ## What You'll Get
 
-- Starting at {{advertised_range}}/month
+- Starting at {{advertised_range}}
 - Direct access to global founders and operators
 - Mentorship and clear growth paths
 - Fully remote setup

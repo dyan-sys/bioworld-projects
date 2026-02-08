@@ -6,7 +6,7 @@
 - Work type: {{employment_type}}
 - Pay type: Monthly
 - Pay range (Currency): PHP
-- Pay range: {{advertised_range}}
+- Pay range: {{advertised_range_local}}
 - Pay shown on ad: Show range on the ad
 
 ---
@@ -15,9 +15,9 @@
 
 ## Virtual Executive Assistant
 
-💼 Full-Time | Remote | Starting rate {{advertised_range}} per month
+💼 Full-Time | Remote | Starting rate {{advertised_range}}
 
-Shortlisted candidates may be hired within 2 weeks.
+Shortlisted candidates may be hired by {{hiring_target_date}}.
 
 ## 🚀 Fast-Track Hiring: Apply Now
 
@@ -60,7 +60,7 @@ This is not a typical admin VA role. You'll work closely with business leaders, 
 
 ## 💡 What You'll Get
 
-- Attractive starting rate and grow fast -- starting at {{advertised_range}}/month
+- Attractive starting rate and grow fast -- starting at {{advertised_range}}
 - Direct access to global founders and operators
 - Mentorship and clear growth paths
 - Fully remote setup
@@ -71,17 +71,10 @@ This is not a typical admin VA role. You'll work closely with business leaders, 
 
 Click Apply Now on JobStreet.
 
-Shortlisted candidates will be asked to complete a screening questionnaire at {{submission_form_url}}, including a short video introduction.
+Shortlisted candidates will be asked to complete a screening questionnaire by invitation only, including a short video introduction.
 
 ---
 
 If you thrive on structure, clarity, and making teams better -- this is your next big step.
 
 Apply today and help us shape the future of global business operations.
-
----
-
-# JOBSTREET — QUALIFYING QUESTIONS
-
-- Do you have at least 1 year of Virtual Assistant experience?
-- Do you have at least 1 year of Executive Virtual Assistant experience?

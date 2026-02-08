@@ -13,7 +13,9 @@
 
 ## Executive Partner — Internal Referral
 
-Full-Time | Remote | Starting at {{advertised_range}}/month
+Full-Time | Remote | Starting at {{advertised_range}}
+
+Shortlisted candidates may be hired by {{hiring_target_date}}.
 
 ## Role Summary
 

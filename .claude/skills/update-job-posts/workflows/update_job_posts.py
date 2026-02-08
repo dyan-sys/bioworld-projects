@@ -16,6 +16,7 @@ Usage:
 """
 
 import argparse
+from datetime import datetime, timedelta, timezone
 import os
 import sys
 import time
@@ -37,7 +38,7 @@ from libraries.notion_helpers import (
     query_open_openings,
     update_page_properties,
 )
-from libraries.template_registry import get_template
+from libraries.template_registry import get_email_template, get_template
 
 # Load .env
 load_dotenv(PROJECT_ROOT / ".env")
@@ -103,6 +104,7 @@ def extract_opening_info(page: dict) -> dict:
     job_title = _get_rich_text(properties, "Job Title")
     employment_type = _get_rich_text(properties, "Employment Type")
     advertised_range = _get_rich_text(properties, "Advertised Range")
+    advertised_range_local = _get_rich_text(properties, "Advertised Range (Local)")
     target_collab_window = _get_rich_text(properties, "Target Collaboration Window")
 
     return {
@@ -115,6 +117,7 @@ def extract_opening_info(page: dict) -> dict:
         "job_title": job_title,
         "employment_type": employment_type,
         "advertised_range": advertised_range,
+        "advertised_range_local": advertised_range_local,
         "target_collab_window": target_collab_window,
     }
 
@@ -207,12 +210,21 @@ def create_job_post(
             print(f"    [SUBMISSION] {submission_form_url}")
 
         # Step 4: Build template variables
+        # Use local range if available, otherwise fall back to USD range
+        advertised_range = opening_info.get("advertised_range") or ""
+        advertised_range_local = opening_info.get("advertised_range_local") or ""
+        # Hiring target date: 14 calendar days from now in SGT (UTC+8)
+        sgt = timezone(timedelta(hours=8))
+        hiring_target = datetime.now(sgt) + timedelta(days=14)
+        hiring_target_date = hiring_target.strftime("%b %d, %Y").replace(" 0", " ")
         variables = {
             "job_title": opening_info.get("job_title") or "",
             "employment_type": opening_info.get("employment_type") or "",
-            "advertised_range": opening_info.get("advertised_range") or "",
+            "advertised_range": advertised_range,
+            "advertised_range_local": advertised_range_local or advertised_range,
             "target_collab_window": opening_info.get("target_collab_window") or "",
             "submission_form_url": submission_form_url,
+            "hiring_target_date": hiring_target_date,
             "post_id": post_id_value,
             "prefix": prefix,
             "channel": channel,
@@ -227,6 +239,16 @@ def create_job_post(
         if body_blocks:
             append_blocks(headers, new_page_id, body_blocks)
             print(f"    [BLOCKS] Appended {len(body_blocks)} blocks")
+
+        # Step 6b: Load email reply template and write to Notion
+        email_tpl = get_email_template(job_code, channel, variables=variables)
+        if email_tpl:
+            update_page_properties(headers, new_page_id, {
+                "Reply Email Template": {
+                    "rich_text": [{"text": {"content": email_tpl["text"]}}],
+                },
+            })
+            print(f"    [EMAIL] Set reply template from: {email_tpl['source']}")
 
         # Step 7: Read back page to get GEN PostID formula value
         gen_post_id = None

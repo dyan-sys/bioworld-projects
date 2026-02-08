@@ -6,7 +6,7 @@
 - Work type: {{employment_type}}
 - Pay type: Monthly
 - Pay range (Currency): PHP
-- Pay range: {{advertised_range}}
+- Pay range: {{advertised_range_local}}
 - Pay shown on ad: Show range on the ad
 
 ---
@@ -15,7 +15,9 @@
 
 ## EPP Product Associate
 
-{{employment_type}} | Remote | Starting rate {{advertised_range}} per month
+{{employment_type}} | Remote | Starting rate {{advertised_range}}
+
+Shortlisted candidates may be hired by {{hiring_target_date}}.
 
 ## About Ally
 
@@ -43,7 +45,7 @@ As a Product Associate, you'll support product development and operations workfl
 
 ## What You'll Get
 
-- Starting at {{advertised_range}}/month
+- Starting at {{advertised_range}}
 - Direct access to global founders and operators
 - Mentorship and clear growth paths
 - Fully remote setup
@@ -53,4 +55,4 @@ As a Product Associate, you'll support product development and operations workfl
 
 Click Apply Now on JobStreet.
 
-Shortlisted candidates will be asked to complete a screening questionnaire at {{submission_form_url}}.
+Shortlisted candidates will be asked to complete a screening questionnaire by invitation only.
