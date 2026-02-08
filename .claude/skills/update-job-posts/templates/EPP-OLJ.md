@@ -11,7 +11,7 @@
 
 # EXTERNAL JOB POST
 
-## EPP Product Associate
+## {{job_title}}
 
 {{employment_type}} | Remote | Starting rate {{advertised_range}}
 

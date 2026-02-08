@@ -11,7 +11,7 @@
 
 # INTERNAL JOB POST
 
-## Executive Partner — Internal Referral
+## {{job_title}} — Internal Referral
 
 Full-Time | Remote | Starting at {{advertised_range}}
 

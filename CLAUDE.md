@@ -279,14 +279,16 @@ python3.11 .claude/skills/update-job-posts/workflows/update_job_posts.py --dry-r
 ### How It Works
 
 1. Queries Ally Openings DB for Status = "Open"
-2. Extracts job code, metadata fields (job title, employment type, advertised range, collaboration window, intake form URL)
+2. Extracts job code, metadata fields (job title, employment type, advertised range, local range, collaboration window, intake form URL)
 3. For each Post Channel:
    a. Creates page in Job Posts DB (properties only, no body)
    b. Sets Post ID (page ID without dashes)
    c. Computes submission form URL = intake_form_url + "?id=" + post_id
-   d. Loads template with `{{variable}}` substitution
-   e. Appends body blocks to the page
-   f. Reads back GEN PostID formula and updates title to match
+   d. Computes hiring target date (today + 14 days in SGT)
+   e. Loads template with `{{variable}}` substitution
+   f. Appends body blocks to the page
+   g. Loads email reply template (if exists) and writes to "Reply Email Template" field
+   h. Reads back GEN PostID formula and updates title to match
 
 ### Template Variables
 
@@ -295,11 +297,20 @@ python3.11 .claude/skills/update-job-posts/workflows/update_job_posts.py --dry-r
 | `{{job_title}}` | Openings DB "Job Title" |
 | `{{employment_type}}` | Openings DB "Employment Type" |
 | `{{advertised_range}}` | Openings DB "Advertised Range" |
+| `{{advertised_range_local}}` | Openings DB "Advertised Range (Local)" — falls back to USD range if empty |
 | `{{target_collab_window}}` | Openings DB "Target Collaboration Window" |
+| `{{hiring_target_date}}` | Computed: today + 14 days in SGT (e.g., "Feb 22, 2026") |
 | `{{submission_form_url}}` | Computed: intake_form_url + "?id=" + post_id |
 | `{{post_id}}` | Page ID without dashes |
 | `{{prefix}}` | Opening prefix (e.g., "251003-EP") |
 | `{{channel}}` | Channel name |
+
+### Email Reply Templates
+
+Jobstreet posts include a pre-formatted reply email written to the "Reply Email Template" rich_text field. Templates follow the naming convention `{JOBCODE}-{Channel}-email.md`.
+
+- `EP-Jobstreet-email.md` — EP reply with local pay range and submission URL
+- `EPP-Jobstreet-email.md` — EPP reply with Mandarin requirement note
 
 ### Notion Databases
 
@@ -310,8 +321,9 @@ python3.11 .claude/skills/update-job-posts/workflows/update_job_posts.py --dry-r
 - `Opening Base In-Take Form` (rich_text): base URL for intake form
 - `Job Title` (rich_text): advertised job title
 - `Employment Type` (rich_text): e.g., "Full-Time"
-- `Advertised Range` (rich_text): e.g., "$1,100 USD - $1,200 USD"
-- `Target Collaboration Window` (rich_text): e.g., "9:00 AM - 6:00 PM HKT"
+- `Advertised Range` (rich_text): e.g., "USD $1,000 - $1,200 per month"
+- `Advertised Range (Local)` (rich_text): e.g., "PHP 55,000 - PHP 70,000 per month"
+- `Target Collaboration Window` (rich_text): e.g., "Asia / US Time Zone"
 
 **Job Posts DB** (`28c2b7ec459780c6a4b6c047caf8c5fe`):
 - `Job Post Title` (title): set to GEN PostID formula value
@@ -320,6 +332,7 @@ python3.11 .claude/skills/update-job-posts/workflows/update_job_posts.py --dry-r
 - `Status` (status): set to "Drafting"
 - `Post ID` (rich_text): page ID without dashes
 - `Opening Base In-take form` (url): intake form URL
+- `Reply Email Template` (rich_text): pre-formatted reply email for Jobstreet
 
 ### Templates
 
@@ -330,6 +343,10 @@ Platform-specific markdown templates in `templates/`, each with two sections:
 - EP: `EP-OLJ.md`, `EP-Jobstreet.md`, `EP-Facebook.md`, `EP-Internal.md`
 - EPP: `EPP-OLJ.md`, `EPP-Jobstreet.md`, `EPP-Facebook.md`, `EPP-Internal.md`
 - Fallback: `_default.md`
+
+**Channel-specific behavior:**
+- **Jobstreet**: Uses "by invitation only" instead of submission URL in post body; uses `{{advertised_range_local}}` for platform pay range
+- **OLJ, Facebook, Internal**: Shows `{{submission_form_url}}` directly in post body
 
 **Adding New Templates:**
 1. Create `{JOBCODE}-{Channel}.md` in `templates/`

@@ -13,7 +13,7 @@
 
 # 🌍 EXTERNAL JOB POST
 
-## Virtual Executive Assistant
+## {{job_title}}
 
 💼 Full-Time | Remote | Starting rate {{advertised_range}}
 

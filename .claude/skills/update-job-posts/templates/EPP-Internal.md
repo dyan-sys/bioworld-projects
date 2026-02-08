@@ -11,7 +11,7 @@
 
 # INTERNAL JOB POST
 
-## EPP Product Associate — Internal Referral
+## {{job_title}} — Internal Referral
 
 {{employment_type}} | Remote | Starting at {{advertised_range}}
 
