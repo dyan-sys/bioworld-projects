@@ -6,3 +6,4 @@ Available skills for Claude Code in this project.
 |-------|-------------|
 | [screen-resume](./screen-resume/SKILL.md) | Score candidate resumes against the Executive Partner rubric using Kimi or Claude. Writes results to Notion. |
 | [update-job-posts](./update-job-posts/SKILL.md) | Create job post pages in the Job Posts DB for Open openings, one per Post Channel with platform-specific templates. |
+| [check-recruit-status](./check-recruit-status/SKILL.md) | Check recruitment pipeline status: pipeline overview, status breakdown, screening backlog, and quality distribution. |

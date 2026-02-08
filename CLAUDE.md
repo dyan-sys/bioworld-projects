@@ -335,6 +335,36 @@ Platform-specific markdown templates in `templates/`, each with two sections:
 1. Create `{JOBCODE}-{Channel}.md` in `templates/`
 2. Add mapping in `libraries/template_registry.py`
 
+## Check Recruit Status Skill
+
+Located in `.claude/skills/check-recruit-status/`:
+
+Queries the Notion Candidates DB and prints a terminal report with 4 key metrics for daily recruitment monitoring.
+
+### Workflow
+
+**File:** `.claude/skills/check-recruit-status/workflows/check_recruit_status.py`
+
+```bash
+# Default (7-day window)
+python3.11 .claude/skills/check-recruit-status/workflows/check_recruit_status.py
+
+# Custom window
+python3.11 .claude/skills/check-recruit-status/workflows/check_recruit_status.py --days 14
+```
+
+**Required:**
+- Environment variables: `NOTION_KEY`, `NOTION_DB_ID`
+- Python 3.11+
+- Dependencies: `requests`, `python-dotenv`
+
+### Metrics
+
+1. **Pipeline Overview** — Total candidates, new in window (configurable days), new today
+2. **Status Breakdown** — Count per status with bar chart and percentage, sorted by count
+3. **Screening Backlog** — Kimi/Claude scored vs unscored with coverage percentage
+4. **Quality Distribution** — Kimi recommendation tier counts (STRONG PROCEED → DO NOT PROCEED)
+
 ## Notion Database Schema
 
 Required properties for candidate database:
