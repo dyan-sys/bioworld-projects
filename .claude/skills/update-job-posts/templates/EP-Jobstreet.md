@@ -11,21 +11,21 @@
 
 ---
 
-# EXTERNAL JOB POST
+# 🌍 EXTERNAL JOB POST
 
 ## Virtual Executive Assistant
 
-Full-Time | Remote | Starting rate {{advertised_range}} per month
+💼 Full-Time | Remote | Starting rate {{advertised_range}} per month
 
 Shortlisted candidates may be hired within 2 weeks.
 
-## Fast-Track Hiring: Apply Now
+## 🚀 Fast-Track Hiring: Apply Now
 
 Be the trusted partner who helps leaders scale with clarity, speed, and structure.
 
 This role is perfect for people who thrive on organization, communication, and making fast-moving teams more effective.
 
-### About Ally
+### ✨ About Ally
 
 Ally helps founders and leaders scale themselves before they scale their companies.
 
@@ -35,13 +35,13 @@ We match Executive Partners (EPs) with fast-growing e-commerce and creative busi
 
 We're not a traditional VA agency. We're a modern operating partner helping global teams run smarter and faster.
 
-## The Role
+## 🧭 The Role
 
 As an Executive Partner, you'll act as a thought and execution partner to founders -- managing priorities, creating order, and driving clarity across teams.
 
 This is not a typical admin VA role. You'll work closely with business leaders, run operations, and build reliable systems that help companies scale faster.
 
-## What You'll Do
+## 📋 What You'll Do
 
 - Manage information flow across Slack, Notion, and Email
 - Keep projects and deadlines moving smoothly
@@ -50,7 +50,7 @@ This is not a typical admin VA role. You'll work closely with business leaders, 
 - Use AI tools (ChatGPT, Notion AI, etc.) to automate repetitive work
 - Anticipate founder needs and create focus for high-impact work
 
-## What We're Looking For
+## 🎯 What We're Looking For
 
 - Strong project coordination and stakeholder management skills
 - Organized and systems-oriented -- builds dashboards and SOPs
@@ -58,7 +58,7 @@ This is not a typical admin VA role. You'll work closely with business leaders, 
 - Curious about AI and automation tools
 - Background in e-commerce, creative, or agency environments (nice to have)
 
-## What You'll Get
+## 💡 What You'll Get
 
 - Attractive starting rate and grow fast -- starting at {{advertised_range}}/month
 - Direct access to global founders and operators
@@ -67,7 +67,7 @@ This is not a typical admin VA role. You'll work closely with business leaders, 
 - {{target_collab_window}}
 - Work that truly matters -- every system you build impacts real global brands
 
-### How to Apply
+### 📨 How to Apply
 
 Click Apply Now on JobStreet.
 
