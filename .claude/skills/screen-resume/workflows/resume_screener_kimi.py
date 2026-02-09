@@ -81,9 +81,18 @@ def fetch_notion_page(notion_key: str, page_id: str) -> dict:
 
 def query_notion_candidates(notion_key: str, db_id: str, limit: int = 5) -> list[dict]:
     """
-    Query Notion for candidates where "Kimi Rating" is empty,
-    sorted by Date Created (most recent first).
+    Query Notion for candidates matching all criteria:
+    - Kimi Rating is empty (unscored)
+    - Created in last 72 hours
+    - Availability = "Full-time (40 hours/week)"
+    - Time zone contains "Asia"
+    Sorted by Date Created (most recent first).
     """
+    from datetime import datetime, timedelta, timezone
+
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=72)
+    cutoff_iso = cutoff.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
     url = f"https://api.notion.com/v1/databases/{db_id}/query"
     headers = {
         "Authorization": f"Bearer {notion_key}",
@@ -92,8 +101,24 @@ def query_notion_candidates(notion_key: str, db_id: str, limit: int = 5) -> list
     }
     payload = {
         "filter": {
-            "property": "Kimi Rating",
-            "rich_text": {"is_empty": True},
+            "and": [
+                {
+                    "property": "Kimi Rating",
+                    "rich_text": {"is_empty": True},
+                },
+                {
+                    "timestamp": "created_time",
+                    "created_time": {"on_or_after": cutoff_iso},
+                },
+                {
+                    "property": "Availability",
+                    "select": {"equals": "Full-time (40 hours/week)"},
+                },
+                {
+                    "property": "Time zone",
+                    "multi_select": {"contains": "Asia"},
+                },
+            ],
         },
         "sorts": [
             {
@@ -576,8 +601,9 @@ def main():
         page = fetch_notion_page(notion_key, args.page_id)
         candidates = [get_candidate_info(page)]
     else:
-        # Batch mode
+        # Batch mode: last 72h, full-time, Asia timezone, unscored
         print(f"  Mode: Batch (limit={args.limit})")
+        print(f"  Filters: last 72h | Full-time | Asia timezone | Kimi unscored")
         candidates_raw = query_notion_candidates(notion_key, notion_db_id, limit=args.limit)
         candidates = [get_candidate_info(c) for c in candidates_raw]
 
