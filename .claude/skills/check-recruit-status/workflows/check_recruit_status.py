@@ -1,15 +1,12 @@
 """
 Check Recruit Status Workflow
 
-Queries the Notion Candidates DB and prints a terminal report with
-4 key metrics: pipeline overview, status breakdown, screening backlog,
-and quality distribution.
+Queries the Notion Candidates DB and prints a Slack-friendly terminal
+report with 7 sections: pipeline overview, candidate breakdown, EP channel
+breakdown, EP conversion funnel, EP channel quality, and screening backlog.
 
 Usage:
-    # Default (7-day window)
     python3.11 check_recruit_status.py
-
-    # Custom window
     python3.11 check_recruit_status.py --days 14
 """
 
@@ -35,15 +32,6 @@ load_dotenv(PROJECT_ROOT / ".env")
 NOTION_API_BASE = "https://api.notion.com/v1"
 SGT = timezone(timedelta(hours=8))  # Singapore Time (UTC+8)
 REPORTS_DIR = PROJECT_ROOT / "local-data" / "talent" / "pipeline_reports"
-
-# Recommendation tiers in display order
-REC_TIERS = [
-    "STRONG PROCEED",
-    "PROCEED",
-    "PROCEED WITH QUESTIONS",
-    "PROCEED WITH CAUTION",
-    "DO NOT PROCEED",
-]
 
 
 def load_env() -> tuple[str, str]:
@@ -72,8 +60,11 @@ def notion_headers(key: str) -> dict:
     }
 
 
-def query_all_candidates(headers: dict, db_id: str) -> list[dict]:
-    """Query all candidates from the Notion DB with pagination."""
+def query_recent_candidates(headers: dict, db_id: str, since_days: int = 60) -> list[dict]:
+    """Query candidates created in the last N days (default 60)."""
+    cutoff = datetime.now(SGT) - timedelta(days=since_days)
+    cutoff_iso = cutoff.strftime("%Y-%m-%d")
+
     url = f"{NOTION_API_BASE}/databases/{db_id}/query"
     all_pages = []
     next_cursor = None
@@ -81,6 +72,10 @@ def query_all_candidates(headers: dict, db_id: str) -> list[dict]:
     while True:
         payload = {
             "page_size": 100,
+            "filter": {
+                "timestamp": "created_time",
+                "created_time": {"on_or_after": cutoff_iso},
+            },
             "sorts": [{"property": "Date Created", "direction": "descending"}],
         }
         if next_cursor:
@@ -99,6 +94,14 @@ def query_all_candidates(headers: dict, db_id: str) -> list[dict]:
     return all_pages
 
 
+def fetch_page(headers: dict, page_id: str) -> dict:
+    """Fetch a single Notion page by ID."""
+    url = f"{NOTION_API_BASE}/pages/{page_id}"
+    response = requests.get(url, headers=headers, timeout=30)
+    response.raise_for_status()
+    return response.json()
+
+
 def extract_candidate(page: dict) -> dict:
     """Extract relevant fields from a raw Notion page."""
     properties = page.get("properties", {})
@@ -111,37 +114,59 @@ def extract_candidate(page: dict) -> dict:
         if title_items:
             name = title_items[0].get("plain_text", "Unknown")
 
-    # Status
-    status = "(No Status)"
-    status_prop = properties.get("Status", {})
-    if status_prop.get("type") == "status":
-        status_obj = status_prop.get("status")
-        if status_obj and status_obj.get("name"):
-            status = status_obj["name"]
-
-    # Created time (from page-level, not property)
+    # Created time (from page-level)
     created_time = page.get("created_time", "")
+
+    # Parse created time to SGT
+    created_sgt = None
+    if created_time:
+        created_sgt = datetime.fromisoformat(
+            created_time.replace("Z", "+00:00")
+        ).astimezone(SGT)
 
     # Kimi Rating (rich_text -> float)
     kimi_rating = _parse_rating(properties, "Kimi Rating")
 
-    # Kimi Recommendation (select)
-    kimi_rec = _parse_select(properties, "Kimi Recommendation")
+    # Post relation ID (for opening breakdown)
+    post_relation_id = None
+    post_prop = properties.get("Post", {})
+    if post_prop.get("type") == "relation":
+        relations = post_prop.get("relation", [])
+        if relations:
+            post_relation_id = relations[0].get("id")
 
-    # Claude Rating (rich_text -> float)
-    claude_rating = _parse_rating(properties, "Claude Rating")
+    # Screener (status) — break out invite type
+    invite_type = None  # None | "sync" | "async"
+    screener_prop = properties.get("Screener", {})
+    if screener_prop.get("type") == "status" and screener_prop.get("status"):
+        screener_name = screener_prop["status"].get("name", "")
+        lower = screener_name.lower()
+        if lower.startswith("to invite"):
+            invite_type = "async" if "async" in lower else "sync"
 
-    # Claude Recommendation (select)
-    claude_rec = _parse_select(properties, "Claude Recommendation")
+    # 1R (status) — proceed if == "Proceed"
+    r1_proceed = False
+    r1_prop = properties.get("1R", {})
+    if r1_prop.get("type") == "status" and r1_prop.get("status"):
+        r1_name = r1_prop["status"].get("name", "")
+        r1_proceed = r1_name == "Proceed"
+
+    # 2R (status) — proceed if == "Proceed"
+    r2_proceed = False
+    r2_prop = properties.get("2R", {})
+    if r2_prop.get("type") == "status" and r2_prop.get("status"):
+        r2_name = r2_prop["status"].get("name", "")
+        r2_proceed = r2_name == "Proceed"
 
     return {
         "name": name,
-        "status": status,
         "created_time": created_time,
+        "created_sgt": created_sgt,
         "kimi_rating": kimi_rating,
-        "kimi_rec": kimi_rec,
-        "claude_rating": claude_rating,
-        "claude_rec": claude_rec,
+        "post_relation_id": post_relation_id,
+        "invite_type": invite_type,
+        "r1_proceed": r1_proceed,
+        "r2_proceed": r2_proceed,
     }
 
 
@@ -160,155 +185,492 @@ def _parse_rating(properties: dict, prop_name: str) -> float | None:
     return None
 
 
-def _parse_select(properties: dict, prop_name: str) -> str | None:
-    """Extract name from a select property."""
-    prop = properties.get(prop_name, {})
-    if prop.get("type") == "select":
-        select_obj = prop.get("select")
-        if select_obj and select_obj.get("name"):
-            return select_obj["name"]
-    return None
+def resolve_post_details(headers: dict, candidates: list[dict]) -> tuple[dict[str, str], dict[str, str]]:
+    """Resolve Post relation IDs to Opening names and Post Channels.
+
+    Returns:
+        (opening_names, post_channels) where each is {post_id: value}.
+    """
+    # Collect unique post IDs
+    post_ids = set()
+    for c in candidates:
+        pid = c.get("post_relation_id")
+        if pid:
+            post_ids.add(pid)
+
+    if not post_ids:
+        return {}, {}
+
+    opening_names = {}   # post_id -> opening name
+    post_channels = {}   # post_id -> channel name
+    print(f"  Resolving {len(post_ids)} post(s) to openings...", end="", flush=True)
+
+    for post_id in post_ids:
+        try:
+            post_page = fetch_page(headers, post_id)
+            post_props = post_page.get("properties", {})
+
+            # Get Post Channel (select) from Post page
+            channel_prop = post_props.get("Post Channel", {})
+            if channel_prop.get("type") == "select" and channel_prop.get("select"):
+                post_channels[post_id] = channel_prop["select"].get("name", "Unknown")
+            else:
+                post_channels[post_id] = "Unknown"
+
+            # Get Opening relation from Post page
+            opening_prop = post_props.get("Opening", {})
+            if opening_prop.get("type") == "relation":
+                relations = opening_prop.get("relation", [])
+                if relations:
+                    opening_id = relations[0].get("id")
+                    opening_page = fetch_page(headers, opening_id)
+                    opening_props = opening_page.get("properties", {})
+
+                    # Get title from Opening
+                    title_prop = opening_props.get("Opening ID & Name", {})
+                    if title_prop.get("type") == "title":
+                        title_items = title_prop.get("title", [])
+                        if title_items:
+                            opening_names[post_id] = title_items[0].get("plain_text", "Unknown Opening")
+                            continue
+
+            opening_names[post_id] = "Unknown Opening"
+        except requests.RequestException:
+            opening_names[post_id] = "(fetch error)"
+            post_channels.setdefault(post_id, "(fetch error)")
+
+    print(" done.")
+    return opening_names, post_channels
 
 
 def compute_pipeline_overview(candidates: list[dict], days: int) -> dict:
-    """Compute pipeline overview: total, new in window, new today."""
-    now = datetime.now(timezone.utc)
-    window_start = now - timedelta(days=days)
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    """Compute pipeline overview using full completed calendar days (SGT)."""
+    now_sgt = datetime.now(SGT)
+    today_start = now_sgt.replace(hour=0, minute=0, second=0, microsecond=0)
 
-    new_in_window = 0
-    new_today = 0
+    # Full calendar days: yesterday vs day before
+    yesterday_start = today_start - timedelta(days=1)
+    day_before_start = today_start - timedelta(days=2)
+
+    # Full completed windows: last N days vs prior N days (excludes today)
+    w_start = today_start - timedelta(days=days)
+    w_prior_start = w_start - timedelta(days=days)
+
+    m_start = today_start - timedelta(days=30)
+    m_prior_start = m_start - timedelta(days=30)
+
+    yesterday = 0
+    day_before = 0
+    in_window = 0
+    in_prior_window = 0
+    in_30d = 0
+    in_prior_30d = 0
 
     for c in candidates:
-        ct = c.get("created_time", "")
-        if not ct:
+        created = c.get("created_sgt")
+        if not created:
             continue
-        created = datetime.fromisoformat(ct.replace("Z", "+00:00"))
-        if created >= window_start:
-            new_in_window += 1
-        if created >= today_start:
-            new_today += 1
+        if yesterday_start <= created < today_start:
+            yesterday += 1
+        if day_before_start <= created < yesterday_start:
+            day_before += 1
+        if w_start <= created < today_start:
+            in_window += 1
+        if w_prior_start <= created < w_start:
+            in_prior_window += 1
+        if m_start <= created < today_start:
+            in_30d += 1
+        if m_prior_start <= created < m_start:
+            in_prior_30d += 1
 
     return {
-        "total": len(candidates),
-        "new_in_window": new_in_window,
-        "new_today": new_today,
+        "yesterday": yesterday,
+        "day_before": day_before,
+        "in_window": in_window,
+        "in_prior_window": in_prior_window,
+        "in_30d": in_30d,
+        "in_prior_30d": in_prior_30d,
     }
 
 
-def compute_status_breakdown(candidates: list[dict]) -> list[tuple[str, int]]:
-    """Count candidates per status, sorted by count descending."""
-    counter = Counter(c["status"] for c in candidates)
+def compute_candidate_breakdown(
+    candidates: list[dict], opening_names: dict[str | None, str]
+) -> list[tuple[str, int]]:
+    """Count candidates per opening for last 7 completed days, sorted desc."""
+    now_sgt = datetime.now(SGT)
+    today_start = now_sgt.replace(hour=0, minute=0, second=0, microsecond=0)
+    cutoff = today_start - timedelta(days=7)
+
+    counter = Counter()
+    for c in candidates:
+        created = c.get("created_sgt")
+        if not created or not (cutoff <= created < today_start):
+            continue
+        pid = c.get("post_relation_id")
+        if pid and pid in opening_names:
+            counter[opening_names[pid]] += 1
+        else:
+            counter["(No Post)"] += 1
     return counter.most_common()
 
 
-def compute_screening_backlog(candidates: list[dict]) -> dict:
-    """Compute screening coverage for Kimi and Claude."""
-    total = len(candidates)
-    kimi_scored = sum(1 for c in candidates if c["kimi_rating"] is not None)
-    claude_scored = sum(1 for c in candidates if c["claude_rating"] is not None)
-    both_scored = sum(1 for c in candidates if c["kimi_rating"] is not None and c["claude_rating"] is not None)
-    neither_scored = sum(1 for c in candidates if c["kimi_rating"] is None and c["claude_rating"] is None)
+def compute_channel_breakdown(
+    candidates: list[dict],
+    opening_names: dict[str, str],
+    post_channels: dict[str, str],
+    role_code: str = "EP",
+) -> dict:
+    """Count candidates by Post Channel for a specific role, for yesterday and last 7d.
+
+    Args:
+        role_code: Job type code to filter on (matched in opening name, e.g. "EP" matches "251003-EP ...").
+    """
+    now_sgt = datetime.now(SGT)
+    today_start = now_sgt.replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday_start = today_start - timedelta(days=1)
+    cutoff_7d = today_start - timedelta(days=7)
+
+    # Build set of post_ids that belong to the target role
+    role_post_ids = set()
+    for pid, name in opening_names.items():
+        # Opening names look like "251003-EP Executive Partner (Full-Time)"
+        # Extract the code after the dash: "EP", "EPP", "CPL", etc.
+        parts = name.split()
+        if parts:
+            prefix = parts[0]  # e.g. "251003-EP"
+            code = prefix.split("-", 1)[1] if "-" in prefix else ""
+            if code == role_code:
+                role_post_ids.add(pid)
+
+    yesterday_counter = Counter()
+    week_counter = Counter()
+
+    for c in candidates:
+        created = c.get("created_sgt")
+        pid = c.get("post_relation_id")
+        if not created or not pid or pid not in role_post_ids:
+            continue
+
+        channel = post_channels.get(pid, "Unknown")
+
+        if yesterday_start <= created < today_start:
+            yesterday_counter[channel] += 1
+        if cutoff_7d <= created < today_start:
+            week_counter[channel] += 1
 
     return {
-        "total": total,
-        "kimi_scored": kimi_scored,
-        "kimi_unscored": total - kimi_scored,
-        "kimi_pct": (kimi_scored / total * 100) if total else 0,
-        "claude_scored": claude_scored,
-        "claude_unscored": total - claude_scored,
-        "claude_pct": (claude_scored / total * 100) if total else 0,
-        "both_scored": both_scored,
-        "neither_scored": neither_scored,
+        "yesterday": yesterday_counter,
+        "7d": week_counter,
     }
 
 
-def compute_quality_distribution(candidates: list[dict]) -> list[tuple[str, int]]:
-    """Count Kimi recommendation tiers in display order."""
-    counter = Counter()
+def _get_ep_post_ids(opening_names: dict[str, str], role_code: str = "EP") -> set:
+    """Return set of post_ids belonging to a role code."""
+    role_post_ids = set()
+    for pid, name in opening_names.items():
+        parts = name.split()
+        if parts:
+            prefix = parts[0]
+            code = prefix.split("-", 1)[1] if "-" in prefix else ""
+            if code == role_code:
+                role_post_ids.add(pid)
+    return role_post_ids
+
+
+def compute_conversion_funnel(
+    candidates: list[dict],
+    opening_names: dict[str, str],
+) -> dict:
+    """Compute EP conversion funnel for 7d, 30d, and 60d windows.
+
+    Stages: Applied → Invited (sync/async) → R1 Proceeds → R2 Proceeds
+    Returns counts per window.
+    """
+    now_sgt = datetime.now(SGT)
+    today_start = now_sgt.replace(hour=0, minute=0, second=0, microsecond=0)
+    cutoffs = {
+        "7d": today_start - timedelta(days=7),
+        "30d": today_start - timedelta(days=30),
+        "60d": today_start - timedelta(days=60),
+    }
+
+    role_post_ids = _get_ep_post_ids(opening_names)
+
+    def _funnel_counts(group: list[dict]) -> dict:
+        applied = len(group)
+        invite_sync = sum(1 for c in group if c["invite_type"] == "sync")
+        invite_async = sum(1 for c in group if c["invite_type"] == "async")
+        invited = invite_sync + invite_async
+        r1_proceed = sum(1 for c in group if c["r1_proceed"])
+        r2_proceed = sum(1 for c in group if c["r2_proceed"])
+        return {
+            "applied": applied,
+            "invite_sync": invite_sync,
+            "invite_async": invite_async,
+            "invited": invited,
+            "r1_proceed": r1_proceed,
+            "r2_proceed": r2_proceed,
+        }
+
+    result = {}
+    for label, cutoff in cutoffs.items():
+        group = [
+            c for c in candidates
+            if c.get("created_sgt") and cutoff <= c["created_sgt"] < today_start
+            and c.get("post_relation_id") in role_post_ids
+        ]
+        result[label] = _funnel_counts(group)
+
+    return result
+
+
+def compute_channel_quality(
+    candidates: list[dict],
+    opening_names: dict[str, str],
+    post_channels: dict[str, str],
+) -> list[dict]:
+    """Compute per-channel invite and R1 rates for EP candidates (last 30d).
+
+    Returns list of dicts sorted by applied desc:
+        [{"channel": str, "applied": int, "invited": int, "r1_proceed": int}, ...]
+    """
+    now_sgt = datetime.now(SGT)
+    today_start = now_sgt.replace(hour=0, minute=0, second=0, microsecond=0)
+    cutoff_30d = today_start - timedelta(days=30)
+
+    role_post_ids = _get_ep_post_ids(opening_names)
+
+    channel_stats: dict[str, dict] = {}
+
     for c in candidates:
-        rec = c.get("kimi_rec")
-        if rec:
-            counter[rec] += 1
+        created = c.get("created_sgt")
+        pid = c.get("post_relation_id")
+        if not created or not pid or pid not in role_post_ids:
+            continue
+        if not (cutoff_30d <= created < today_start):
+            continue
 
-    # Return in fixed tier order, including zeros
-    return [(tier, counter.get(tier, 0)) for tier in REC_TIERS]
+        channel = post_channels.get(pid, "Unknown")
+        if channel not in channel_stats:
+            channel_stats[channel] = {"applied": 0, "invited": 0, "r1_proceed": 0, "r2_proceed": 0}
+
+        channel_stats[channel]["applied"] += 1
+        if c["invite_type"] is not None:
+            channel_stats[channel]["invited"] += 1
+        if c["r1_proceed"]:
+            channel_stats[channel]["r1_proceed"] += 1
+        if c["r2_proceed"]:
+            channel_stats[channel]["r2_proceed"] += 1
+
+    result = [
+        {"channel": ch, **stats}
+        for ch, stats in channel_stats.items()
+    ]
+    result.sort(key=lambda x: x["applied"], reverse=True)
+    return result
 
 
-def _bar(count: int, max_count: int, max_width: int = 20) -> str:
+def compute_screening_backlog(candidates: list[dict]) -> dict:
+    """Compute Kimi screening backlog for last 24h and last 7d."""
+    now_sgt = datetime.now(SGT)
+    cutoff_24h = now_sgt - timedelta(hours=24)
+    cutoff_7d = now_sgt - timedelta(days=7)
+
+    def _kimi_stats(group):
+        total = len(group)
+        scored = sum(1 for c in group if c["kimi_rating"] is not None)
+        return {
+            "total": total,
+            "scored": scored,
+            "unscored": total - scored,
+            "pct": (scored / total * 100) if total else 0,
+        }
+
+    last_24h = [c for c in candidates if c.get("created_sgt") and c["created_sgt"] >= cutoff_24h]
+    last_7d = [c for c in candidates if c.get("created_sgt") and c["created_sgt"] >= cutoff_7d]
+
+    return {
+        "24h": _kimi_stats(last_24h),
+        "7d": _kimi_stats(last_7d),
+    }
+
+
+def _bar(count: int, max_count: int, max_width: int = 15) -> str:
     """Render a simple bar chart string."""
     if max_count == 0:
         return ""
     width = round(count / max_count * max_width)
-    return "|" * width
+    return "\u2588" * width
+
+
+def _trend(current: int, previous: int) -> str:
+    """Return trend emoji + delta string."""
+    diff = current - previous
+    if diff > 0:
+        return f"\U0001f7e2 +{diff}"   # green circle
+    elif diff < 0:
+        return f"\U0001f534 {diff}"     # red circle
+    return "\u26aa ~"                    # white circle
+
+
+def _pct(num: int, denom: int) -> str:
+    """Format percentage with 2 significant digits, return '-' if denom is 0."""
+    if denom == 0:
+        return "-"
+    val = num / denom * 100
+    return f"{val:.2g}%"
 
 
 def build_report(
     days: int,
     pipeline: dict,
-    status_breakdown: list[tuple[str, int]],
+    candidate_breakdown: list[tuple[str, int]],
     backlog: dict,
-    quality: list[tuple[str, int]],
+    channel_breakdown: dict | None = None,
+    conversion_funnel: dict | None = None,
+    channel_quality: list[dict] | None = None,
 ) -> str:
-    """Build the full report as a string."""
+    """Build the full Slack-friendly report."""
     now_sgt = datetime.now(SGT)
     timestamp_str = now_sgt.strftime("%Y-%m-%d %H:%M SGT")
+
+    day_trend = _trend(pipeline["yesterday"], pipeline["day_before"])
+    window_trend = _trend(pipeline["in_window"], pipeline["in_prior_window"])
+    month_trend = _trend(pipeline["in_30d"], pipeline["in_prior_30d"])
 
     out = StringIO()
     p = lambda line="": print(line, file=out)
 
-    p()
-    p("=" * 60)
-    p("  RECRUITMENT PIPELINE STATUS")
-    p(f"  {timestamp_str} | Window: {days} days")
-    p("=" * 60)
+    p(f"*Recruitment Pipeline* | {timestamp_str}")
 
-    # 1. Pipeline Overview
+    # 1. Pipeline Overview (full completed days only)
     p()
-    p("  1. PIPELINE OVERVIEW")
-    p("  ---")
-    p(f"  Total Candidates:    {pipeline['total']:>5}")
-    p(f"  New (last {days} days):  {pipeline['new_in_window']:>5}")
-    p(f"  New Today:           {pipeline['new_today']:>5}")
+    p(f"*1. Pipeline Overview*")
+    p(f"```")
+    p(f"Yesterday    {pipeline['yesterday']:>5}  (day before: {pipeline['day_before']})  {day_trend}")
+    p(f"Last {days}d      {pipeline['in_window']:>5}  (prior {days}d: {pipeline['in_prior_window']})    {window_trend}")
+    p(f"Last 30d     {pipeline['in_30d']:>5}  (prior 30d: {pipeline['in_prior_30d']})   {month_trend}")
+    p(f"```")
 
-    # 2. Status Breakdown
+    # 2. Candidate Breakdown (last 7 completed days)
     p()
-    p("  2. STATUS BREAKDOWN")
-    p("  ---")
-    if status_breakdown:
-        max_count = status_breakdown[0][1]  # already sorted desc
-        max_label_len = max(len(s) for s, _ in status_breakdown)
-        for status, count in status_breakdown:
-            pct = count / pipeline["total"] * 100 if pipeline["total"] else 0
+    p(f"*2. Candidate Breakdown (last 7d)*")
+    p(f"```")
+    if candidate_breakdown:
+        max_count = candidate_breakdown[0][1]
+        max_name_len = 30
+        total = sum(count for _, count in candidate_breakdown)
+        for name, count in candidate_breakdown:
+            pct = count / total * 100 if total else 0
             bar = _bar(count, max_count)
-            p(f"  {status:<{max_label_len}}  {count:>4}  {bar:<20}  {pct:>3.0f}%")
+            display = (name[:max_name_len - 1] + "\u2026") if len(name) > max_name_len else name
+            p(f"{display:<{max_name_len}}  {count:>4}  {bar:<15} {pct:>3.0f}%")
+    else:
+        p("No candidates in the last 7 days.")
+    p(f"```")
 
-    # 3. Screening Backlog
-    p()
-    p("  3. SCREENING BACKLOG")
-    p("  ---")
-    p(f"  {'':16} {'Scored':>7}  {'Unscored':>8}  {'Coverage':>8}")
-    p(f"  {'Kimi:':16} {backlog['kimi_scored']:>7}  {backlog['kimi_unscored']:>8}  {backlog['kimi_pct']:>7.0f}%")
-    p(f"  {'Claude:':16} {backlog['claude_scored']:>7}  {backlog['claude_unscored']:>8}  {backlog['claude_pct']:>7.0f}%")
-    p()
-    p(f"  Both scored:        {backlog['both_scored']:>5}")
-    p(f"  Neither scored:     {backlog['neither_scored']:>5}")
+    # 3. EP Channel Breakdown
+    if channel_breakdown:
+        p()
+        p(f"*3. EP Channel Breakdown*")
+        p(f"```")
+        week = channel_breakdown["7d"]
+        yesterday = channel_breakdown["yesterday"]
+        # Collect all channels across both periods
+        all_channels = sorted(set(list(week.keys()) + list(yesterday.keys())))
+        if all_channels:
+            week_total = sum(week.values())
+            yest_total = sum(yesterday.values())
+            max_count = max(week.values()) if week else 0
+            p(f"{'Channel':<15} {'Last 7d':>7} {'%':>5}  {'':15} {'Yest':>5}")
+            for ch in all_channels:
+                w = week.get(ch, 0)
+                y = yesterday.get(ch, 0)
+                pct = w / week_total * 100 if week_total else 0
+                bar = _bar(w, max_count)
+                p(f"{ch:<15} {w:>7} {pct:>4.0f}%  {bar:<15} {y:>5}")
+            p(f"{'─' * 15} {'─' * 7} {'─' * 5}  {'':15} {'─' * 5}")
+            p(f"{'Total':<15} {week_total:>7}  {'':4}  {'':15} {yest_total:>5}")
+        else:
+            p("No EP candidates with channel data.")
+        p(f"```")
 
-    # 4. Quality Distribution
-    p()
-    p("  4. QUALITY DISTRIBUTION (Kimi)")
-    p("  ---")
-    scored_recs = [count for _, count in quality]
-    max_q = max(scored_recs) if scored_recs else 0
-    total_scored = sum(scored_recs)
-    for tier, count in quality:
-        pct = count / total_scored * 100 if total_scored else 0
-        bar = _bar(count, max_q)
-        p(f"  {tier:<24}  {count:>4}  {bar:<20}  {pct:>3.0f}%")
+    # 5. EP Conversion Funnel
+    if conversion_funnel:
+        p()
+        p(f"*5. EP Conversion Funnel*")
+        p(f"```")
+        windows = ["7d", "30d", "60d"]
+        fw = {w: conversion_funnel[w] for w in windows}
 
+        # Header
+        hdr = f"{'':20}"
+        for w in windows:
+            hdr += f" {'Last '+w:>12}"
+        p(hdr)
+
+        # Funnel rows
+        rows = [
+            ("Applied", "applied"),
+            ("  To Invite", "invite_sync"),
+            ("  To Invite (Async)", "invite_async"),
+            ("Invited to R1", "invited"),
+            ("R1 Proceeds", "r1_proceed"),
+            ("R2 Proceeds", "r2_proceed"),
+        ]
+        for label, key in rows:
+            line = f"{label:<20}"
+            for w in windows:
+                c = fw[w][key]
+                if key == "applied":
+                    line += f" {c:>12}"
+                else:
+                    pct = _pct(c, fw[w]["applied"])
+                    line += f" {c:>5}  {pct:>5}"
+            p(line)
+
+        # Stage-to-stage rates
+        p()
+        hdr2 = f"  {'Stage rates':<18}"
+        for w in windows:
+            hdr2 += f" {w:>12}"
+        p(hdr2)
+        stage_pairs = [
+            ("Applied→Invite", "invited", "applied"),
+            ("Invite→R1", "r1_proceed", "invited"),
+            ("R1→R2", "r2_proceed", "r1_proceed"),
+        ]
+        for label, num_key, denom_key in stage_pairs:
+            line = f"  {label:<18}"
+            for w in windows:
+                rate = _pct(fw[w][num_key], fw[w][denom_key])
+                line += f" {rate:>12}"
+            p(line)
+        p(f"```")
+
+    # 6. EP Channel Quality (last 30d)
+    if channel_quality:
+        p()
+        p(f"*6. EP Channel Quality (last 30d)*")
+        p(f"```")
+        p(f"{'Channel':<15} {'Applied':>7}  {'Invited':>7}  {'Inv%':>5}  {'R1 Proc':>7}  {'R1%':>5}  {'R2 Proc':>7}  {'R2%':>5}")
+        for row in channel_quality:
+            inv_pct = _pct(row["invited"], row["applied"])
+            r1_pct = _pct(row["r1_proceed"], row["applied"])
+            r2_pct = _pct(row["r2_proceed"], row["applied"])
+            p(f"{row['channel']:<15} {row['applied']:>7}  {row['invited']:>7}  {inv_pct:>5}  {row['r1_proceed']:>7}  {r1_pct:>5}  {row['r2_proceed']:>7}  {r2_pct:>5}")
+        p(f"```")
+
+    # 7. Screening Backlog (Kimi)
     p()
-    p("=" * 60)
-    p()
+    p(f"*7. Screening Backlog (Kimi)*")
+    p(f"```")
+    p(f"{'':10} {'Total':>5}  {'Scored':>6}  {'Unscored':>8}  {'Coverage':>8}")
+    b24 = backlog["24h"]
+    b7d = backlog["7d"]
+    p(f"{'Last 24h':10} {b24['total']:>5}  {b24['scored']:>6}  {b24['unscored']:>8}  {b24['pct']:>7.0f}%")
+    p(f"{'Last 7d':10} {b7d['total']:>5}  {b7d['scored']:>6}  {b7d['unscored']:>8}  {b7d['pct']:>7.0f}%")
+    p(f"```")
 
     return out.getvalue()
 
@@ -335,10 +697,10 @@ def main():
 
     headers = notion_headers(notion_key)
 
-    # Query all candidates
-    print("Fetching candidates from Notion...", end="", flush=True)
+    # Query recent candidates (last 60 days covers all metrics)
+    print("Fetching candidates (last 60d)...", end="", flush=True)
     try:
-        pages = query_all_candidates(headers, db_id)
+        pages = query_recent_candidates(headers, db_id, since_days=60)
     except requests.RequestException as e:
         print(f"\nERROR: Could not query candidates: {e}")
         sys.exit(1)
@@ -351,14 +713,22 @@ def main():
     # Extract data
     candidates = [extract_candidate(p) for p in pages]
 
+    # Resolve opening names and channels from Post relations
+    opening_names, post_channels = resolve_post_details(headers, candidates)
+
     # Compute metrics
     pipeline = compute_pipeline_overview(candidates, args.days)
-    status_breakdown = compute_status_breakdown(candidates)
+    candidate_breakdown = compute_candidate_breakdown(candidates, opening_names)
+    channel_breakdown = compute_channel_breakdown(candidates, opening_names, post_channels, role_code="EP")
+    conversion_funnel = compute_conversion_funnel(candidates, opening_names)
+    channel_quality = compute_channel_quality(candidates, opening_names, post_channels)
     backlog = compute_screening_backlog(candidates)
-    quality = compute_quality_distribution(candidates)
 
     # Build and print report
-    report = build_report(args.days, pipeline, status_breakdown, backlog, quality)
+    report = build_report(
+        args.days, pipeline, candidate_breakdown, backlog,
+        channel_breakdown, conversion_funnel, channel_quality,
+    )
     print(report, end="")
 
     # Save to file with SGT timestamp
