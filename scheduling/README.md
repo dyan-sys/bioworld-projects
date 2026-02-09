@@ -21,7 +21,7 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T.../B.../...
 
 ```bash
 cp scheduling/com.ally.pipeline-report.plist ~/Library/LaunchAgents/
-launchctl load ~/Library/LaunchAgents/com.ally.pipeline-report.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.pipeline-report.plist
 ```
 
 ### 4. Test
@@ -42,7 +42,7 @@ cat local-data/logs/launchd-stdout.log
 ## Uninstall
 
 ```bash
-launchctl unload ~/Library/LaunchAgents/com.ally.pipeline-report.plist
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.ally.pipeline-report.plist
 rm ~/Library/LaunchAgents/com.ally.pipeline-report.plist
 ```
 

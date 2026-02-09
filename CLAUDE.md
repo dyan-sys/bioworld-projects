@@ -184,12 +184,16 @@ Client Partnership Lead rubric for operations leadership:
 ### Data Architecture
 
 ```
-local-data/talent/
-├── resume_raw_txt/           # Extracted resume text
-│   └── {CandidateName}.txt
-└── resume_receipts/          # Full scoring JSON
-    ├── {CandidateName}_Claude.json
-    └── {CandidateName}_Kimi.json
+local-data/
+├── logs/                         # Scheduling logs (launchd output)
+└── talent/
+    ├── resume_raw_txt/           # Extracted resume text
+    │   └── {CandidateName}.txt
+    ├── resume_receipts/          # Full scoring JSON
+    │   ├── {CandidateName}_Claude.json
+    │   └── {CandidateName}_Kimi.json
+    └── pipeline_reports/         # Daily pipeline report snapshots
+        └── {YYYY-MM-DD_HHMM_SGT}.txt
 ```
 
 ## Update Resume Screener Skill
@@ -358,7 +362,7 @@ Platform-specific markdown templates in `templates/`, each with two sections:
 
 Located in `.claude/skills/check-recruit-status/`:
 
-Queries the Notion Candidates DB and prints a terminal report with 4 key metrics for daily recruitment monitoring.
+Queries the Notion Candidates DB, prints a Slack-formatted terminal report with 7 sections, and optionally posts to Slack.
 
 ### Workflow
 
@@ -379,10 +383,12 @@ python3.11 .claude/skills/check-recruit-status/workflows/check_recruit_status.py
 
 ### Metrics
 
-1. **Pipeline Overview** — Total candidates, new in window (configurable days), new today
-2. **Status Breakdown** — Count per status with bar chart and percentage, sorted by count
-3. **Screening Backlog** — Kimi/Claude scored vs unscored with coverage percentage
-4. **Quality Distribution** — Kimi recommendation tier counts (STRONG PROCEED → DO NOT PROCEED)
+1. **Pipeline Overview** — Yesterday, last Nd, last 30d counts with trend vs prior period
+2. **Candidate Breakdown (last 7d)** — Candidates per opening with bar chart
+3. **EP Channel Breakdown** — Per-channel counts (last 7d + yesterday)
+4. **EP Conversion Funnel** — Applied → Invited → R1 → R2 rates for 7d/30d/60d
+5. **EP Channel Quality (last 30d)** — Per-channel invite and R1/R2 rates
+6. **Screening Backlog (Kimi)** — Scored vs unscored for last 24h and 7d
 
 ## Scheduling
 
@@ -400,7 +406,13 @@ Daily pipeline report runs automatically via macOS `launchd` at 00:00 UTC (08:00
 **Install:**
 ```bash
 cp scheduling/com.ally.pipeline-report.plist ~/Library/LaunchAgents/
-launchctl load ~/Library/LaunchAgents/com.ally.pipeline-report.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.pipeline-report.plist
+```
+
+**Uninstall:**
+```bash
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.ally.pipeline-report.plist
+rm ~/Library/LaunchAgents/com.ally.pipeline-report.plist
 ```
 
 **Logs:** `local-data/logs/` (gitignored)
