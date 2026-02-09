@@ -23,6 +23,7 @@ pip install -r requirements.txt
 NOTION_KEY=secret_xxx        # Notion integration token
 NOTION_DB_ID=xxx             # Notion database ID
 MOONSHOT_API_KEY=xxx         # Moonshot AI API key (for Kimi screener)
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...  # Slack Incoming Webhook (optional, for daily report)
 ```
 
 ## Resume Screening Skill
@@ -300,6 +301,7 @@ python3.11 .claude/skills/update-job-posts/workflows/update_job_posts.py --dry-r
 | `{{advertised_range_local}}` | Openings DB "Advertised Range (Local)" — falls back to USD range if empty |
 | `{{target_collab_window}}` | Openings DB "Target Collaboration Window" |
 | `{{hiring_target_date}}` | Computed: today + 14 days in SGT (e.g., "Feb 22, 2026") |
+| `{{hiring_target_date_short}}` | Computed: today + 14 days in SGT, short format (e.g., "Feb 22") |
 | `{{submission_form_url}}` | Computed: intake_form_url + "?id=" + post_id |
 | `{{post_id}}` | Page ID without dashes |
 | `{{prefix}}` | Opening prefix (e.g., "251003-EP") |
@@ -381,6 +383,27 @@ python3.11 .claude/skills/check-recruit-status/workflows/check_recruit_status.py
 2. **Status Breakdown** — Count per status with bar chart and percentage, sorted by count
 3. **Screening Backlog** — Kimi/Claude scored vs unscored with coverage percentage
 4. **Quality Distribution** — Kimi recommendation tier counts (STRONG PROCEED → DO NOT PROCEED)
+
+## Scheduling
+
+Daily pipeline report runs automatically via macOS `launchd` at 00:00 UTC (08:00 SGT) and posts to Slack.
+
+**Files:** `scheduling/` directory contains:
+- `com.ally.pipeline-report.plist` — launchd schedule
+- `run-pipeline-report.sh` — wrapper script (sets PATH, logs output)
+- `README.md` — setup instructions
+
+**Required:**
+- Environment variable: `SLACK_WEBHOOK_URL` (Incoming Webhook URL)
+- If not set, the report still runs but skips Slack posting
+
+**Install:**
+```bash
+cp scheduling/com.ally.pipeline-report.plist ~/Library/LaunchAgents/
+launchctl load ~/Library/LaunchAgents/com.ally.pipeline-report.plist
+```
+
+**Logs:** `local-data/logs/` (gitignored)
 
 ## Notion Database Schema
 

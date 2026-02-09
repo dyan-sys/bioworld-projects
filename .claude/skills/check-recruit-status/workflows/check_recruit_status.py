@@ -675,6 +675,20 @@ def build_report(
     return out.getvalue()
 
 
+def post_to_slack(report: str) -> None:
+    """Post report to Slack via Incoming Webhook. Skips if SLACK_WEBHOOK_URL not set."""
+    webhook_url = os.environ.get("SLACK_WEBHOOK_URL")
+    if not webhook_url:
+        return
+
+    try:
+        resp = requests.post(webhook_url, json={"text": report}, timeout=15)
+        resp.raise_for_status()
+        print("Slack: posted successfully.")
+    except requests.RequestException as e:
+        print(f"Slack: failed to post — {e}")
+
+
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -738,6 +752,9 @@ def main():
     report_path = REPORTS_DIR / filename
     report_path.write_text(report)
     print(f"Report saved to: {report_path.relative_to(PROJECT_ROOT)}")
+
+    # Post to Slack (skips silently if SLACK_WEBHOOK_URL not set)
+    post_to_slack(report)
 
 
 if __name__ == "__main__":
