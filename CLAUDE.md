@@ -390,6 +390,85 @@ python3.11 .claude/skills/check-recruit-status/workflows/check_recruit_status.py
 5. **EP Channel Quality (last 30d)** — Per-channel invite and R1/R2 rates
 6. **Screening Backlog (Kimi)** — Scored vs unscored for last 24h and 7d
 
+## Invite Candidates Skill
+
+Located in `.claude/skills/invite-candidates/`:
+
+Creates Gmail DRAFT emails for R1 interview invitations. Routes candidates to the correct email template based on their Screener status. **Never sends — drafts only.** A human reviews and sends each draft manually.
+
+### R1 Invite Routing
+
+Routing is config-driven via `templates/R1-invite-mapping.json`:
+
+| Screener Status | Template | Interview Type |
+|---|---|---|
+| `To Invite` | `R1-Live-Invite.md` | Live (Calendly) |
+| `To invite (Async)` | `R1-Async-Truffle-Invite.md` | Async (HireTruffle) |
+
+**Guard:** Only candidates with `1R = "Not Started"` are processed (prevents re-inviting).
+
+**Scope:** Candidates edited in the last 120 hours (5 days).
+
+To add a new route, edit `R1-invite-mapping.json` — no code changes needed.
+
+### Workflow
+
+**File:** `.claude/skills/invite-candidates/workflows/invite_candidates.py`
+
+```bash
+# Batch mode (default limit 10)
+python3.11 .claude/skills/invite-candidates/workflows/invite_candidates.py
+
+# Custom limit
+python3.11 .claude/skills/invite-candidates/workflows/invite_candidates.py --limit 20
+
+# Single candidate
+python3.11 .claude/skills/invite-candidates/workflows/invite_candidates.py --page-id <notion_page_id>
+
+# Dry run (preview without creating drafts)
+python3.11 .claude/skills/invite-candidates/workflows/invite_candidates.py --dry-run
+```
+
+**Required:**
+- Environment variables: `NOTION_KEY`, `NOTION_DB_ID`
+- Gmail OAuth2 credentials: `credentials.json` in project root (or `GMAIL_CREDENTIALS_PATH` env var)
+- Python 3.11+
+- Dependencies: `requests`, `python-dotenv`, `google-api-python-client`, `google-auth-httplib2`, `google-auth-oauthlib`
+
+### Gmail Setup
+
+1. Create a Google Cloud project and enable the Gmail API
+2. Create OAuth2 credentials (Desktop app type), download as `credentials.json`
+3. Place `credentials.json` in the project root (gitignored)
+4. First run opens a browser for OAuth consent
+5. Token saved to `local-data/gmail_token.json` (gitignored), auto-refreshes on subsequent runs
+6. Scope: `gmail.compose` (narrowest scope for draft creation)
+
+### How It Works
+
+1. Loads routing config from `R1-invite-mapping.json`
+2. Queries Candidates DB for matching Screener statuses with `1R = "Not Started"` guard
+3. For each candidate, selects the correct HTML email template based on Screener status
+4. Renders template with `{first_name}`, creates Gmail draft
+5. Saves receipt JSON to `local-data/talent/invite_emails/` (e.g., `R1-Live-{Name}.json`)
+
+### Data Output
+
+```
+local-data/talent/invite_emails/
+├── R1-Live-{CandidateName}.json
+└── R1-Async-Truffle-{CandidateName}.json
+```
+
+### Edge Cases
+
+- **No email:** Skipped with `[SKIP] No email address`
+- **Unknown status:** Skipped if Screener status has no matching template
+- **Empty name:** Greeting falls back to "Hi there,"
+- **Dry run:** Skips Gmail auth, renders and saves receipts without creating drafts
+- **Single mode (`--page-id`):** Works regardless of Screener status (skips if no template)
+- **Duplicate runs:** Creates duplicate drafts (no Notion status tracking)
+
 ## Scheduling
 
 Daily pipeline report runs automatically via macOS `launchd` at 00:00 UTC (08:00 SGT) and posts to Slack.

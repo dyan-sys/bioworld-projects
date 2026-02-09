@@ -1,0 +1,19 @@
+{
+  "description": "Maps Screener status values to R1 invite email templates and receipt prefixes",
+  "round": "R1",
+  "status_field": "Screener",
+  "guard_field": "1R",
+  "guard_value": "Not Started",
+  "mappings": {
+    "To Invite": {
+      "label": "R1 Live Interview",
+      "template": "R1-Live-Invite.md",
+      "receipt_prefix": "R1-Live"
+    },
+    "To invite (Async)": {
+      "label": "R1 Async Interview (HireTruffle)",
+      "template": "R1-Async-Truffle-Invite.md",
+      "receipt_prefix": "R1-Async-Truffle"
+    }
+  }
+}
