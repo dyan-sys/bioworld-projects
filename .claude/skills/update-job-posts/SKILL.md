@@ -63,7 +63,10 @@ Templates use `{{variable}}` placeholders that are replaced at render time:
 | `{{job_title}}` | Openings DB "Job Title" |
 | `{{employment_type}}` | Openings DB "Employment Type" |
 | `{{advertised_range}}` | Openings DB "Advertised Range" |
+| `{{advertised_range_local}}` | Openings DB "Advertised Range (Local)" — falls back to USD range if empty |
 | `{{target_collab_window}}` | Openings DB "Target Collaboration Window" |
+| `{{hiring_target_date}}` | Computed: today + 14 days in SGT (e.g., "Feb 22, 2026") |
+| `{{hiring_target_date_short}}` | Computed: today + 14 days in SGT, short format (e.g., "Feb 22") |
 | `{{submission_form_url}}` | Computed: intake_form_url + "?id=" + post_id |
 | `{{post_id}}` | Page ID without dashes |
 | `{{prefix}}` | Opening prefix (e.g., "251003-EP") |

@@ -4,7 +4,7 @@
 - Post type: Job listing
 - Work location: Remote
 - Employment type: {{employment_type}}
-- Compensation: {{advertised_range}}
+- Compensation: {{advertised_range_local}}
 
 ---
 
@@ -12,7 +12,7 @@
 
 ## {{job_title}}
 
-{{employment_type}} | Remote | Starting at {{advertised_range}}
+{{employment_type}} | Remote | Starting at {{advertised_range_local}}
 
 Shortlisted candidates may be hired by {{hiring_target_date}}.
 
@@ -38,7 +38,7 @@ Ally helps founders and leaders scale themselves before they scale their compani
 
 ## What You'll Get
 
-- Starting at {{advertised_range}}
+- Starting at {{advertised_range_local}}
 - Fully remote setup
 - Mentorship and clear growth paths
 - {{target_collab_window}}

@@ -2,26 +2,21 @@
 
 - Job title: {{job_title}}
 - Category: Virtual Assistant
-- Salary: {{advertised_range_local}}
+- Salary: {{advertised_range}}
 - Employment type: {{employment_type}}
 - Schedule: {{target_collab_window}}
 - Location: Remote (Philippines)
 
 ---
 
-{{job_title}}
-Remote | {{advertised_range}} ({{advertised_range_local}}) | {{target_collab_window}}
-3 openings — confirmed client placements. Top candidates hired by {{hiring_target_date}}.
+Full Time | Remote | 2 Sold Openings | Hire by {{hiring_target_date_short}} | Asia / US Time
 
-We're hiring experienced VAs / EAs who are already strong at execution—and want better clients, better systems, and coaching in modern AI workflows.
+—
 
-This is not a traditional VA job. You'll do real operator-style work: run weekly rhythms, drive follow-through, write crisp updates, and build lightweight systems (Notion/Sheets). Then we amplify you with training + AI standards so your output becomes faster, cleaner, and more reliable.
+Are you a High Agency, Experienced EA, seeking impact & growth?
 
-Stability matters: our EPs support leaders at a NASDAQ-listed company and multiple 8-figure brands.
+Apply below for real operator work, stable clients, and AI coaching.
 
-If you're proactive, organized, and communicate clearly, you'll ramp fast.
-
-Apply now (2 min):
 {{submission_form_url}}
 
 —

@@ -211,12 +211,13 @@ def create_job_post(
 
         # Step 4: Build template variables
         # Use local range if available, otherwise fall back to USD range
-        advertised_range = opening_info.get("advertised_range") or ""
-        advertised_range_local = opening_info.get("advertised_range_local") or ""
+        advertised_range = (opening_info.get("advertised_range") or "").replace("++", "")
+        advertised_range_local = (opening_info.get("advertised_range_local") or "").replace("++", "")
         # Hiring target date: 14 calendar days from now in SGT (UTC+8)
         sgt = timezone(timedelta(hours=8))
         hiring_target = datetime.now(sgt) + timedelta(days=14)
         hiring_target_date = hiring_target.strftime("%b %d, %Y").replace(" 0", " ")
+        hiring_target_date_short = hiring_target.strftime("%b %d").replace(" 0", " ")
         variables = {
             "job_title": opening_info.get("job_title") or "",
             "employment_type": opening_info.get("employment_type") or "",
@@ -225,6 +226,7 @@ def create_job_post(
             "target_collab_window": opening_info.get("target_collab_window") or "",
             "submission_form_url": submission_form_url,
             "hiring_target_date": hiring_target_date,
+            "hiring_target_date_short": hiring_target_date_short,
             "post_id": post_id_value,
             "prefix": prefix,
             "channel": channel,

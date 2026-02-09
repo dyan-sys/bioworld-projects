@@ -1,13 +1,17 @@
 # Platform Metadata — Jobstreet
 
 - Job title: {{job_title}}
-- Location: Philippines (Remote)
+- Location: Metro Manila PH
 - Workplace option: Fully remote
 - Work type: {{employment_type}}
 - Pay type: Monthly
-- Pay range (Currency): PHP
-- Pay range: {{advertised_range_local}}
+- Pay range (Currency): USD
+- Pay range: {{advertised_range}}
 - Pay shown on ad: Show range on the ad
+
+# Job Summary
+
+2 Active Openings | Hire by {{hiring_target_date_short}} | Real Impact from Day 1 + Intensive training in AI workflows | Founder-vetted, stable, growing clients only
 
 ---
 
@@ -15,7 +19,7 @@
 
 ## {{job_title}}
 
-💼 Full-Time | Remote | Starting rate {{advertised_range}}
+💼 Remote | Starting rate {{advertised_range}}
 
 Shortlisted candidates may be hired by {{hiring_target_date}}.
 

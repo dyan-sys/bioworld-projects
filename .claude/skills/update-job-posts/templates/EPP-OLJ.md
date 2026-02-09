@@ -9,20 +9,15 @@
 
 ---
 
-{{job_title}}
-{{employment_type}} | Remote | Starting rate {{advertised_range}} ({{advertised_range_local}})
-Shortlisted candidates may be hired by {{hiring_target_date}}.
+Remote | 2 New Sold Openings | Closing by {{hiring_target_date_short}} | Asia / US Time
 
 —
 
-Apply here:
+Are you a Product-Minded Operator with eCommerce experience, seeking impact & growth?
+
+Apply below for real product operations work, stable clients, active coaching in AI+product ops.
+
 {{submission_form_url}}
-
-—
-
-Be a key player in driving product operations for fast-growing e-commerce brands.
-
-This role is perfect for people who thrive on coordination, problem-solving, and making cross-functional teams more effective.
 
 —
 
@@ -34,7 +29,7 @@ Ally helps founders and leaders scale themselves before they scale their compani
 
 [2] The Role
 
-As a Product Associate, you'll support product development and operations workflows, working closely with cross-functional teams to drive execution and maintain quality.
+As a **{{job_title}}**, you'll support product development and operations workflows, working closely with cross-functional teams to drive execution and maintain quality.
 
 —
 
@@ -60,7 +55,7 @@ As a Product Associate, you'll support product development and operations workfl
 
 [5] What You'll Get
 
-- Starting at {{advertised_range}}
+- Starting at {{advertised_range_local}}
 - Direct access to global founders and operators
 - Mentorship and clear growth paths
 - Fully remote setup

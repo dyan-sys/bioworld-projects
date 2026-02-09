@@ -5,7 +5,7 @@ Thanks for your interest in the {{job_title}} role at Ally! After reviewing your
 Here's a quick overview:
 
 💼 Role Highlights
-- Pay: {{advertised_range_local}} (full-time)
+- Pay: {{advertised_range}} (full-time)
 - Schedule: {{target_collab_window}}
 - Work: Support international founders and teams with operations, scheduling, and coordination
 

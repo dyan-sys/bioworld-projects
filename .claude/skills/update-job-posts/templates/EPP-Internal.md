@@ -3,7 +3,7 @@
 - Opening: {{prefix}}
 - Job title: {{job_title}}
 - Employment type: {{employment_type}}
-- Compensation: {{advertised_range}}
+- Compensation: {{advertised_range_local}}
 - Distribution: Internal referral network
 - Referral bonus: Check with talent team
 
@@ -13,7 +13,7 @@
 
 ## {{job_title}} — Internal Referral
 
-{{employment_type}} | Remote | Starting at {{advertised_range}}
+{{employment_type}} | Remote | Starting at {{advertised_range_local}}
 
 Shortlisted candidates may be hired by {{hiring_target_date}}.
 
