@@ -89,6 +89,60 @@ def fetch_notion_page(notion_key: str, page_id: str) -> dict:
     return response.json()
 
 
+DEFAULT_JOB_TITLE = "Virtual Executive Assistant"
+
+
+def get_job_title_from_post(notion_key: str, post_page_id: str, cache: dict) -> str:
+    """
+    Resolve the job title for a candidate via Post → Opening → Job Title.
+
+    Uses a cache keyed by Opening page ID to avoid redundant API calls
+    for candidates from the same opening.
+
+    Returns DEFAULT_JOB_TITLE on any failure.
+    """
+    try:
+        # Fetch Post page to get Opening relation
+        post_page = fetch_notion_page(notion_key, post_page_id)
+        post_props = post_page.get("properties", {})
+
+        # Extract Opening relation ID from Post
+        opening_id = None
+        if "Opening" in post_props:
+            opening_prop = post_props["Opening"]
+            if opening_prop.get("type") == "relation":
+                relations = opening_prop.get("relation", [])
+                if relations:
+                    opening_id = relations[0].get("id")
+
+        if not opening_id:
+            return DEFAULT_JOB_TITLE
+
+        # Check cache
+        if opening_id in cache:
+            return cache[opening_id]
+
+        # Fetch Opening page to get Job Title
+        opening_page = fetch_notion_page(notion_key, opening_id)
+        opening_props = opening_page.get("properties", {})
+
+        job_title = None
+        if "Job Title" in opening_props:
+            jt_prop = opening_props["Job Title"]
+            if jt_prop.get("type") == "rich_text":
+                rich_text = jt_prop.get("rich_text", [])
+                if rich_text:
+                    job_title = rich_text[0].get("plain_text", "").strip()
+
+        resolved = job_title if job_title else DEFAULT_JOB_TITLE
+        cache[opening_id] = resolved
+        return resolved
+
+    except Exception as e:
+        print(f"  [WARNING] Job title lookup failed: {e}")
+        return DEFAULT_JOB_TITLE
+
+
 def query_to_invite_candidates(notion_key: str, db_id: str, limit: int = 10) -> list[dict]:
     """
     Query Notion for candidates matching:
@@ -175,11 +229,21 @@ def get_candidate_info(page: dict) -> dict:
             if status_obj:
                 screener_status = status_obj.get("name")
 
+    # Get Post relation ID (for job title lookup via Opening)
+    post_relation_id = None
+    if "Post" in properties:
+        post_prop = properties["Post"]
+        if post_prop.get("type") == "relation":
+            relations = post_prop.get("relation", [])
+            if relations:
+                post_relation_id = relations[0].get("id")
+
     return {
         "page_id": page.get("id"),
         "name": name,
         "email": email,
         "screener_status": screener_status,
+        "post_relation_id": post_relation_id,
     }
 
 
@@ -246,11 +310,11 @@ def load_template(template_filename: str) -> tuple[str, str]:
     return subject_line, body
 
 
-def render_email(subject: str, body: str, first_name: str) -> tuple[str, str]:
-    """Replace {first_name} placeholder in subject and body."""
+def render_email(subject: str, body: str, first_name: str, job_title: str = DEFAULT_JOB_TITLE) -> tuple[str, str]:
+    """Replace {first_name} and {job_title} placeholders in subject and body."""
     return (
-        subject.replace("{first_name}", first_name),
-        body.replace("{first_name}", first_name),
+        subject.replace("{first_name}", first_name).replace("{job_title}", job_title),
+        body.replace("{first_name}", first_name).replace("{job_title}", job_title),
     )
 
 
@@ -282,6 +346,8 @@ def process_candidate(
     candidate: dict,
     gmail_service=None,
     dry_run: bool = False,
+    notion_key: str = None,
+    title_cache: dict = None,
 ) -> dict:
     """Process a single candidate: select template by screener status, render email, create Gmail draft."""
     name = candidate["name"]
@@ -310,9 +376,16 @@ def process_candidate(
     receipt_prefix = tpl_config["receipt_prefix"]
     print(f"  [TEMPLATE] {tpl_config['template']}")
 
+    # Resolve job title from Post → Opening → Job Title
+    job_title = DEFAULT_JOB_TITLE
+    post_relation_id = candidate.get("post_relation_id")
+    if post_relation_id and notion_key and title_cache is not None:
+        job_title = get_job_title_from_post(notion_key, post_relation_id, title_cache)
+    print(f"  [JOB TITLE] {job_title}")
+
     # Render email
     first_name = derive_first_name(name)
-    subject, body = render_email(subject_template, body_template, first_name)
+    subject, body = render_email(subject_template, body_template, first_name, job_title)
 
     if dry_run:
         result["status"] = "dry_run"
@@ -432,6 +505,7 @@ def main():
         print("  WARNING: Re-running creates duplicate drafts (no Notion status tracking).")
     print("-" * 60)
 
+    title_cache = {}
     results = []
     for i, candidate in enumerate(candidates, 1):
         print(f"\n[{i}/{len(candidates)}] {candidate['name'] or '(no name)'}")
@@ -439,6 +513,8 @@ def main():
             candidate,
             gmail_service=gmail_service,
             dry_run=args.dry_run,
+            notion_key=notion_key,
+            title_cache=title_cache,
         )
         results.append(result)
 

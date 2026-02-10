@@ -7,6 +7,7 @@ Scheduled jobs run via macOS `launchd`. All jobs use a shared generic wrapper (`
 | Job | Schedule | Plist |
 |-----|----------|-------|
 | Daily Pipeline Report | 00:00 UTC (08:00 SGT) | `com.ally.pipeline-report.plist` |
+| EP Channel Issue Flagging | 00:00 UTC (08:00 SGT) | `com.ally.ep-issues.plist` |
 | Service Health Check | 02:00 UTC (10:00 SGT) | `com.ally.service-check.plist` |
 
 ## Generic Wrapper (`run-job.sh`)
@@ -52,6 +53,10 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/services/T.../B.../...
 cp scheduling/com.ally.pipeline-report.plist ~/Library/LaunchAgents/
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.pipeline-report.plist
 
+# EP channel issue flagging (08:00 SGT)
+cp scheduling/com.ally.ep-issues.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.ep-issues.plist
+
 # Service health check (10:00 SGT)
 cp scheduling/com.ally.service-check.plist ~/Library/LaunchAgents/
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.service-check.plist
@@ -64,6 +69,9 @@ Trigger immediately:
 ```bash
 # Pipeline report
 launchctl start com.ally.pipeline-report
+
+# EP issues
+launchctl start com.ally.ep-issues
 
 # Service check
 launchctl start com.ally.service-check
@@ -82,6 +90,10 @@ ls local-data/service-status/
 # Pipeline report
 launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.ally.pipeline-report.plist
 rm ~/Library/LaunchAgents/com.ally.pipeline-report.plist
+
+# EP issues
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.ally.ep-issues.plist
+rm ~/Library/LaunchAgents/com.ally.ep-issues.plist
 
 # Service check
 launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.ally.service-check.plist
@@ -110,6 +122,7 @@ rm ~/Library/LaunchAgents/com.ally.service-check.plist
 | `run-job.sh` | Generic wrapper: network wait, run script, write status JSON |
 | `run-pipeline-report.sh` | Shim: calls run-job.sh for pipeline report |
 | `com.ally.pipeline-report.plist` | launchd schedule (daily 00:00 UTC) |
+| `com.ally.ep-issues.plist` | launchd schedule (daily 00:00 UTC) |
 | `com.ally.service-check.plist` | launchd schedule (daily 02:00 UTC) |
 
 ## Notes

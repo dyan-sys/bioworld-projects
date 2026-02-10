@@ -483,8 +483,9 @@ python3.11 .claude/skills/invite-candidates/workflows/invite_candidates.py --dry
 1. Loads routing config from `R1-invite-mapping.json`
 2. Queries Candidates DB for matching Screener statuses with `1R = "Not Started"` guard
 3. For each candidate, selects the correct HTML email template based on Screener status
-4. Renders template with `{first_name}`, creates Gmail draft
-5. Saves receipt JSON to `local-data/talent/invite_emails/` (e.g., `R1-Live-{Name}.json`)
+4. Resolves job title via Post → Opening → Job Title (cached per opening, falls back to "Virtual Executive Assistant")
+5. Renders template with `{first_name}` and `{job_title}`, creates Gmail draft
+6. Saves receipt JSON to `local-data/talent/invite_emails/` (e.g., `R1-Live-{Name}.json`)
 
 ### Data Output
 

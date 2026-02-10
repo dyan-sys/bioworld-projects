@@ -21,6 +21,27 @@
         }
       ]
     },
+    "ep-issues": {
+      "label": "EP Channel Issue Flagging",
+      "schedule": {
+        "expected_hour_utc": 0,
+        "frequency": "daily"
+      },
+      "tolerance_minutes": 120,
+      "artifact_checks": [
+        {
+          "type": "file_exists",
+          "directory": "local-data/talent/ep_reviews",
+          "pattern": "{YYYY-MM-DD}_report.txt"
+        },
+        {
+          "type": "log_contains",
+          "directory": "local-data/logs",
+          "pattern": "ep-issues_{YYYY-MM-DD}_*_UTC.log",
+          "search_string": "SUMMARY"
+        }
+      ]
+    },
     "job-posts": {
       "label": "Scheduled Job Posts",
       "schedule": {
