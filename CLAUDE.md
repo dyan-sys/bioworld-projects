@@ -193,6 +193,11 @@ local-data/
 │   ├── {job-id}_{timestamp}.json
 │   └── reports/                  # Service check report snapshots
 │       └── {YYYY-MM-DD_HHMM_SGT}.txt
+├── linkedin/                     # LinkedIn content engine artifacts
+│   ├── research/                 # Raw research results + summaries
+│   │   └── {YYYY-MM-DD}_{topic-slug}.json
+│   └── drafts/                   # Generated post drafts
+│       └── {YYYY-MM-DD}_{topic-slug}.md
 └── talent/
     ├── resume_raw_txt/           # Extracted resume text
     │   └── {CandidateName}.txt
@@ -624,6 +629,71 @@ The service status report includes a Moonshot API balance/usage section:
 - Computes spend delta by comparing today's balance to yesterday's snapshot
 - Counts daily API calls from Kimi receipt files (resume receipts + EP reviews)
 - Graceful fallback: if balance fetch fails, the section is omitted
+
+## LinkedIn Content Engine Skill
+
+Located in `.claude/skills/linkedin-content/`:
+
+Generates LinkedIn post drafts by combining user creative direction with web research and Ally's voice. Uses Kimi (Moonshot AI) for both research and draft generation. No auto-posting — drafts go to local files for human review.
+
+### Workflow
+
+**File:** `.claude/skills/linkedin-content/workflows/generate_content.py`
+
+```bash
+# Full pipeline: research + draft
+python3.11 .claude/skills/linkedin-content/workflows/generate_content.py \
+  --brief "Delegation fails when execs don't trust the process" \
+  --pillar delegation
+
+# Dry run (research only)
+python3.11 .claude/skills/linkedin-content/workflows/generate_content.py \
+  --brief "Why most delegation advice is backwards" --dry-run
+
+# Skip research (brief + strategy only)
+python3.11 .claude/skills/linkedin-content/workflows/generate_content.py \
+  --brief "At Ally we believe ownership means..." --skip-research
+```
+
+**Required:**
+- Environment variable: `MOONSHOT_API_KEY`
+- Python 3.11+
+- Dependencies: `openai`, `httpx`, `h2`, `python-dotenv`
+
+### Pipeline
+
+1. **Steering** — User provides `--brief` (topic idea) and optional `--pillar`
+2. **Research** — Kimi + `$web_search` finds recent articles, data points, contrarian takes
+3. **Synthesis** — Kimi drafts LinkedIn post using strategy doc, research, and voice guidelines
+
+### Content Pillars
+
+| Key | Name |
+|-----|------|
+| delegation | Delegation & Executive Leverage |
+| focus | Focus & Priority Management |
+| operations | How We Operate at Ally |
+| ai-tools | Tools, AI, and the Modern EA |
+| life-at-ally | Life at Ally |
+| time-management | Time Management & Prioritization |
+| achievements | Achievements & Outcomes |
+
+### Data Output
+
+```
+local-data/linkedin/
+├── research/                        # Raw research results + summaries
+│   └── {YYYY-MM-DD}_{topic-slug}.json
+└── drafts/                          # Generated post drafts (ready for review)
+    └── {YYYY-MM-DD}_{topic-slug}.md
+```
+
+### Templates
+
+- `content-strategy.md` — Full strategy doc (audience, voice, pillars, goals)
+- `post-system-prompt.md` — System prompt for Kimi when drafting posts
+- `research-prompt.md` — System prompt for Kimi when researching
+- `pillar-config.json` — Pillar definitions with topic seeds
 
 ## Scheduling
 

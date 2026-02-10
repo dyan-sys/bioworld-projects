@@ -1,0 +1,39 @@
+{
+  "pillars": {
+    "delegation": {
+      "name": "Delegation & Executive Leverage",
+      "description": "How real leverage is created",
+      "search_seeds": ["executive delegation", "assistant leverage", "delegation failure"]
+    },
+    "focus": {
+      "name": "Focus & Priority Management",
+      "description": "Working on the right problems",
+      "search_seeds": ["executive focus", "priority management", "context switching cost"]
+    },
+    "operations": {
+      "name": "How We Operate at Ally",
+      "description": "Signaling standards and culture without performative transparency",
+      "search_seeds": ["operations culture", "ownership culture", "feedback culture"]
+    },
+    "ai-tools": {
+      "name": "Tools, AI, and the Modern EA",
+      "description": "Relevance without hype",
+      "search_seeds": ["AI executive assistant", "AI tools productivity", "EA role evolution"]
+    },
+    "life-at-ally": {
+      "name": "Life at Ally",
+      "description": "Stories of what EPs do for clients",
+      "search_seeds": ["executive assistant impact", "virtual assistant success stories"]
+    },
+    "time-management": {
+      "name": "Time Management & Prioritization",
+      "description": "How EPs protect executive time and create leverage",
+      "search_seeds": ["calendar optimization", "decision fatigue", "time leverage"]
+    },
+    "achievements": {
+      "name": "Achievements & Outcomes",
+      "description": "Tangible results EPs deliver",
+      "search_seeds": ["executive support outcomes", "assistant ROI", "operational efficiency"]
+    }
+  }
+}
