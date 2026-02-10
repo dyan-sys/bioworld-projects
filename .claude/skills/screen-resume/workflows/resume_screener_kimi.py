@@ -539,6 +539,11 @@ def process_candidate(candidate: dict, notion_key: str, moonshot_key: str) -> di
         final_score = score_result.get("final_score", 0)
         recommendation = score_result.get("recommendation", "UNABLE TO ASSESS")
         rationale = format_detailed_rationale(score_result)
+
+        # Note fallback rubric usage in rationale
+        if job_title and "(Default)" in job_title and job_opening:
+            rationale = f"NOTE: Opening {job_opening} has no specific rubric — scored using standard Executive Partner rubric.\n\n{rationale}"
+
         print(f"  [UPDATE] Notion: Score={final_score}, Rec={recommendation}")
         update_notion_rating(notion_key, page_id, final_score, recommendation, rationale)
 

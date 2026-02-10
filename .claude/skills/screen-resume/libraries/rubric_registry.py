@@ -98,11 +98,11 @@ def get_rubric_path(opening_id: Optional[str] = None) -> Tuple[Path, str]:
         rubric_filename = mapping["rubric"]
         job_title = mapping["title"]
 
-        # Warn if unknown job type was provided
+        # Log fallback for unknown job types (expected — scored using standard EP rubric)
         if job_type:
             warnings.warn(
-                f"Unknown job type '{job_type}' (from Opening ID '{opening_id}') - "
-                f"falling back to default rubric. Add '{job_type}' to job-type-mapping.json",
+                f"No specific rubric for job type '{job_type}' (Opening ID '{opening_id}') — "
+                f"using standard Executive Partner rubric.",
                 UserWarning
             )
 
