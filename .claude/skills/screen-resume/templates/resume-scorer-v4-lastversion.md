@@ -18,22 +18,22 @@ This document provides detailed instructions for AI agents to screen Executive P
 
 | Bucket | Weight | Threshold | Purpose |
 |--------|--------|-----------|---------|
-| Education | 15% | None | Assess academic foundation and rigor |
-| Experience & Trajectory | 20% | ≥12.0 raw | Evaluate depth, growth, and high-pressure environment |
+| Education | 20% | None | Assess academic foundation and rigor |
+| Experience & Trajectory | 20% | ≥10.0 raw | Evaluate depth, growth, and high-pressure environment |
 | Skills | 20% | ≥5.0 raw | Assess operational, strategic, and core VA capabilities |
-| Communication | 20% | ≥1.0 raw | Evaluate written clarity (writing quality only) |
-| Context Knowledge | 15% | None | Bonus for target industry experience |
-| Other Factors | 10% | None | Kicker: age, awards, learning, references, resume design |
+| Communication | 20% | ≥2.0 raw | Evaluate written clarity and resume presentation quality |
+| Context Knowledge | 10% | None | Bonus for target industry experience |
+| Other Factors | 10% | None | Kicker: age, awards, learning, references |
 
 ### Final Score Calculation
 
 ```
 Final Score (0-100) = [
-  (Education_Equiv_0-4 × 0.15) +
+  (Education_Equiv_0-4 × 0.20) +
   (Experience_Equiv_0-4 × 0.20) +
   (Skills_Equiv_0-4 × 0.20) +
   (Communication_Equiv_0-4 × 0.20) +
-  (Context_Equiv_0-4 × 0.15) +
+  (Context_Equiv_0-4 × 0.10) +
   (Other_Equiv_0-4 × 0.10)
 ] × 25
 ```
@@ -53,9 +53,9 @@ Where each "Equiv_0-4" is the equivalent 0-4 value looked up from the interpreta
 ### Threshold Assessment & Recommendation Adjustment
 
 **Three Core Thresholds (Flagged, Not Disqualifying):**
-- Experience & Trajectory ≥ 12.0 raw (MEETS level)
+- Experience & Trajectory ≥ 10.0 raw (MEETS level)
 - Skills ≥ 5.0 raw (MEETS level)
-- Communication ≥ 1.0 raw (MEETS level)
+- Communication ≥ 2.0 raw (MEETS level)
 
 **Recommendation Logic:**
 
@@ -79,7 +79,7 @@ Where each "Equiv_0-4" is the equivalent 0-4 value looked up from the interpreta
 
 ---
 
-## BUCKET 1: EDUCATION (15% weight)
+## BUCKET 1: EDUCATION (20% weight)
 
 ### Purpose
 Assess the academic foundation, rigor, and relevance of the candidate's formal education. Education signals analytical ability, discipline, and foundational knowledge.
@@ -180,14 +180,13 @@ Evaluate the depth, quality, and progression of the candidate's professional exp
 
 ### Scoring Breakdown
 
-#### 2.1 Total EA Experience (Raw Points: 0-5)
+#### 2.1 Total EA Experience (Raw Points: 0-3)
 
 | Years | Points |
 |-------|--------|
-| 7+ years | 5 |
-| 5-7 years | 4 |
-| 3-5 years | 3 |
-| 2-3 years | 2 |
+| 5+ years | 3 |
+| 3-5 years | 2 |
+| 2-3 years | 1.5 |
 | 1-2 years | 1 |
 | <1 year | 0 |
 
@@ -267,53 +266,35 @@ Evaluate the depth, quality, and progression of the candidate's professional exp
 
 **Scoring Rule:** Assess tenure and organizational integration.
 
-#### 2.4c Tenure Stability (Raw Points: 0-2)
+#### 2.4c Consistency & Deepening of Expertise (Raw Points: 0-2)
 
 | Score | Definition |
 |-------|-----------|
-| **2** | Stable tenure pattern: Most professional roles 1.5+ years; short stints limited to internships, OJT, or first role out of school |
-| **1** | Mostly stable: Average professional tenure ~1 year; at most one mid-career role <6 months (contract/freelance roles noted but not heavily penalized) |
-| **0** | Unstable pattern: Multiple mid-career professional roles <6 months, OR 3+ professional roles <1 year in last 5 years |
+| **2** | Clear specialization: Stayed in EA roles and deepened expertise; Promoted or expanded scope; Consistent focus on executive support |
+| **1** | Some consistency: Mix of EA and related roles; Some progression but also lateral moves |
+| **0** | Job-hopping or role-switching: Multiple different types of roles; Less than 1 year per role; No clear specialization |
 
-**Scoring Rule:** Only count mid-career professional roles for stability assessment. Internships, OJT, trainee positions, and first job out of school are excluded from short-tenure penalties.
-
-#### 2.4d Employment Continuity (Raw Points: 0-2)
-
-| Score | Definition |
-|-------|-----------|
-| **2** | No unexplained gaps >2 months |
-| **1** | One gap of 2-3 months, or gaps explained by education/relocation |
-| **0** | Multiple gaps >2 months, or any gap >6 months unexplained |
-
-**Scoring Rule:** Look at timeline between roles. Gaps explained by education, relocation, or family reasons score higher than unexplained gaps.
-
-### EA Experience Gate Rule
-
-**If section 2.1 (Total EA Experience) = 0 points** (no roles explicitly titled as EA, Executive Assistant, Executive Partner, or equivalent):
-- Cap the entire Experience & Trajectory bucket at BELOW level (Equivalent 0-4 = 1.0), regardless of other sub-bucket scores
-- Note in rationale: "EA Experience Gate applied — no EA-titled roles found; Experience capped at BELOW"
-
-This prevents candidates with strong operational backgrounds in unrelated domains (accounting, payroll, customer service) from scoring high on Experience.
+**Scoring Rule:** Look at career progression. Multiple EA roles with increasing scope = 2. Mix of EA, content writing, data entry, customer service = 0.
 
 ### Experience & Trajectory Score Calculation
 
 **Step 1: Sum Raw Points**
 ```
-Raw Points = 2.1 + 2.2 + 2.3 + 2.4 + 2.4a + 2.4b + 2.4c + 2.4d
+Raw Points = 2.1 + 2.2 + 2.3 + 2.4 + 2.4a + 2.4b + 2.4c
 ```
-**Maximum Raw Points:** 5 + 3 + 3 + 3 + 3 + 2 + 2 + 2 = 23 points
+**Maximum Raw Points:** 3 + 3 + 3 + 3 + 3 + 2 + 2 = 19 points
 
 **Step 2: Interpret Raw Score**
 
 | Raw Score | Level | Equivalent 0-4 | Definition |
 |-----------|-------|---|-----------|
-| **19-23** | EXCEEDS | 4.0 | 5+ years Tier A with strategic work and clear growth |
-| **15.0-18.9** | ABOVE | 3.0 | 3-5 years Tier A/B with growth and strategic involvement |
-| **12-14.9** | MEETS | 2.0 | 2-3 years Tier B or 1-2 years Tier A |
-| **6-11.9** | BELOW | 1.0 | <2 years or primarily transactional work |
-| **0-5.9** | VERY BELOW | 0 | No EA experience or significant gaps |
+| **15-19** | EXCEEDS | 4.0 | 5+ years Tier A with strategic work and clear growth |
+| **13.0-14.9** | ABOVE | 3.0 | 3-5 years Tier A/B with growth and strategic involvement |
+| **10-12.9** | MEETS | 2.0 | 2-3 years Tier B or 1-2 years Tier A |
+| **5-9.9** | BELOW | 1.0 | <2 years or primarily transactional work |
+| **0-4.9** | VERY BELOW | 0 | No EA experience or significant gaps |
 
-**THRESHOLD:** ≥ 12.0 (MEETS level)
+**THRESHOLD:** ≥ 10.0 (MEETS level)
 
 **Use the Equivalent 0-4 value in final score calculation.**
 
@@ -403,7 +384,7 @@ Raw Points = 3.1 + 3.2 + 3.3 + 3.4 + 3.5
 ## BUCKET 4: COMMUNICATION (20% weight)
 
 ### Purpose
-Evaluate the quality of written communication. This bucket focuses purely on writing quality — resume design and presentation are scored separately under Other Factors (6.5).
+Evaluate the quality of written communication and the professionalism of resume presentation.
 
 ### Scoring Breakdown
 
@@ -415,31 +396,39 @@ Evaluate the quality of written communication. This bucket focuses purely on wri
 | **1** | MEETS: Generally clear writing; Minor errors; Professional tone; Organized |
 | **0** | VERY BELOW: Unclear writing; Frequent errors; Unprofessional tone; Disorganized |
 
+#### 4.2 Resume Design & Presentation (Raw Points: 0-2)
+
+| Score | Definition |
+|-------|-----------|
+| **2** | EXCEEDS: Visually engaging design; Clear visual hierarchy; Professional layout; Good use of white space; Possibly includes visual elements (icons, sections, color); Maintains professionalism while being distinctive |
+| **1** | MEETS: Standard professional format; Organized; Readable; Not visually distinctive |
+| **0** | VERY BELOW: Cluttered; Hard to read; Unprofessional appearance |
+
 ### Communication Score Calculation
 
 **Step 1: Sum Raw Points**
 ```
-Raw Points = 4.1
+Raw Points = 4.1 + 4.2
 ```
-**Maximum Raw Points:** 2 points
+**Maximum Raw Points:** 2 + 2 = 4 points
 
 **Step 2: Interpret Raw Score**
 
 | Raw Score | Level | Equivalent 0-4 | Definition |
 |-----------|-------|---|-----------|
-| **2.0** | EXCEEDS/MEETS | 4.0 | Excellent clarity and professional writing |
-| **1.0** | BELOW | 2.0 | Generally clear writing with minor issues |
-| **0** | VERY BELOW | 0 | Unclear writing or significant errors |
+| **3.1-4.0** | EXCEEDS | 4.0 | Flawless writing + visually engaging design |
+| **2.2-3.0** | ABOVE | 3.0 | Clear writing + some visual elements |
+| **2.0-2.1** | MEETS | 2.0 | Clear writing + standard format |
+| **1.0-1.9** | BELOW | 1.0 | Some clarity issues or poor design |
+| **0-0.9** | VERY BELOW | 0 | Significant writing or design problems |
 
-**THRESHOLD:** ≥ 1.0 raw (requires at least generally clear writing to pass)
-
-**Note:** Resume formatting/design issues (e.g., character-spacing from PDF extraction) do not affect this bucket. Only actual writing quality matters here.
+**THRESHOLD:** ≥ 2.0 (MEETS level)
 
 **Use the Equivalent 0-4 value in final score calculation.**
 
 ---
 
-## BUCKET 5: CONTEXT KNOWLEDGE (15% weight)
+## BUCKET 5: CONTEXT KNOWLEDGE (10% weight)
 
 ### Purpose
 Bonus points for candidates with direct experience in target industries.
@@ -545,30 +534,20 @@ Estimated Age = 22 + (2026 - First Job Year)
 | **1** | Basic reference: One reference provided with contact information |
 | **0** | No reference provided OR "Available upon request" only |
 
-#### 6.5 Resume Presentation Quality (Raw Points: 0-2)
-
-| Score | Definition |
-|-------|-----------|
-| **2** | EXCEEDS: Visually engaging design; Clear visual hierarchy; Professional layout; Good use of white space; Possibly includes visual elements (icons, sections, color); Maintains professionalism while being distinctive |
-| **1** | MEETS: Standard professional format; Organized; Readable; Not visually distinctive |
-| **0** | VERY BELOW: Cluttered; Hard to read; Unprofessional appearance |
-
-**Note:** PDF extraction artifacts (character-spacing, encoding issues) should NOT penalize candidates here. Score based on the intended design quality, not extraction artifacts.
-
 ### Other Factors Score Calculation
 
 **Step 1: Sum Raw Points**
 ```
-Raw Points = 6.1 + 6.2 + 6.3 + 6.4 + 6.5
+Raw Points = 6.1 + 6.2 + 6.3 + 6.4
 ```
-**Maximum Raw Points:** 2 + 2 + 2 + 2 + 2 = 10 points
+**Maximum Raw Points:** 2 + 2 + 2 + 2 = 8 points
 
 **Step 2: Interpret Raw Score**
 
 | Raw Score | Level | Equivalent 0-4 | Definition |
 |-----------|-------|---|-----------|
-| **5.0-10.0** | EXCEEDS | 4.0 | Multiple strong factors (ideal age + awards + learning + reference + design) |
-| **3.0-4.9** | ABOVE | 3.0 | Several factors present with good scores |
+| **4.0-8.0** | EXCEEDS | 4.0 | Multiple strong factors (ideal age + awards + learning + reference) |
+| **3.0-3.9** | ABOVE | 3.0 | Several factors present with good scores |
 | **2.0-2.9** | MEETS | 2.0 | Some factors present |
 | **1.0-1.9** | BELOW | 1.0 | Minimal factors |
 | **0-0.9** | VERY BELOW | 0 | No factors present |
@@ -584,11 +563,11 @@ Raw Points = 6.1 + 6.2 + 6.3 + 6.4 + 6.5
 ### Step 1: Calculate All Six Bucket Raw Scores
 
 1. **Education:** 0-6 raw
-2. **Experience & Trajectory:** 0-23 raw
+2. **Experience & Trajectory:** 0-19 raw
 3. **Skills:** 0-14 raw
-4. **Communication:** 0-2 raw
+4. **Communication:** 0-4 raw
 5. **Context Knowledge:** 0-4 raw
-6. **Other Factors:** 0-10 raw
+6. **Other Factors:** 0-8 raw
 
 ### Step 2: Convert to Equivalent 0-4 Values
 
@@ -605,11 +584,11 @@ For each bucket, look up the raw score in the interpretation table and get the *
 
 ```
 Final Score = [
-  (Education_Equiv_0-4 × 0.15) +
+  (Education_Equiv_0-4 × 0.20) +
   (Experience_Equiv_0-4 × 0.20) +
   (Skills_Equiv_0-4 × 0.20) +
   (Communication_Equiv_0-4 × 0.20) +
-  (Context_Equiv_0-4 × 0.15) +
+  (Context_Equiv_0-4 × 0.10) +
   (Other_Equiv_0-4 × 0.10)
 ] × 25
 ```
@@ -617,9 +596,9 @@ Final Score = [
 ### Step 4: Assess Threshold Status
 
 **Three Core Thresholds:**
-- Experience & Trajectory: Raw ≥ 12.0 → PASS or FAIL
+- Experience & Trajectory: Raw ≥ 10.0 → PASS or FAIL
 - Skills: Raw ≥ 5.0 → PASS or FAIL
-- Communication: Raw ≥ 1.0 → PASS or FAIL
+- Communication: Raw ≥ 2.0 → PASS or FAIL
 
 **Count how many thresholds are passed (0/3, 1/3, 2/3, or 3/3)**
 
@@ -659,16 +638,6 @@ If you cannot estimate age from any available information:
 - Do NOT apply age override
 - Proceed with base recommendation
 
-### Step 5b: Determine Routing Suggestion
-
-Based on final score and threshold assessment, suggest an interview routing:
-
-| Condition | Suggested Route |
-|-----------|----------------|
-| Score ≥ 65 AND all 3 thresholds passed | **Live Interview** |
-| Score 50-64, OR score ≥ 65 with 1+ threshold gap | **Async Assessment** |
-| Score < 50 or DO NOT PROCEED recommendation | **—** (no route) |
-
 ### Step 6: Provide Detailed Assessment
 
 For each candidate, provide:
@@ -678,7 +647,6 @@ For each candidate, provide:
 **FINAL SCORE:** [X.XX]/100
 **TIER:** [Tier 1 Strong / Tier 2 Viable / Tier 3 Below]
 **RECOMMENDATION:** [STRONG PROCEED / PROCEED / PROCEED WITH QUESTIONS / PROCEED WITH CAUTION / DO NOT PROCEED]
-**SUGGESTED ROUTE:** [Live Interview / Async Assessment / —]
 
 **AGE ASSESSMENT:**
 - Estimated Age (as of 2026): [X years old] | Method: [Graduation year / Stated age / Work timeline]
@@ -706,11 +674,11 @@ For each candidate, provide:
 
 **BUCKET SCORES (Raw):**
 - Education: [X.X]/6.0
-- Experience & Trajectory: [X.X]/23.0
+- Experience & Trajectory: [X.X]/19.0
 - Skills: [X.X]/14.0
-- Communication: [X.X]/2.0
+- Communication: [X.X]/4.0
 - Context Knowledge: [X.X]/4.0
-- Other Factors: [X.X]/10.0
+- Other Factors: [X.X]/8.0
 ---
 ```
 
@@ -736,7 +704,7 @@ For each candidate, provide:
 
 ### Pitfall 5: Giving Credit for Unrelated Experience
 **Problem:** Resume shows 10 years of customer service, labeled as "EA experience."
-**Solution:** Only count roles explicitly labeled as EA, Executive Assistant, or equivalent. Customer service is not EA experience. When section 2.1 = 0, the **EA Experience Gate Rule** caps the entire Experience bucket at BELOW (1.0) regardless of other sub-scores.
+**Solution:** Only count roles explicitly labeled as EA, Executive Assistant, or equivalent. Customer service is not EA experience.
 
 ### Pitfall 6: Underweighting Communication
 **Problem:** Candidate has great experience but sparse, unprofessional resume; this is overlooked.
@@ -756,35 +724,35 @@ For each candidate, provide:
 
 **Raw Scores:**
 - Education: 5.0 (Tier 1 Philippine + Magna + Business)
-- Experience & Trajectory: 21.0 (7+ years, Tier A, high scope, clear growth, strategic work, embedded, stable tenure, no gaps)
+- Experience & Trajectory: 17.0 (5+ years, Tier A, high scope, clear growth, strategic work, embedded)
 - Skills: 13.0 (Strong systems thinking, high ownership, stakeholder management, expert VA skills, business impact)
-- Communication: 2.0 (Excellent writing quality)
+- Communication: 3.8 (Excellent writing, visually engaging design)
 - Context Knowledge: 2.0 (Some marketing exposure)
-- Other Factors: 7.0 (Ideal age, some awards, learning, references, visually engaging resume)
+- Other Factors: 5.0 (Ideal age, some awards, learning, references)
 
 **Equivalent 0-4 Values (from interpretation tables):**
 - Education: 5.0 raw → EXCEEDS → 4.0
-- Experience & Trajectory: 21.0 raw → EXCEEDS → 4.0
+- Experience & Trajectory: 17.0 raw → EXCEEDS → 4.0
 - Skills: 13.0 raw → EXCEEDS → 4.0
-- Communication: 2.0 raw → EXCEEDS/MEETS → 4.0
+- Communication: 3.8 raw → EXCEEDS → 4.0
 - Context Knowledge: 2.0 raw → ABOVE → 3.0
-- Other Factors: 7.0 raw → EXCEEDS → 4.0
+- Other Factors: 5.0 raw → MEETS → 2.0
 
 **Final Score Calculation:**
 ```
-= [(4.0 × 0.15) + (4.0 × 0.20) + (4.0 × 0.20) + (4.0 × 0.20) + (3.0 × 0.15) + (4.0 × 0.10)] × 25
-= [0.60 + 0.80 + 0.80 + 0.80 + 0.45 + 0.40] × 25
-= 3.85 × 25
-= 96.25/100
+= [(4.0 × 0.20) + (4.0 × 0.20) + (4.0 × 0.20) + (4.0 × 0.20) + (3.0 × 0.10) + (2.0 × 0.10)] × 25
+= [0.80 + 0.80 + 0.80 + 0.80 + 0.30 + 0.20] × 25
+= 3.90 × 25
+= 97.5/100
 ```
 
 **Threshold Assessment:**
-- Experience & Trajectory: 21.0 ✓ PASS (≥12.0)
+- Experience & Trajectory: 17.0 ✓ PASS (≥10.0)
 - Skills: 13.0 ✓ PASS (≥5.0)
-- Communication: 2.0 ✓ PASS (≥1.0)
+- Communication: 3.8 ✓ PASS (≥2.0)
 All 3/3 thresholds passed
 
-**Recommendation:** **STRONG PROCEED** (Score 96.25 + all thresholds passed)
+**Recommendation:** **STRONG PROCEED** (Score 97.5 + all thresholds passed)
 
 ---
 
