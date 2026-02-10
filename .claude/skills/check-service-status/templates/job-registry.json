@@ -1,0 +1,25 @@
+{
+  "jobs": {
+    "pipeline-report": {
+      "label": "Daily Pipeline Report",
+      "schedule": {
+        "expected_hour_utc": 0,
+        "frequency": "daily"
+      },
+      "tolerance_minutes": 120,
+      "artifact_checks": [
+        {
+          "type": "file_exists",
+          "directory": "local-data/talent/pipeline_reports",
+          "pattern": "{YYYY-MM-DD}_*_SGT.txt"
+        },
+        {
+          "type": "log_contains",
+          "directory": "local-data/logs",
+          "pattern": "pipeline-report_{YYYY-MM-DD}_*_UTC.log",
+          "search_string": "Report saved to"
+        }
+      ]
+    }
+  }
+}

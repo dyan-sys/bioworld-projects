@@ -23,7 +23,8 @@ pip install -r requirements.txt
 NOTION_KEY=secret_xxx        # Notion integration token
 NOTION_DB_ID=xxx             # Notion database ID
 MOONSHOT_API_KEY=xxx         # Moonshot AI API key (for Kimi screener)
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...  # Slack Incoming Webhook (optional, for daily report)
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...        # Slack Incoming Webhook (optional, for daily report)
+SLACK_WEBHOOK_URL_JARVIS=https://hooks.slack.com/services/... # Slack webhook for #ally-jarvis (service status)
 ```
 
 ## Resume Screening Skill
@@ -186,6 +187,10 @@ Client Partnership Lead rubric for operations leadership:
 ```
 local-data/
 ├── logs/                         # Scheduling logs (launchd output)
+├── service-status/               # Job status JSONs from run-job.sh
+│   ├── {job-id}_{timestamp}.json
+│   └── reports/                  # Service check report snapshots
+│       └── {YYYY-MM-DD_HHMM_SGT}.txt
 └── talent/
     ├── resume_raw_txt/           # Extracted resume text
     │   └── {CandidateName}.txt
@@ -469,32 +474,107 @@ local-data/talent/invite_emails/
 - **Single mode (`--page-id`):** Works regardless of Screener status (skips if no template)
 - **Duplicate runs:** Creates duplicate drafts (no Notion status tracking)
 
-## Scheduling
+## Check Service Status Skill
 
-Daily pipeline report runs automatically via macOS `launchd` at 00:00 UTC (08:00 SGT) and posts to Slack.
+Located in `.claude/skills/check-service-status/`:
 
-**Files:** `scheduling/` directory contains:
-- `com.ally.pipeline-report.plist` — launchd schedule
-- `run-pipeline-report.sh` — wrapper script (sets PATH, logs output)
-- `README.md` — setup instructions
+Monitors scheduled jobs by reading status files written by the generic `run-job.sh` wrapper. Checks whether each registered job ran on time, exited cleanly, and produced expected artifacts. Posts a summary to Slack.
+
+### Workflow
+
+**File:** `.claude/skills/check-service-status/workflows/check_service_status.py`
+
+```bash
+# Check all jobs for today
+python3.11 .claude/skills/check-service-status/workflows/check_service_status.py
+
+# Check a specific job
+python3.11 .claude/skills/check-service-status/workflows/check_service_status.py --job pipeline-report
+
+# Check a specific date
+python3.11 .claude/skills/check-service-status/workflows/check_service_status.py --date 2026-02-09
+```
 
 **Required:**
-- Environment variable: `SLACK_WEBHOOK_URL` (Incoming Webhook URL)
-- If not set, the report still runs but skips Slack posting
+- Environment variable: `SLACK_WEBHOOK_URL_JARVIS` (optional, posts to #ally-jarvis; falls back to `SLACK_WEBHOOK_URL`)
+- Python 3.11+
+- Dependencies: `requests`, `python-dotenv`
+
+### Health Levels
+
+| Status file? | Exit code | Artifacts? | Result |
+|---|---|---|---|
+| Found | 0 | All pass | **OK** |
+| Found | 0 | Some fail | **WARN** |
+| Found | non-zero | — | **FAIL** |
+| Not found | — | — | **MISSED** |
+
+### Job Registry
+
+Jobs are registered in `templates/job-registry.json`. Adding a new job = add a JSON entry, no code changes needed.
+
+Supported artifact checks:
+- `file_exists` — checks if a file matching a pattern exists in a directory
+- `log_contains` — checks if a log file contains a specific string
+
+## Scheduling
+
+Scheduled jobs run via macOS `launchd`. All jobs use a shared generic wrapper (`run-job.sh`) that handles network readiness, logging, and status tracking.
+
+### Generic Wrapper (`run-job.sh`)
+
+**File:** `scheduling/run-job.sh`
+
+All scheduled jobs are run through `run-job.sh`, which:
+1. Waits for network readiness (DNS check against `api.notion.com`)
+2. Runs the Python script, capturing stdout+stderr to `local-data/logs/{job-id}_{timestamp}.log`
+3. Writes a status JSON to `local-data/service-status/{job-id}_{timestamp}.json`
+
+```bash
+scheduling/run-job.sh <job-id> <python-script>
+```
+
+Status values: `success` (exit 0), `failed` (exit non-zero), `network_unavailable`
+
+### Scheduled Jobs
+
+| Job | Schedule | Plist |
+|-----|----------|-------|
+| Daily Pipeline Report | 00:00 UTC (08:00 SGT) | `com.ally.pipeline-report.plist` |
+| Service Health Check | 02:00 UTC (10:00 SGT) | `com.ally.service-check.plist` |
+
+**Required:**
+- Environment variable: `SLACK_WEBHOOK_URL` (Incoming Webhook URL, optional)
+- If not set, reports still run but skip Slack posting
 
 **Install:**
 ```bash
+# Pipeline report
 cp scheduling/com.ally.pipeline-report.plist ~/Library/LaunchAgents/
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.pipeline-report.plist
+
+# Service check
+cp scheduling/com.ally.service-check.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.service-check.plist
 ```
 
 **Uninstall:**
 ```bash
 launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.ally.pipeline-report.plist
 rm ~/Library/LaunchAgents/com.ally.pipeline-report.plist
+
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.ally.service-check.plist
+rm ~/Library/LaunchAgents/com.ally.service-check.plist
 ```
 
+### Adding a New Scheduled Job
+
+1. Create a launchd plist (copy existing, update Label/ProgramArguments/schedule)
+2. Add entry to `.claude/skills/check-service-status/templates/job-registry.json`
+3. Install plist to `~/Library/LaunchAgents/` and bootstrap
+
 **Logs:** `local-data/logs/` (gitignored)
+**Status files:** `local-data/service-status/` (gitignored)
 
 ## Notion Database Schema
 
