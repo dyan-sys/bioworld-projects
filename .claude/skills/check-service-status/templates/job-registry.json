@@ -20,6 +20,23 @@
           "search_string": "Report saved to"
         }
       ]
+    },
+    "job-posts": {
+      "label": "Scheduled Job Posts",
+      "schedule": {
+        "expected_hour_utc": 0,
+        "frequency": "weekly",
+        "expected_days": [1, 4]
+      },
+      "tolerance_minutes": 120,
+      "artifact_checks": [
+        {
+          "type": "log_contains",
+          "directory": "local-data/logs",
+          "pattern": "job-posts_{YYYY-MM-DD}_*_UTC.log",
+          "search_string": "SUMMARY"
+        }
+      ]
     }
   }
 }

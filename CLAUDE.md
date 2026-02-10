@@ -279,6 +279,9 @@ python3.11 .claude/skills/update-job-posts/workflows/update_job_posts.py --openi
 
 # Dry run (preview without creating)
 python3.11 .claude/skills/update-job-posts/workflows/update_job_posts.py --dry-run
+
+# Filter by channel
+python3.11 .claude/skills/update-job-posts/workflows/update_job_posts.py --channel OLJ --dry-run
 ```
 
 **Required:**
@@ -362,6 +365,27 @@ Platform-specific markdown templates in `templates/`, each with two sections:
 **Adding New Templates:**
 1. Create `{JOBCODE}-{Channel}.md` in `templates/`
 2. Add mapping in `libraries/template_registry.py`
+
+### Scheduled Job Posts
+
+**File:** `.claude/skills/update-job-posts/workflows/scheduled_update_job_posts.py`
+
+Wrapper script for automated posting. Reads `posting-plan.json` to determine which channels to post for today (by day-of-week in SGT), then dispatches to the main workflow with `--channel` filtering.
+
+**Schedule:** Mon + Thu at 00:00 UTC (08:00 SGT) via `com.ally.job-posts.plist`
+
+**Posting Plan** (`templates/posting-plan.json`):
+- OLJ: every Monday
+- Jobstreet: every Monday + Thursday
+
+Posts are always created fresh (new drafts each run) with updated hiring target dates.
+
+**To change which channels run on which days**, edit `posting-plan.json`. Uses human-readable day names (`"Monday"`, `"Thursday"`, etc.). No code changes needed.
+
+```bash
+# Manual run (uses today's day-of-week)
+python3.11 .claude/skills/update-job-posts/workflows/scheduled_update_job_posts.py
+```
 
 ## Check Recruit Status Skill
 
@@ -508,6 +532,7 @@ python3.11 .claude/skills/check-service-status/workflows/check_service_status.py
 | Found | 0 | Some fail | **WARN** |
 | Found | non-zero | — | **FAIL** |
 | Not found | — | — | **MISSED** |
+| Not found (weekly, not scheduled today) | — | — | **SKIP** |
 
 ### Job Registry
 
@@ -540,8 +565,9 @@ Status values: `success` (exit 0), `failed` (exit non-zero), `network_unavailabl
 
 | Job | Schedule | Plist |
 |-----|----------|-------|
-| Daily Pipeline Report | 00:00 UTC (08:00 SGT) | `com.ally.pipeline-report.plist` |
-| Service Health Check | 02:00 UTC (10:00 SGT) | `com.ally.service-check.plist` |
+| Daily Pipeline Report | 00:00 UTC (08:00 SGT) daily | `com.ally.pipeline-report.plist` |
+| Scheduled Job Posts | 00:00 UTC (08:00 SGT) Mon + Thu | `com.ally.job-posts.plist` |
+| Service Health Check | 02:00 UTC (10:00 SGT) daily | `com.ally.service-check.plist` |
 
 **Required:**
 - Environment variable: `SLACK_WEBHOOK_URL` (Incoming Webhook URL, optional)
@@ -553,6 +579,10 @@ Status values: `success` (exit 0), `failed` (exit non-zero), `network_unavailabl
 cp scheduling/com.ally.pipeline-report.plist ~/Library/LaunchAgents/
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.pipeline-report.plist
 
+# Job posts (Mon + Thu)
+cp scheduling/com.ally.job-posts.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.job-posts.plist
+
 # Service check
 cp scheduling/com.ally.service-check.plist ~/Library/LaunchAgents/
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.service-check.plist
@@ -562,6 +592,9 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.service-check.p
 ```bash
 launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.ally.pipeline-report.plist
 rm ~/Library/LaunchAgents/com.ally.pipeline-report.plist
+
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.ally.job-posts.plist
+rm ~/Library/LaunchAgents/com.ally.job-posts.plist
 
 launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.ally.service-check.plist
 rm ~/Library/LaunchAgents/com.ally.service-check.plist

@@ -13,6 +13,9 @@ Usage:
 
     # Dry run (preview without creating)
     python3.11 update_job_posts.py --dry-run
+
+    # Filter by channel
+    python3.11 update_job_posts.py --channel OLJ --dry-run
 """
 
 import argparse
@@ -295,7 +298,7 @@ def create_job_post(
     return result
 
 
-def process_opening(headers: dict, opening: dict, dry_run: bool = False) -> list[dict]:
+def process_opening(headers: dict, opening: dict, dry_run: bool = False, channel_filter: str = None) -> list[dict]:
     """Process a single opening: create job posts for each channel."""
     info = extract_opening_info(opening)
     print(f"\n  Opening: {info['title']}")
@@ -314,6 +317,8 @@ def process_opening(headers: dict, opening: dict, dry_run: bool = False) -> list
 
     results = []
     for channel in info["channels"]:
+        if channel_filter and channel.lower() != channel_filter.lower():
+            continue
         print(f"\n  --- Channel: {channel} ---")
         result = create_job_post(
             headers=headers,
@@ -340,12 +345,18 @@ def main():
         action="store_true",
         help="Preview what would be created without making changes",
     )
+    parser.add_argument(
+        "--channel",
+        help="Only create posts for this channel (e.g., OLJ, Jobstreet)",
+    )
     args = parser.parse_args()
 
     print("=" * 60)
     print("UPDATE JOB POSTS WORKFLOW")
     print("=" * 60)
 
+    if args.channel:
+        print(f"[MODE] Channel filter: {args.channel}")
     if args.dry_run:
         print("[MODE] Dry run — no pages will be created")
 
@@ -392,7 +403,7 @@ def main():
     for i, opening in enumerate(openings, 1):
         info = extract_opening_info(opening)
         print(f"\n[{i}/{len(openings)}] {info['title']}")
-        results = process_opening(headers, opening, dry_run=args.dry_run)
+        results = process_opening(headers, opening, dry_run=args.dry_run, channel_filter=args.channel)
         all_results.extend(results)
 
     # Summary

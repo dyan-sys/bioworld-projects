@@ -1,0 +1,14 @@
+{
+  "schedules": [
+    {
+      "channel": "OLJ",
+      "days": ["Monday"],
+      "description": "OLJ posts every Monday"
+    },
+    {
+      "channel": "Jobstreet",
+      "days": ["Monday", "Thursday"],
+      "description": "Jobstreet posts every Monday and Thursday"
+    }
+  ]
+}

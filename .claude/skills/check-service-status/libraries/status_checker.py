@@ -95,16 +95,38 @@ def assess_job_health(
     job_config: dict,
     status_files: list[dict],
     artifact_results: list[dict],
+    check_date: str | None = None,
 ) -> dict:
     """Determine overall health for a job.
+
+    Args:
+        check_date: Date string in YYYY-MM-DD format. Used to determine
+            weekday for weekly schedule checks.
 
     Returns:
         {"job_id": str, "label": str, "health": str, "status": dict|None,
          "artifacts": list, "detail": str}
     """
     label = job_config["label"]
+    schedule = job_config.get("schedule", {})
 
     if not status_files:
+        # For weekly jobs, check if today is a scheduled day
+        if schedule.get("frequency") == "weekly" and check_date:
+            expected_days = schedule.get("expected_days", [])
+            if expected_days:
+                from datetime import date as date_cls
+                check_weekday = date_cls.fromisoformat(check_date).isoweekday()
+                if check_weekday not in expected_days:
+                    return {
+                        "job_id": job_id,
+                        "label": label,
+                        "health": "SKIP",
+                        "status": None,
+                        "artifacts": [],
+                        "detail": "Not scheduled today",
+                    }
+
         return {
             "job_id": job_id,
             "label": label,
@@ -169,6 +191,7 @@ def _health_icon(health: str) -> str:
         "WARN": "[WARN]",
         "FAIL": "[FAIL]",
         "MISSED": "[MISSED]",
+        "SKIP": "[SKIP]",
     }.get(health, "[?]")
 
 
@@ -207,7 +230,10 @@ def build_status_report(results: list[dict], timestamp: datetime) -> str:
     p("Details:")
     for r in results:
         p(f"  {r['job_id']}:")
-        if r["health"] == "MISSED":
+        if r["health"] == "SKIP":
+            p(f"    [SKIP] {r['detail']}")
+            continue
+        elif r["health"] == "MISSED":
             p(f"    [MISSED] {r['detail']}")
         elif r["health"] == "FAIL":
             p(f"    [FAIL] {r['detail']}")

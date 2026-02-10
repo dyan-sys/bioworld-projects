@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.ally.job-posts</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/yikfaiivanli/Projects/ally-os/scheduling/run-job.sh</string>
+        <string>job-posts</string>
+        <string>.claude/skills/update-job-posts/workflows/scheduled_update_job_posts.py</string>
+    </array>
+
+    <!-- Mon + Thu at 00:00 UTC = 08:00 SGT -->
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict>
+            <key>Weekday</key>
+            <integer>1</integer>
+            <key>Hour</key>
+            <integer>0</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+        <dict>
+            <key>Weekday</key>
+            <integer>4</integer>
+            <key>Hour</key>
+            <integer>0</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+    </array>
+
+    <key>StandardOutPath</key>
+    <string>/Users/yikfaiivanli/Projects/ally-os/local-data/logs/launchd-stdout.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/yikfaiivanli/Projects/ally-os/local-data/logs/launchd-stderr.log</string>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/yikfaiivanli/Projects/ally-os</string>
+</dict>
+</plist>

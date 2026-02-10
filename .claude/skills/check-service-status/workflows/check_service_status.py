@@ -95,7 +95,7 @@ def main():
             artifact_results.append(result)
 
         # Assess health
-        health = assess_job_health(job_id, job_config, status_files, artifact_results)
+        health = assess_job_health(job_id, job_config, status_files, artifact_results, check_date=check_date)
         results.append(health)
 
     # Build report
