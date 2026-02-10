@@ -429,14 +429,14 @@ def compute_channel_quality(
     opening_names: dict[str, str],
     post_channels: dict[str, str],
 ) -> list[dict]:
-    """Compute per-channel invite and R1 rates for EP candidates (last 30d).
+    """Compute per-channel invite and R1 rates for EP candidates (last 60d).
 
     Returns list of dicts sorted by applied desc:
         [{"channel": str, "applied": int, "invited": int, "r1_proceed": int}, ...]
     """
     now_sgt = datetime.now(SGT)
     today_start = now_sgt.replace(hour=0, minute=0, second=0, microsecond=0)
-    cutoff_30d = today_start - timedelta(days=30)
+    cutoff_60d = today_start - timedelta(days=60)
 
     role_post_ids = _get_ep_post_ids(opening_names)
 
@@ -447,7 +447,7 @@ def compute_channel_quality(
         pid = c.get("post_relation_id")
         if not created or not pid or pid not in role_post_ids:
             continue
-        if not (cutoff_30d <= created < today_start):
+        if not (cutoff_60d <= created < today_start):
             continue
 
         channel = post_channels.get(pid, "Unknown")
@@ -636,9 +636,9 @@ def build_report(
             hdr2 += f" {w:>12}"
         p(hdr2)
         stage_pairs = [
-            ("Applied→Invite", "invited", "applied"),
-            ("Invite→R1", "r1_proceed", "invited"),
-            ("R1→R2", "r2_proceed", "r1_proceed"),
+            ("Applied→Invited", "invited", "applied"),
+            ("Invited→R1 Proceed", "r1_proceed", "invited"),
+            ("R1→R2 Proceed", "r2_proceed", "r1_proceed"),
         ]
         for label, num_key, denom_key in stage_pairs:
             line = f"  {label:<18}"
@@ -648,10 +648,10 @@ def build_report(
             p(line)
         p(f"```")
 
-    # 6. EP Channel Quality (last 30d)
+    # 6. EP Channel Quality (last 60d)
     if channel_quality:
         p()
-        p(f"*6. EP Channel Quality (last 30d)*")
+        p(f"*6. EP Channel Quality (last 60d)*")
         p(f"```")
         p(f"{'Channel':<15} {'Applied':>7}  {'Invited':>7}  {'Inv%':>5}  {'R1 Proc':>7}  {'R1%':>5}  {'R2 Proc':>7}  {'R2%':>5}")
         for row in channel_quality:
