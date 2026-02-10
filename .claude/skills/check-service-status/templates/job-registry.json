@@ -58,6 +58,22 @@
           "search_string": "SUMMARY"
         }
       ]
+    },
+    "resume-screener": {
+      "label": "Resume Screener (Kimi)",
+      "schedule": {
+        "expected_hour_utc": 0,
+        "frequency": "daily"
+      },
+      "tolerance_minutes": 960,
+      "artifact_checks": [
+        {
+          "type": "log_contains",
+          "directory": "local-data/logs",
+          "pattern": "resume-screener_{YYYY-MM-DD}_*_UTC.log",
+          "search_string": "SUMMARY"
+        }
+      ]
     }
   }
 }

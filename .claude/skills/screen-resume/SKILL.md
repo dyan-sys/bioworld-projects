@@ -130,3 +130,22 @@ python3.11 workflows/resume_screener.py --page-id abc123...
 ```
 
 Each script extracts resume text, scores against the rubric, saves a receipt JSON, and updates the Notion page.
+
+### Scheduled Screening
+
+The Kimi screener runs automatically 4 times per day via launchd:
+- 8am SGT (00:00 UTC)
+- 12pm SGT (04:00 UTC)
+- 4pm SGT (08:00 UTC)
+- 8pm SGT (12:00 UTC)
+
+Each run processes up to 20 unscored candidates (80/day max), filtered by:
+- Created in last 72 hours
+- Full-time availability
+- Asia timezone
+- Kimi Rating empty
+
+Logs: `local-data/logs/resume-screener_{timestamp}.log`
+Status: `local-data/service-status/resume-screener_{timestamp}.json`
+
+To manually trigger (for testing): `launchctl kickstart -k gui/$(id -u)/com.ally.resume-screener`

@@ -721,6 +721,7 @@ Status values: `success` (exit 0), `failed` (exit non-zero), `network_unavailabl
 | Daily Pipeline Report | 00:00 UTC (08:00 SGT) daily | `com.ally.pipeline-report.plist` |
 | EP Channel Issue Flagging | 00:00 UTC (08:00 SGT) daily | `com.ally.ep-issues.plist` |
 | Scheduled Job Posts | 00:00 UTC (08:00 SGT) Mon + Thu | `com.ally.job-posts.plist` |
+| Resume Screener (Kimi) | 00:00, 04:00, 08:00, 12:00 UTC (8am, noon, 4pm, 8pm SGT) | `com.ally.resume-screener.plist` |
 | Service Health Check | 02:00 UTC (10:00 SGT) daily | `com.ally.service-check.plist` |
 
 **Required:**
@@ -741,6 +742,10 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.job-posts.plist
 cp scheduling/com.ally.ep-issues.plist ~/Library/LaunchAgents/
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.ep-issues.plist
 
+# Resume screener (4x daily)
+cp scheduling/com.ally.resume-screener.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.resume-screener.plist
+
 # Service check
 cp scheduling/com.ally.service-check.plist ~/Library/LaunchAgents/
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.service-check.plist
@@ -756,6 +761,9 @@ rm ~/Library/LaunchAgents/com.ally.ep-issues.plist
 
 launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.ally.job-posts.plist
 rm ~/Library/LaunchAgents/com.ally.job-posts.plist
+
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.ally.resume-screener.plist
+rm ~/Library/LaunchAgents/com.ally.resume-screener.plist
 
 launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.ally.service-check.plist
 rm ~/Library/LaunchAgents/com.ally.service-check.plist
