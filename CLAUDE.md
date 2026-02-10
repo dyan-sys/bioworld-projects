@@ -23,8 +23,10 @@ pip install -r requirements.txt
 NOTION_KEY=secret_xxx        # Notion integration token
 NOTION_DB_ID=xxx             # Notion database ID
 MOONSHOT_API_KEY=xxx         # Moonshot AI API key (for Kimi screener)
+MOONSHOT_API_KEY_EP=xxx      # Separate Moonshot key for EP channel review (optional, falls back to MOONSHOT_API_KEY)
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...        # Slack Incoming Webhook (optional, for daily report)
 SLACK_WEBHOOK_URL_JARVIS=https://hooks.slack.com/services/... # Slack webhook for #ally-jarvis (service status)
+SLACK_BOT_TOKEN=xoxb-xxx                                     # Slack Bot Token (channels:history, users:read)
 ```
 
 ## Resume Screening Skill
@@ -197,8 +199,11 @@ local-data/
     ├── resume_receipts/          # Full scoring JSON
     │   ├── {CandidateName}_Claude.json
     │   └── {CandidateName}_Kimi.json
-    └── pipeline_reports/         # Daily pipeline report snapshots
-        └── {YYYY-MM-DD_HHMM_SGT}.txt
+    ├── pipeline_reports/         # Daily pipeline report snapshots
+    │   └── {YYYY-MM-DD_HHMM_SGT}.txt
+    └── ep_reviews/               # EP channel review artifacts
+        ├── {YYYY-MM-DD}_review.json
+        └── {YYYY-MM-DD}_report.txt
 ```
 
 ## Update Resume Screener Skill
@@ -489,6 +494,16 @@ local-data/talent/invite_emails/
 └── R1-Async-Truffle-{CandidateName}.json
 ```
 
+### Post-Send Status Updates (Manual)
+
+After sending drafts from Gmail, the human manually updates Notion `1R` from "Not Started" to "Invitation Sent". This was investigated in WIT-28 — automation was considered but deemed not worth the complexity at current volume (~5-10 invites per batch).
+
+**Technical findings (for future reference if volume increases):**
+- Gmail draft detection: `drafts.get(draftId)` returns 404 when a draft is sent. Search `to:{email} subject:"{subject}" in:sent` to confirm sent vs deleted.
+- Receipt files already store `draft_id`. Would need to add `page_id` for Notion updates.
+- Would need `gmail.readonly` scope added (requires token re-auth via browser).
+- Calendly booking detection: REST API polling via `GET /scheduled_events` with Personal Access Token is feasible. Webhooks require a public server (not viable on Mac/launchd). Zapier/Make can bridge Calendly → Notion with no code (~$20-30/mo).
+
 ### Edge Cases
 
 - **No email:** Skipped with `[SKIP] No email address`
@@ -497,6 +512,64 @@ local-data/talent/invite_emails/
 - **Dry run:** Skips Gmail auth, renders and saves receipts without creating drafts
 - **Single mode (`--page-id`):** Works regardless of Screener status (skips if no template)
 - **Duplicate runs:** Creates duplicate drafts (no Notion status tracking)
+
+## Flag EP Issues Skill
+
+Located in `.claude/skills/flag-ep-issues/`:
+
+Reviews EP (Executive Partner) Slack channel conversations daily. Reads yesterday's messages from monitored channels, sends a batched analysis to Kimi AI, and posts flagged issues to #ally-jarvis.
+
+### Workflow
+
+**File:** `.claude/skills/flag-ep-issues/workflows/flag_ep_issues.py`
+
+```bash
+# Default (yesterday's conversations)
+python3.11 .claude/skills/flag-ep-issues/workflows/flag_ep_issues.py
+
+# Specific date
+python3.11 .claude/skills/flag-ep-issues/workflows/flag_ep_issues.py --date 2026-02-09
+
+# Single channel
+python3.11 .claude/skills/flag-ep-issues/workflows/flag_ep_issues.py --channel C0XXXXXX
+
+# Dry run (no Slack posting)
+python3.11 .claude/skills/flag-ep-issues/workflows/flag_ep_issues.py --dry-run
+```
+
+**Required:**
+- Environment variables: `MOONSHOT_API_KEY_EP` (or `MOONSHOT_API_KEY` fallback), `SLACK_BOT_TOKEN`
+- Optional: `SLACK_WEBHOOK_URL_JARVIS` (for posting to Slack)
+- Python 3.11+
+- Dependencies: `slack-sdk`, `openai`, `httpx`, `h2`, `requests`, `python-dotenv`
+
+### How It Works
+
+1. Loads channel registry from `templates/channel-registry.json`
+2. Reads yesterday's messages from each channel via Slack Bot API
+3. Formats conversations into readable transcripts (with threads)
+4. Sends all transcripts in a single batched Kimi API call
+5. Parses JSON response with per-channel status and flags
+6. Builds Slack report and posts to #ally-jarvis
+
+### Flag Types
+
+| Type | Description |
+|------|-------------|
+| Missed Item | Unanswered questions, unacknowledged requests |
+| Stalled Progress | Repeated follow-ups, no movement on topics |
+| No Activity | Channels with zero messages |
+
+### Channel Registry
+
+Channels are config-driven via `templates/channel-registry.json`. To add/remove channels, edit the JSON — no code changes needed. The Slack bot must be invited to each monitored channel.
+
+### Slack Bot Setup
+
+1. Create app at https://api.slack.com/apps
+2. Add bot scopes: `channels:history`, `users:read` (add `groups:history` if channels are private)
+3. Install to workspace, copy Bot Token to `.env` as `SLACK_BOT_TOKEN`
+4. Invite bot to each monitored channel (`/invite @BotName`)
 
 ## Check Service Status Skill
 
@@ -566,6 +639,7 @@ Status values: `success` (exit 0), `failed` (exit non-zero), `network_unavailabl
 | Job | Schedule | Plist |
 |-----|----------|-------|
 | Daily Pipeline Report | 00:00 UTC (08:00 SGT) daily | `com.ally.pipeline-report.plist` |
+| EP Channel Issue Flagging | 00:00 UTC (08:00 SGT) daily | `com.ally.ep-issues.plist` |
 | Scheduled Job Posts | 00:00 UTC (08:00 SGT) Mon + Thu | `com.ally.job-posts.plist` |
 | Service Health Check | 02:00 UTC (10:00 SGT) daily | `com.ally.service-check.plist` |
 
@@ -583,6 +657,10 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.pipeline-report
 cp scheduling/com.ally.job-posts.plist ~/Library/LaunchAgents/
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.job-posts.plist
 
+# EP channel issue flagging
+cp scheduling/com.ally.ep-issues.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.ep-issues.plist
+
 # Service check
 cp scheduling/com.ally.service-check.plist ~/Library/LaunchAgents/
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.service-check.plist
@@ -592,6 +670,9 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.service-check.p
 ```bash
 launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.ally.pipeline-report.plist
 rm ~/Library/LaunchAgents/com.ally.pipeline-report.plist
+
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.ally.ep-issues.plist
+rm ~/Library/LaunchAgents/com.ally.ep-issues.plist
 
 launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.ally.job-posts.plist
 rm ~/Library/LaunchAgents/com.ally.job-posts.plist
@@ -608,6 +689,12 @@ rm ~/Library/LaunchAgents/com.ally.service-check.plist
 
 **Logs:** `local-data/logs/` (gitignored)
 **Status files:** `local-data/service-status/` (gitignored)
+
+## Linear MCP Tool
+
+- To update issue status, use the `state` parameter (not `status`). The `status` param is silently ignored.
+- When multiple states share the same type (e.g., "Canceled" and "Duplicate" are both type `canceled`), use the **UUID** instead of the name to avoid ambiguous matching.
+- Team: "With Ally", team ID: `f3fb95e8-5a4d-4949-b49e-4cf4c95f81d9`
 
 ## Notion Database Schema
 
