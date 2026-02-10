@@ -616,6 +616,15 @@ Supported artifact checks:
 - `file_exists` — checks if a file matching a pattern exists in a directory
 - `log_contains` — checks if a log file contains a specific string
 
+### API Usage Tracking
+
+The service status report includes a Moonshot API balance/usage section:
+- Fetches balance from `GET /v1/users/me/balance` for both `MOONSHOT_API_KEY` (screening) and `MOONSHOT_API_KEY_EP` (EP review)
+- Saves daily snapshots to `local-data/service-status/api-balance/{YYYY-MM-DD}.json`
+- Computes spend delta by comparing today's balance to yesterday's snapshot
+- Counts daily API calls from Kimi receipt files (resume receipts + EP reviews)
+- Graceful fallback: if balance fetch fails, the section is omitted
+
 ## Scheduling
 
 Scheduled jobs run via macOS `launchd`. All jobs use a shared generic wrapper (`run-job.sh`) that handles network readiness, logging, and status tracking.

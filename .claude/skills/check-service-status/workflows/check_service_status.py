@@ -11,6 +11,7 @@ Usage:
 """
 
 import argparse
+import os
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -22,6 +23,13 @@ SKILL_ROOT = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 
 sys.path.insert(0, str(SKILL_ROOT / "libraries"))
+from balance_checker import (
+    build_balance_section,
+    count_api_calls,
+    fetch_balance,
+    load_snapshot,
+    save_snapshot,
+)
 from status_checker import (
     assess_job_health,
     build_status_report,
@@ -38,6 +46,50 @@ SGT = timezone(timedelta(hours=8))
 STATUS_DIR = PROJECT_ROOT / "local-data" / "service-status"
 REPORTS_DIR = STATUS_DIR / "reports"
 REGISTRY_PATH = SKILL_ROOT / "templates" / "job-registry.json"
+
+
+BALANCE_SNAPSHOT_DIR = STATUS_DIR / "api-balance"
+
+
+def _build_api_balance_section(check_date: str) -> str | None:
+    """Fetch Moonshot API balances and build the report section.
+
+    Returns the formatted section string, or None if both keys fail.
+    """
+    key_screening = os.environ.get("MOONSHOT_API_KEY")
+    key_ep = os.environ.get("MOONSHOT_API_KEY_EP") or key_screening
+
+    if not key_screening and not key_ep:
+        return None
+
+    balances = {}
+    for key_name, api_key in [("screening", key_screening), ("ep_review", key_ep)]:
+        if not api_key:
+            continue
+        try:
+            balances[key_name] = fetch_balance(api_key)
+        except Exception as e:
+            print(f"WARNING: Failed to fetch balance for {key_name}: {e}")
+
+    if not balances:
+        return None
+
+    # Save today's snapshot
+    try:
+        save_snapshot(balances, check_date, BALANCE_SNAPSHOT_DIR)
+    except Exception as e:
+        print(f"WARNING: Failed to save balance snapshot: {e}")
+
+    # Load yesterday's snapshot for delta
+    from datetime import date as date_cls
+
+    yesterday = (date_cls.fromisoformat(check_date) - timedelta(days=1)).isoformat()
+    prev_snapshot = load_snapshot(yesterday, BALANCE_SNAPSHOT_DIR)
+
+    # Count API calls
+    call_counts = count_api_calls(check_date, PROJECT_ROOT)
+
+    return build_balance_section(balances, prev_snapshot, call_counts)
 
 
 def main():
@@ -101,6 +153,12 @@ def main():
     # Build report
     now_sgt = datetime.now(SGT)
     report = build_status_report(results, now_sgt)
+
+    # API balance section
+    balance_section = _build_api_balance_section(check_date)
+    if balance_section:
+        report += "\n" + balance_section
+
     print(report, end="")
 
     # Save report
