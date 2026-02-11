@@ -167,3 +167,13 @@ Save analysis as JSON with this structure:
 4. **Evaluate rubric usability**: Could a different interviewer score consistently?
 5. **Consider candidate perspective**: Would this feel like a fair evaluation?
 6. **Balance technical and behavioral**: CS roles need both, ensure coverage
+
+## Document Formatting
+
+When writing analysis documents, follow the tone and visual hierarchy conventions in SKILL.md:
+- Supportive tone — validate what works before suggesting improvements
+- 🟢 High impact / 🟡 Medium impact / ⚪ Nice-to-have color coding
+- 💡 prefix on recommendations
+- Emoji-coded H2 headings (🔍, ✅, 🔧, 📊, 📦)
+- "Areas for Improvement" not "Key Issues"
+- "Must-do / Should-do / Nice-to-have" not "Must-fix / Should-fix"

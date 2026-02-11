@@ -137,6 +137,16 @@ Save analysis as JSON with this structure:
 
 1. **Be specific**: Reference exact phrases or sections when noting issues
 2. **Be actionable**: Recommendations should be concrete rewrites, not vague suggestions
-3. **Be balanced**: Note strengths as well as issues
+3. **Be balanced**: Note strengths as well as issues — lead with strengths
 4. **Be calibrated**: Use the full 0-10 scale, don't cluster scores in middle
 5. **Check competency alignment**: Explicitly reference which competencies are well/poorly addressed
+
+## Document Formatting
+
+When writing analysis documents, follow the tone and visual hierarchy conventions in SKILL.md:
+- Supportive tone — validate what works before suggesting improvements
+- 🟢 High impact / 🟡 Medium impact / ⚪ Nice-to-have color coding
+- 💡 prefix on recommendations
+- Emoji-coded H2 headings (🔍, ✅, 🔧, 📊, 📦)
+- "Areas for Improvement" not "Key Issues"
+- "Must-do / Should-do / Nice-to-have" not "Must-fix / Should-fix"

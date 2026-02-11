@@ -2,6 +2,7 @@
   "care-n-bloom": {
     "display_name": "Care & Bloom",
     "notion_parent_page_id": "3042b7ec459780769d60d297a69ca3b5",
+    "notion_internal_page_id": "3042b7ec-4597-8072-af23-e80106864291",
     "slack_channel_id": "C0AE99NGTGA",
     "default_checklist": [
       "Compensation framing — does this match your budget and growth plan?",

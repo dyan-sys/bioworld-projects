@@ -259,11 +259,40 @@ All analysis is saved as JSON with this structure:
 }
 ```
 
+## Document Tone & Framing
+
+When writing client-facing analysis documents (analysis.md, reviews, recommendations):
+
+**Tone:**
+- **Supportive and encouraging**, not critical. We're a consulting partner, not an auditor.
+- **Validate first, then suggest.** Every section about improvements should acknowledge what the client already did well before recommending changes.
+- Use "key challenge" or "key missing piece" — never "core issue" or "main problem."
+- Use "Areas for Improvement" — never "Key Issues" or "Problems."
+- Frame recommendations as building on their work: "The next step is..." not "You need to fix..."
+- Close with collaboration language: "we'd love your feedback" / "starting points for discussion."
+
+**Visual Hierarchy:**
+- Add emojis to H2 section headings for scannability (e.g., 🔍 Executive Summary, ✅ What Works Well, 🔧 Areas for Improvement, 📊 Summary, 📦 Deliverables).
+- Color-code impact levels with emoji dots:
+  - 🟢 **High impact** (green = go do this)
+  - 🟡 **Medium impact** (yellow = should do)
+  - ⚪ **Nice-to-have** (grey = low priority)
+- Prefix all recommendations with 💡 to visually separate "what is" from "what to do."
+- Use the same color coding in summary tables.
+- Priority labels: "Must-do" / "Should-do" / "Nice-to-have" (not "Must-fix" / "Should-fix").
+
+**Structure pattern for each improvement item:**
+1. H3 with the topic name
+2. Color-coded impact level (🟢/🟡/⚪)
+3. What the client already did well (validate)
+4. What's missing or could be stronger
+5. 💡 Recommendation with specific action
+
 ## Tips for Effective Analysis
 
 1. **Be Specific**: Reference exact lines or phrases when noting issues
 2. **Be Actionable**: Recommendations should be concrete, not vague ("Add X" vs "Could be better")
-3. **Be Balanced**: Highlight strengths as well as issues
+3. **Be Balanced**: Highlight strengths as well as issues — lead with strengths
 4. **Use Full Scale**: Scores from 0-10, don't cluster around 5-7
 5. **Check Competency Alignment**: Explicitly map requirements/questions to CS framework
 6. **Consider Role Tier**: Expectations differ for Tier 1 vs Tier 2 vs Account Management

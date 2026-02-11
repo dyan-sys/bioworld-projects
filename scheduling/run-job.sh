@@ -16,7 +16,60 @@ PYTHON="/opt/homebrew/bin/python3.11"
 LOG_DIR="$PROJECT_ROOT/local-data/logs"
 STATUS_DIR="$PROJECT_ROOT/local-data/service-status"
 
+# Load .env for Slack webhook
+if [ -f "$PROJECT_ROOT/.env" ]; then
+  SLACK_WEBHOOK_URL_JARVIS="$(grep '^SLACK_WEBHOOK_URL_JARVIS=' "$PROJECT_ROOT/.env" | cut -d= -f2-)"
+fi
+
 mkdir -p "$LOG_DIR" "$STATUS_DIR"
+
+# ── Slack notification helper ──────────────────────────────
+notify_slack() {
+  local status="$1"
+  local duration="$2"
+  local exit_code="${3:-0}"
+
+  [ -z "${SLACK_WEBHOOK_URL_JARVIS:-}" ] && return 0
+
+  # Format duration as Xm Ys
+  local mins=$((duration / 60))
+  local secs=$((duration % 60))
+  local dur_str=""
+  if [ "$mins" -gt 0 ]; then
+    dur_str="${mins}m ${secs}s"
+  else
+    dur_str="${secs}s"
+  fi
+
+  # Pick emoji
+  local emoji
+  case "$status" in
+    success)            emoji="white_check_mark" ;;
+    failed)             emoji="x" ;;
+    network_unavailable) emoji="warning" ;;
+    *)                  emoji="grey_question" ;;
+  esac
+
+  # Extract SUMMARY block from log (everything after the SUMMARY divider)
+  local summary=""
+  if [ -f "$LOGFILE" ]; then
+    summary="$(sed -n '/^SUMMARY$/,$ p' "$LOGFILE" | tail -n +3 | head -20)"
+  fi
+
+  # Build message text
+  local text=":${emoji}: *${JOB_ID}* — ${status} (${dur_str})"
+  if [ "$status" = "failed" ]; then
+    text="${text} | exit ${exit_code}"
+  fi
+  if [ -n "$summary" ]; then
+    text="${text}\n\`\`\`${summary}\`\`\`"
+  fi
+
+  # Post (fire-and-forget, don't fail the wrapper)
+  curl -s -X POST -H 'Content-type: application/json' \
+    --data "{\"text\": \"${text}\"}" \
+    "$SLACK_WEBHOOK_URL_JARVIS" >/dev/null 2>&1 || true
+}
 
 TIMESTAMP="$(date -u +%Y-%m-%d_%H%M_UTC)"
 LOGFILE="$LOG_DIR/${JOB_ID}_${TIMESTAMP}.log"
@@ -42,6 +95,7 @@ while ! host api.notion.com >/dev/null 2>&1; do
   "log_file": "local-data/logs/${JOB_ID}_${TIMESTAMP}.log"
 }
 EOF
+    notify_slack "network_unavailable" "$WAITED" 1
     exit 1
   fi
   sleep 5
@@ -56,8 +110,8 @@ fi
 START_ISO="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 START_EPOCH="$(date +%s)"
 
-"$PYTHON" "$PROJECT_ROOT/$SCRIPT" >> "$LOGFILE" 2>&1
-EXIT_CODE=$?
+EXIT_CODE=0
+"$PYTHON" "$PROJECT_ROOT/$SCRIPT" >> "$LOGFILE" 2>&1 || EXIT_CODE=$?
 
 END_ISO="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 END_EPOCH="$(date +%s)"
@@ -81,3 +135,6 @@ cat > "$STATUS_DIR/${JOB_ID}_${TIMESTAMP}.json" <<EOF
   "log_file": "local-data/logs/${JOB_ID}_${TIMESTAMP}.log"
 }
 EOF
+
+# Notify Slack
+notify_slack "$STATUS" "$DURATION" "$EXIT_CODE"
