@@ -1,13 +1,13 @@
 """
 Background Check Workflow
 
-Screens candidates' online presence using Kimi web search to flag
-red flags before they advance in the pipeline.
+Screens candidates' online presence using Gemini + Google Search grounding
+to flag red flags before they advance in the pipeline.
 
 Steps per candidate:
 1. Load candidate data from Notion + resume text from local files
-2. Kimi Call 1 — Generate targeted search queries (no web search)
-3. Kimi Call 2 — Execute searches and analyze findings (with $web_search)
+2. Kimi — Generate targeted search queries
+3. Gemini + Google Search — Search google.com and analyze findings
 4. Save receipt to local-data/talent/background_checks/
 5. Update Notion with BG Check status and notes
 """
@@ -29,9 +29,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(SKILL_ROOT))
 
 from libraries.kimi_web_checker import (
+    GEMINI_MODEL,
     MOONSHOT_MODEL,
+    gemini_search_and_analyze,
     generate_search_queries,
-    run_background_check,
     save_receipt,
 )
 
@@ -44,26 +45,28 @@ RAW_TEXT_DIR = DATA_DIR / "resume_raw_txt"
 BG_CHECK_DIR = DATA_DIR / "background_checks"
 
 
-def load_env_keys() -> tuple[str, str, str]:
+def load_env_keys() -> dict:
     """Load required environment variables."""
-    notion_key = os.environ.get("NOTION_KEY")
-    notion_db_id = os.environ.get("NOTION_DB_ID")
-    moonshot_key = os.environ.get("MOONSHOT_API_KEY")
+    keys = {
+        "notion_key": os.environ.get("NOTION_KEY"),
+        "notion_db_id": os.environ.get("NOTION_DB_ID"),
+        "moonshot_key": os.environ.get("MOONSHOT_API_KEY"),
+        "gemini_api_key": os.environ.get("GEMINI_API_KEY"),
+    }
 
-    missing = []
-    if not notion_key:
-        missing.append("NOTION_KEY")
-    if not notion_db_id:
-        missing.append("NOTION_DB_ID")
-    if not moonshot_key:
-        missing.append("MOONSHOT_API_KEY")
-
+    missing = [name for name, val in keys.items() if not val]
     if missing:
+        var_names = {
+            "notion_key": "NOTION_KEY",
+            "notion_db_id": "NOTION_DB_ID",
+            "moonshot_key": "MOONSHOT_API_KEY",
+            "gemini_api_key": "GEMINI_API_KEY",
+        }
         raise EnvironmentError(
-            f"Missing required environment variables: {', '.join(missing)}"
+            f"Missing required environment variables: {', '.join(var_names[k] for k in missing)}"
         )
 
-    return notion_key, notion_db_id, moonshot_key
+    return keys
 
 
 def clean_name_for_filename(name: str) -> str:
@@ -86,12 +89,7 @@ def fetch_notion_page(notion_key: str, page_id: str) -> dict:
 
 
 def parse_status_filter(filter_str: str) -> tuple[str, str]:
-    """
-    Parse a status filter string like '2R:Proceed' into (stage, status).
-
-    Returns:
-        Tuple of (property_name, status_value)
-    """
+    """Parse a status filter string like '2R:Proceed' into (stage, status)."""
     parts = filter_str.split(":", 1)
     if len(parts) != 2:
         raise ValueError(
@@ -118,7 +116,6 @@ def query_notion_candidates(
         "Content-Type": "application/json",
     }
 
-    # Build filter conditions
     stage_prop, stage_value = status_filter or ("2R", "Proceed")
 
     filters = [
@@ -154,7 +151,6 @@ def get_candidate_info(page: dict) -> dict:
     """Extract candidate name, resume URL, and metadata from a Notion page."""
     properties = page.get("properties", {})
 
-    # Get candidate name from "Full Name" (title field)
     name = "Unknown"
     if "Full Name" in properties:
         name_prop = properties["Full Name"]
@@ -163,7 +159,6 @@ def get_candidate_info(page: dict) -> dict:
             if title_items:
                 name = title_items[0].get("plain_text", "Unknown")
 
-    # Get resume URL from "Resume" property (files type)
     resume_url = None
     if "Resume" in properties:
         resume_prop = properties["Resume"]
@@ -175,7 +170,6 @@ def get_candidate_info(page: dict) -> dict:
             elif file_obj.get("type") == "file":
                 resume_url = file_obj.get("file", {}).get("url")
 
-    # Get Location (rich_text field)
     location = ""
     if "Location" in properties:
         loc_prop = properties["Location"]
@@ -195,9 +189,6 @@ def get_candidate_info(page: dict) -> dict:
 def load_resume_text(candidate_name: str, resume_url: str | None) -> str | None:
     """
     Load resume text from local file, falling back to PDF extraction.
-
-    Checks local-data/talent/resume_raw_txt/{name}.txt first. If not found
-    and a resume URL is available, extracts text from the PDF.
     """
     clean_name = clean_name_for_filename(candidate_name)
     text_path = RAW_TEXT_DIR / f"{clean_name}.txt"
@@ -208,7 +199,6 @@ def load_resume_text(candidate_name: str, resume_url: str | None) -> str | None:
     if not resume_url:
         return None
 
-    # Fallback: extract from PDF using screen-resume's pdf_tools
     try:
         pdf_tools_path = (
             PROJECT_ROOT / ".claude" / "skills" / "screen-resume" / "libraries"
@@ -219,7 +209,6 @@ def load_resume_text(candidate_name: str, resume_url: str | None) -> str | None:
         print(f"  [EXTRACT] Downloading resume PDF...")
         text = extract_text_from_url(resume_url)
 
-        # Save for future use
         RAW_TEXT_DIR.mkdir(parents=True, exist_ok=True)
         text_path.write_text(text, encoding="utf-8")
         print(f"  [SAVE] Raw text -> {text_path.name}")
@@ -231,27 +220,16 @@ def load_resume_text(candidate_name: str, resume_url: str | None) -> str | None:
 
 
 def extract_employers_from_resume(resume_text: str) -> str:
-    """
-    Extract likely employer names from resume text.
-
-    Simple heuristic: look for lines that seem like company names
-    near employment-related keywords.
-    """
+    """Extract likely employer names from resume text."""
     if not resume_text:
         return ""
 
-    # Take the first 2000 chars (usually covers work experience section)
     text = resume_text[:2000]
-
-    # Common patterns: lines following "Experience" headers, or lines with dates
-    # This is a rough heuristic — Kimi Call 1 will do the real work
     lines = text.split("\n")
     employers = []
     for line in lines:
         line = line.strip()
-        # Lines with date ranges often contain company names
         if re.search(r"\b(20\d{2}|19\d{2})\s*[-–—]\s*(20\d{2}|present|current)", line, re.I):
-            # Strip the date part to get company/title info
             cleaned = re.sub(r"\b(20\d{2}|19\d{2})\s*[-–—]\s*(20\d{2}|present|current)\b", "", line, flags=re.I)
             cleaned = cleaned.strip(" |·•–—-,")
             if cleaned and len(cleaned) > 3:
@@ -261,24 +239,17 @@ def extract_employers_from_resume(resume_text: str) -> str:
 
 
 def format_bg_check_notes(result: dict) -> str:
-    """
-    Format background check result into a concise text for Notion rich_text.
-
-    Max 2000 chars (Notion rich_text limit).
-    """
+    """Format background check result for Notion rich_text (max 2000 chars)."""
     parts = []
 
-    # Overall
     recommendation = result.get("overall_recommendation", "Unknown")
     confidence = result.get("confidence", "Unknown")
     parts.append(f"RESULT: {recommendation} (Confidence: {confidence})")
 
-    # Summary
     summary = result.get("summary", "")
     if summary:
         parts.append(f"\n{summary}")
 
-    # Per-category breakdown
     categories = result.get("categories", {})
     cat_labels = {
         "linkedin_consistency": "LinkedIn",
@@ -294,7 +265,6 @@ def format_bg_check_notes(result: dict) -> str:
             findings = cat.get("findings", "")
             parts.append(f"\n{label}: {rating} — {findings}")
 
-    # Confidence reasoning
     conf_reason = result.get("confidence_reasoning", "")
     if conf_reason:
         parts.append(f"\nConfidence note: {conf_reason}")
@@ -333,8 +303,7 @@ def update_notion_bg_check(
 
 def process_candidate(
     candidate: dict,
-    notion_key: str,
-    moonshot_key: str,
+    env_keys: dict,
     dry_run: bool = False,
 ) -> dict:
     """Process a single candidate: load data, search, analyze, save, update."""
@@ -367,19 +336,28 @@ def process_candidate(
             "resume_text": resume_text,
         }
 
-        # Call 1: Generate search queries
+        # Step 1: Generate search queries (Kimi)
         print(f"  [QUERIES] Generating search queries...")
-        queries = generate_search_queries(candidate_data, moonshot_key)
+        queries = generate_search_queries(candidate_data, env_keys["moonshot_key"])
         print(f"  [QUERIES] Generated {len(queries)} queries:")
         for q in queries:
             print(f"    - {q}")
 
-        # Call 2: Run background check with web search
-        print(f"  [CHECK] Running background check with web search...")
-        check_result = run_background_check(candidate_data, queries, moonshot_key)
+        # Step 2: Search + Analyze (Gemini with Google Search grounding)
+        print(f"  [SEARCH] Gemini + Google Search grounding...")
+        gemini_result = gemini_search_and_analyze(
+            candidate_data, queries, env_keys["gemini_api_key"]
+        )
 
-        # Remove raw_response for Notion (keep in receipt)
-        raw_response = check_result.pop("raw_response", "")
+        check_result = gemini_result["result"]
+        sources = gemini_result["sources"]
+        search_queries_used = gemini_result["search_queries_used"]
+        raw_response = gemini_result["raw_response"]
+
+        if sources:
+            print(f"  [SOURCES] {len(sources)} grounding sources found")
+        if search_queries_used:
+            print(f"  [QUERIES] Gemini searched: {search_queries_used[:3]}")
 
         recommendation = check_result.get("overall_recommendation", "Review Recommended")
         confidence = check_result.get("confidence", "Unknown")
@@ -389,10 +367,15 @@ def process_candidate(
         receipt_data = {
             "candidate_name": name,
             "page_id": page_id,
-            "queries": queries,
+            "queries_generated": queries,
+            "queries_used_by_gemini": search_queries_used,
+            "grounding_sources": sources,
             "result": check_result,
             "raw_response": raw_response,
-            "model": f"Kimi ({MOONSHOT_MODEL})",
+            "models": {
+                "query_generation": f"Kimi ({MOONSHOT_MODEL})",
+                "search_and_analysis": f"Gemini ({GEMINI_MODEL}) + Google Search",
+            },
         }
         receipt_path = save_receipt(receipt_data, name)
         print(f"  [SAVE] Receipt -> {receipt_path.name}")
@@ -403,7 +386,7 @@ def process_candidate(
         else:
             notes = format_bg_check_notes(check_result)
             print(f"  [UPDATE] Notion: BG Check={recommendation}")
-            update_notion_bg_check(notion_key, page_id, recommendation, notes)
+            update_notion_bg_check(env_keys["notion_key"], page_id, recommendation, notes)
 
         result["status"] = "success"
         result["recommendation"] = recommendation
@@ -424,7 +407,7 @@ def process_candidate(
 def main():
     """Main workflow entry point."""
     parser = argparse.ArgumentParser(
-        description="Run background checks on candidates using Kimi web search"
+        description="Run background checks using Gemini + Google Search grounding"
     )
     parser.add_argument(
         "--page-id",
@@ -455,7 +438,7 @@ def main():
     args = parser.parse_args()
 
     print("=" * 60)
-    print("BACKGROUND CHECK WORKFLOW (Kimi Web Search)")
+    print("BACKGROUND CHECK (Gemini + Google Search Grounding)")
     print("=" * 60)
 
     # Ensure directories exist
@@ -464,8 +447,8 @@ def main():
     # Load environment
     print("\n[1/3] Loading environment...")
     try:
-        notion_key, notion_db_id, moonshot_key = load_env_keys()
-        print("  NOTION_KEY, NOTION_DB_ID, and MOONSHOT_API_KEY loaded.")
+        env_keys = load_env_keys()
+        print("  NOTION_KEY, NOTION_DB_ID, MOONSHOT_API_KEY, GEMINI_API_KEY loaded.")
     except EnvironmentError as e:
         print(f"  ERROR: {e}")
         sys.exit(1)
@@ -487,14 +470,17 @@ def main():
     print("\n[2/3] Fetching candidates...")
     if args.page_id:
         print(f"  Mode: Single candidate (page_id={args.page_id})")
-        page = fetch_notion_page(notion_key, args.page_id)
+        page = fetch_notion_page(env_keys["notion_key"], args.page_id)
         candidates = [get_candidate_info(page)]
     else:
         filter_desc = f"{status_filter[0]}={status_filter[1]}" if status_filter else "2R=Proceed"
         print(f"  Mode: Batch (limit={args.limit})")
         print(f"  Filters: {filter_desc} | BG Check empty")
         candidates_raw = query_notion_candidates(
-            notion_key, notion_db_id, limit=args.limit, status_filter=status_filter
+            env_keys["notion_key"],
+            env_keys["notion_db_id"],
+            limit=args.limit,
+            status_filter=status_filter,
         )
         candidates = [get_candidate_info(c) for c in candidates_raw]
 
@@ -528,9 +514,7 @@ def main():
 
         for i, candidate in enumerate(batch, start + 1):
             print(f"\n[{i}/{total}] {candidate['name']}")
-            result = process_candidate(
-                candidate, notion_key, moonshot_key, dry_run=args.dry_run
-            )
+            result = process_candidate(candidate, env_keys, dry_run=args.dry_run)
             results.append(result)
 
     # Summary

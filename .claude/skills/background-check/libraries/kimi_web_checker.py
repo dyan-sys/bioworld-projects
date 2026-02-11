@@ -1,16 +1,14 @@
 """
-Kimi Web Checker Library
+Background Check Library
 
-Uses Kimi (Moonshot AI) with $web_search builtin tool to perform candidate
-background checks — searching for online presence, verifying resume claims,
-and flagging red flags.
+Three-step pattern:
+  1. generate_search_queries() — Kimi generates targeted queries (no web search)
+  2. gemini_search_and_analyze() — Gemini with Google Search grounding searches + analyzes
+  3. save_receipt() — Save results to local-data
 
-Two-call pattern:
-  Call 1 — generate_search_queries(): No web search, generates targeted queries
-  Call 2 — run_background_check(): With $web_search, executes searches and analyzes
-
-Adapted from linkedin-content/libraries/web_researcher.py — same HTTP/2 transport,
-streaming, tool-call loop, and JSON parsing patterns.
+Uses Kimi for query generation (good at disambiguation) and Gemini with
+Google Search grounding for the actual search + analysis (uses google.com's
+real index — catches Facebook groups, forums, complaint sites, etc.).
 """
 
 import json
@@ -19,9 +17,12 @@ from datetime import datetime
 from pathlib import Path
 
 import httpx
+from google import genai
+from google.genai import types
 from openai import OpenAI
 
 MOONSHOT_MODEL = "kimi-k2.5"
+GEMINI_MODEL = "gemini-2.5-flash"
 TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "templates"
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DATA_DIR = PROJECT_ROOT / "local-data" / "talent" / "background_checks"
@@ -58,7 +59,7 @@ def _clean_json_output(text: str) -> str:
 
 
 def _parse_json_response(response: str) -> dict:
-    """Parse JSON from Kimi's response, handling potential extra text."""
+    """Parse JSON from AI response, handling potential extra text."""
     cleaned = _clean_json_output(response)
 
     try:
@@ -66,7 +67,6 @@ def _parse_json_response(response: str) -> dict:
     except json.JSONDecodeError:
         pass
 
-    # Try to find JSON object in the response
     json_match = re.search(r"\{.*\}", cleaned, re.DOTALL)
     if json_match:
         try:
@@ -81,7 +81,7 @@ def generate_search_queries(candidate_data: dict, moonshot_key: str) -> list[str
     """
     Generate targeted search queries for a candidate background check.
 
-    Call 1 — no web search, just query generation from candidate info.
+    Step 1 — Kimi generates queries from candidate info (no web search).
 
     Args:
         candidate_data: Dict with 'name', 'location', 'employers', 'resume_text'
@@ -93,7 +93,6 @@ def generate_search_queries(candidate_data: dict, moonshot_key: str) -> list[str
     prompt_path = TEMPLATE_DIR / "query-generation-prompt.md"
     system_prompt = prompt_path.read_text(encoding="utf-8")
 
-    # Build context from candidate data
     name = candidate_data["name"]
     location = candidate_data.get("location", "")
     employers = candidate_data.get("employers", "")
@@ -126,7 +125,6 @@ def generate_search_queries(candidate_data: dict, moonshot_key: str) -> list[str
     except json.JSONDecodeError:
         pass
 
-    # Fallback: extract array from response
     json_match = re.search(r"\[.*\]", cleaned, re.DOTALL)
     if json_match:
         try:
@@ -145,22 +143,25 @@ def generate_search_queries(candidate_data: dict, moonshot_key: str) -> list[str
     return fallback
 
 
-def run_background_check(
-    candidate_data: dict, queries: list[str], moonshot_key: str
+def gemini_search_and_analyze(
+    candidate_data: dict,
+    queries: list[str],
+    gemini_api_key: str,
 ) -> dict:
     """
-    Run background check using Kimi with $web_search.
+    Search and analyze using Gemini with Google Search grounding.
 
-    Call 2 — with web search tool enabled. Handles the tool_calls loop
-    where Kimi may call $web_search multiple times.
+    Step 2 — Gemini uses Google's actual search index to find and analyze
+    information about the candidate. Single call that searches + analyzes.
 
     Args:
         candidate_data: Dict with 'name', 'resume_text'
         queries: Search queries from generate_search_queries()
-        moonshot_key: Moonshot API key
+        gemini_api_key: Google AI Studio API key
 
     Returns:
-        Parsed background check result dict
+        Dict with 'result' (parsed analysis), 'sources' (grounding chunks),
+        'search_queries' (queries Gemini actually used), 'raw_response'
     """
     prompt_path = TEMPLATE_DIR / "background-check-prompt.md"
     system_prompt = prompt_path.read_text(encoding="utf-8")
@@ -173,88 +174,57 @@ def run_background_check(
         f"## Resume Excerpt\n{resume_excerpt}\n\n"
         f"## Search Queries to Investigate\n"
         + "\n".join(f"- {q}" for q in queries)
-        + "\n\nSearch for each query and analyze the findings."
+        + "\n\nSearch for each query using Google Search and analyze the findings."
     )
 
-    client = _build_kimi_client(moonshot_key)
+    client = genai.Client(api_key=gemini_api_key)
 
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_content},
-    ]
+    google_search_tool = types.Tool(
+        google_search=types.GoogleSearch()
+    )
 
-    tools = [
-        {
-            "type": "builtin_function",
-            "function": {"name": "$web_search"},
-        }
-    ]
+    config = types.GenerateContentConfig(
+        tools=[google_search_tool],
+        system_instruction=system_prompt,
+    )
 
-    print("  [Searching", end="", flush=True)
+    print("  [Gemini+Google", end="", flush=True)
 
-    # Tool-call loop (non-streaming to avoid thinking mode issues with
-    # reasoning_content in assistant tool-call messages). Kimi may call
-    # $web_search multiple times before returning final content.
-    max_rounds = 15
-    final_content = ""
-    for _ in range(max_rounds):
-        response = client.chat.completions.create(
-            model=MOONSHOT_MODEL,
-            messages=messages,
-            tools=tools,
-            stream=False,
+    response = client.models.generate_content(
+        model=GEMINI_MODEL,
+        contents=user_content,
+        config=config,
+    )
+
+    print(".]")
+
+    raw_response = response.text.strip()
+
+    # Extract grounding metadata
+    sources = []
+    search_queries_used = []
+
+    grounding_metadata = getattr(
+        response.candidates[0], "grounding_metadata", None
+    )
+    if grounding_metadata:
+        search_queries_used = list(
+            getattr(grounding_metadata, "web_search_queries", []) or []
         )
-
-        choice = response.choices[0]
-        finish_reason = choice.finish_reason
-
-        if finish_reason == "tool_calls" and choice.message.tool_calls:
-            # Kimi wants to use web search — echo back the assistant message.
-            # kimi-k2.5 requires non-empty reasoning_content in assistant
-            # tool-call messages (thinking mode is always on).
-            tool_calls_list = [
-                {
-                    "id": tc.id,
-                    "type": tc.type,
-                    "function": {
-                        "name": tc.function.name,
-                        "arguments": tc.function.arguments,
-                    },
-                }
-                for tc in choice.message.tool_calls
-            ]
-            assistant_msg = {
-                "role": "assistant",
-                "content": choice.message.content or "",
-                "reasoning_content": "Performing web search.",
-                "tool_calls": tool_calls_list,
-            }
-            messages.append(assistant_msg)
-
-            # Add tool results (Kimi handles $web_search internally)
-            for tc in tool_calls_list:
-                messages.append(
+        for chunk in getattr(grounding_metadata, "grounding_chunks", []) or []:
+            web = getattr(chunk, "web", None)
+            if web:
+                sources.append(
                     {
-                        "role": "tool",
-                        "tool_call_id": tc["id"],
-                        "content": "Search completed.",
+                        "title": getattr(web, "title", ""),
+                        "uri": getattr(web, "uri", ""),
                     }
                 )
-            print("→", end="", flush=True)
-            continue
 
-        # Done — final content returned
-        final_content = choice.message.content or ""
-        print(".", end="", flush=True)
-        break
-
-    print("]")
-
-    raw_response = final_content.strip()
+    # Parse the structured JSON response
     try:
         result = _parse_json_response(raw_response)
     except ValueError:
-        # If JSON parsing fails, return a structured error result
         result = {
             "categories": {},
             "overall_recommendation": "Review Recommended",
@@ -263,8 +233,12 @@ def run_background_check(
             "summary": raw_response[:500],
         }
 
-    result["raw_response"] = raw_response
-    return result
+    return {
+        "result": result,
+        "sources": sources,
+        "search_queries_used": search_queries_used,
+        "raw_response": raw_response,
+    }
 
 
 def save_receipt(receipt_data: dict, candidate_name: str) -> Path:

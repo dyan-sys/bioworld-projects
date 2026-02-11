@@ -29,6 +29,7 @@ MOONSHOT_API_KEY_EP=xxx      # Separate Moonshot key for EP channel review (opti
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...        # Slack Incoming Webhook (optional, for daily report)
 SLACK_WEBHOOK_URL_JARVIS=https://hooks.slack.com/services/... # Slack webhook for #ally-jarvis (service status)
 SLACK_BOT_TOKEN=xoxb-xxx                                     # Slack Bot Token (channels:history, users:read)
+GEMINI_API_KEY=xxx                                            # Google AI Studio API key (Gemini, for background check)
 ```
 
 ## Skills
@@ -47,7 +48,7 @@ SLACK_BOT_TOKEN=xoxb-xxx                                     # Slack Bot Token (
 | LinkedIn Content | `.claude/skills/linkedin-content/` | Generates LinkedIn post drafts via Kimi research + synthesis. Drafts to local files for human review. |
 | Recruit Consulting | `.claude/skills/recruit-consulting/` | AI-assisted review of client JDs and interview templates for CS roles. Interactive process, no Python workflows. |
 | Adapt Client JD | `.claude/skills/adapt-client-jd/` | Adapts client JDs for specific job platforms (OLJ, Jobstreet) with format rules. |
-| Background Check | `.claude/skills/background-check/` | Screens candidates' online presence via Kimi web search. Checks LinkedIn consistency, news/legal, social media. On-demand only. |
+| Background Check | `.claude/skills/background-check/` | Screens candidates' online presence via Gemini + Google Search grounding. Checks LinkedIn consistency, news/legal, social media. On-demand only. |
 
 ## Data Architecture
 

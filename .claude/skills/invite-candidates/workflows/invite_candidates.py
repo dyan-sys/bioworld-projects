@@ -33,6 +33,8 @@ from pathlib import Path
 
 import requests
 from dotenv import load_dotenv
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
 
 # Path setup
 SKILL_ROOT = Path(__file__).resolve().parents[1]
@@ -543,6 +545,48 @@ def main():
 
     if not args.dry_run and drafted > 0:
         print(f"\n  Check your Gmail Drafts folder for {drafted} new draft(s).")
+
+    # Post summary to Slack #ally-recruitment (skip in dry-run or zero drafts)
+    if not args.dry_run and drafted > 0:
+        post_to_slack(results)
+
+
+SLACK_CHANNEL_RECRUITMENT = "#ally-recruitment"
+SLACK_TAG_DYAN = "<@U097X5H3472>"
+
+
+def post_to_slack(results: list[dict]) -> None:
+    """Post invite summary to #ally-recruitment, tagging Dyan."""
+    token = os.environ.get("SLACK_BOT_TOKEN")
+    if not token:
+        print("Slack: SLACK_BOT_TOKEN not set — skipping notification.")
+        return
+
+    drafted = [r for r in results if r["status"] == "drafted"]
+    skipped = sum(1 for r in results if r["status"] == "skipped")
+    errors = sum(1 for r in results if r["status"] == "error")
+
+    lines = [f"*Invite Candidates — {len(drafted)} draft(s) created*"]
+    for r in drafted:
+        lines.append(f"  • {r['name']} → {r.get('email', 'N/A')}")
+    if skipped:
+        lines.append(f"  Skipped: {skipped}")
+    if errors:
+        lines.append(f"  Errors: {errors}")
+    lines.append(f"\n{SLACK_TAG_DYAN} Please review and send from Gmail Drafts.")
+
+    text = "\n".join(lines)
+
+    try:
+        client = WebClient(token=token)
+        client.chat_postMessage(
+            channel=SLACK_CHANNEL_RECRUITMENT,
+            text=text,
+            mrkdwn=True,
+        )
+        print(f"Slack: posted to {SLACK_CHANNEL_RECRUITMENT}.")
+    except SlackApiError as e:
+        print(f"Slack: failed to post — {e.response['error']}")
 
 
 if __name__ == "__main__":
