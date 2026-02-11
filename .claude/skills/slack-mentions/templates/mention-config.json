@@ -1,0 +1,10 @@
+{
+  "monitored_user_id": "U0975UFHDB8",
+  "lookback_hours": 8,
+  "channel_types": "public_channel,private_channel",
+  "exclude_channels": [],
+  "exclude_bot_messages": true,
+  "max_preview_length": 120,
+  "state_file": "local-data/slack-mentions/state.json",
+  "state_retention_hours": 48
+}
