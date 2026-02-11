@@ -33,6 +33,8 @@ python3.11 .claude/skills/track-async-completions/workflows/track_async_completi
 
 Primary match is by **Full Name** (title field in Candidates DB), since Hireflix completion emails don't contain the candidate's email address.
 
+The candidate pool includes both `Screener = "To invite (Async)"` (HireTruffle) and `Screener = "To invite (Async Hireflix)"` (Hireflix) statuses.
+
 For unmatched candidates, use `--message-id` + `--page-id` to force-link.
 
 ## Dedup

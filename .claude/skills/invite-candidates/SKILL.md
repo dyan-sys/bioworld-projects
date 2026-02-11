@@ -17,6 +17,7 @@ Configured in `templates/R1-invite-mapping.json`:
 |---|---|---|
 | `To Invite` | `R1-Live-Invite.md` | Live interview (Calendly) |
 | `To invite (Async)` | `R1-Async-Truffle-Invite.md` | Async interview (HireTruffle) |
+| `To invite (Async Hireflix)` | `R1-Async-Hireflix-Invite.md` | Async interview (Hireflix) |
 
 **Guard:** Only candidates with `1R = "Not Started"` are processed — prevents re-inviting candidates already emailed.
 
@@ -62,7 +63,8 @@ python3.11 .claude/skills/invite-candidates/workflows/invite_candidates.py --dry
 ```
 local-data/talent/invite_emails/
 ├── R1-Live-{CandidateName}.json
-└── R1-Async-Truffle-{CandidateName}.json
+├── R1-Async-Truffle-{CandidateName}.json
+└── R1-Async-Hireflix-{CandidateName}.json
 ```
 
 ## Requirements

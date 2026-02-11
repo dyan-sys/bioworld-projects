@@ -1,8 +1,8 @@
-Subject: Interview Invitation – Virtual Executive Assistant Position at Ally
+Subject: Interview Invitation – {job_title} Position at Ally
 
 <p>Hi {first_name},</p>
 
-<p>Thank you for applying for the Virtual Executive Assistant position at Ally! We're excited to move forward and invite you to complete our initial interview, which you can do asynchronously at a time that's convenient for you.</p>
+<p>Thank you for applying for the {job_title} position at Ally! We're excited to move forward and invite you to complete our initial interview, which you can do asynchronously at a time that's convenient for you.</p>
 
 <p><b>Important:</b></p>
 <ul>

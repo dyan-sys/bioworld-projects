@@ -20,10 +20,13 @@ def _notion_headers(notion_key: str) -> dict:
 
 def fetch_async_invited_candidates(notion_key: str, db_id: str) -> list[dict]:
     """
-    Fetch all candidates with Screener = "To invite (Async)".
+    Fetch all candidates invited to async interviews.
 
-    Returns list of page dicts — the pool of candidates who were invited
-    to async interviews. Used to scope fuzzy name matching.
+    Matches both Screener statuses:
+    - "To invite (Async)" — HireTruffle
+    - "To invite (Async Hireflix)" — Hireflix
+
+    Returns list of page dicts used to scope fuzzy name matching.
     """
     url = f"{NOTION_BASE}/databases/{db_id}/query"
     all_results = []
@@ -32,8 +35,10 @@ def fetch_async_invited_candidates(notion_key: str, db_id: str) -> list[dict]:
     while True:
         payload = {
             "filter": {
-                "property": "Screener",
-                "status": {"equals": "To invite (Async)"},
+                "or": [
+                    {"property": "Screener", "status": {"equals": "To invite (Async)"}},
+                    {"property": "Screener", "status": {"equals": "To invite (Async Hireflix)"}},
+                ]
             },
             "page_size": 100,
         }

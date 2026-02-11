@@ -14,6 +14,11 @@
       "label": "R1 Async Interview (HireTruffle)",
       "template": "R1-Async-Truffle-Invite.md",
       "receipt_prefix": "R1-Async-Truffle"
+    },
+    "To invite (Async Hireflix)": {
+      "label": "R1 Async Interview (Hireflix)",
+      "template": "R1-Async-Hireflix-Invite.md",
+      "receipt_prefix": "R1-Async-Hireflix"
     }
   }
 }
