@@ -1,22 +1,38 @@
 {
   "$schema": "Job type mapping schema",
-  "description": "Maps job type codes (from Opening ID) to job titles and scorer templates",
+  "description": "Maps job type codes (from Opening ID) to job titles, scorer templates, and rate bounds",
   "mappings": {
     "EP": {
       "title": "Executive Partner",
-      "rubric": "resume-scorer-v4.md"
+      "rubric": "resume-scorer-v4.md",
+      "rate_bounds": {
+        "monthly": { "min": 790, "max": 1600 },
+        "hourly": { "min": 4.5, "max": 9 }
+      }
     },
     "EPP": {
       "title": "EPP Product Associate",
-      "rubric": "resume-scorer-epp.md"
+      "rubric": "resume-scorer-epp.md",
+      "rate_bounds": {
+        "monthly": { "min": 790, "max": 2000 },
+        "hourly": { "min": 4.5, "max": 15 }
+      }
     },
     "CPL": {
       "title": "Client Partnership Lead",
-      "rubric": "resume-scorer-cpl.md"
+      "rubric": "resume-scorer-cpl.md",
+      "rate_bounds": {
+        "monthly": { "min": 1500, "max": 2900 },
+        "hourly": { "min": 8.5, "max": 20 }
+      }
     }
   },
   "default": {
     "title": "Executive Partner (Default)",
-    "rubric": "resume-scorer-v4.md"
+    "rubric": "resume-scorer-v4.md",
+    "rate_bounds": {
+      "monthly": { "min": 790, "max": 1600 },
+      "hourly": { "min": 4.5, "max": 9 }
+    }
   }
 }

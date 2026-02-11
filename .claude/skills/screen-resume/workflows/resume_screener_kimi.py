@@ -171,11 +171,21 @@ def get_candidate_info(page: dict) -> dict:
                 # Get first related Post page ID
                 post_relation_id = relations[0].get("id")
 
+    # Get Target Rate (rich_text field)
+    target_rate = ""
+    if "Target Rate" in properties:
+        rate_prop = properties["Target Rate"]
+        if rate_prop.get("type") == "rich_text":
+            rate_items = rate_prop.get("rich_text", [])
+            if rate_items:
+                target_rate = rate_items[0].get("plain_text", "")
+
     return {
         "page_id": page.get("id"),
         "name": name,
         "resume_url": resume_url,
         "post_relation_id": post_relation_id,
+        "target_rate": target_rate,
     }
 
 
@@ -472,6 +482,154 @@ def update_notion_rating(
     response.raise_for_status()
 
 
+def parse_target_rate(rate_text: str) -> dict | None:
+    """
+    Parse free-form target rate text into a structured dict.
+
+    Handles patterns like:
+    - "$800/month", "$1,200/mo", "$5.50/hr"
+    - "PHP 25,000", "₱25000"
+    - "MYR 3,500", "RM 3500", "RM3,500/month"
+    - "$800-$1200/month" (uses lower bound)
+    - "1200" (bare number, defaults to monthly)
+
+    Returns:
+        {"amount": float, "period": "monthly"|"hourly", "currency": "USD"|"PHP"|"MYR", "raw": str}
+        or None if unparseable.
+    """
+    if not rate_text or not rate_text.strip():
+        return None
+
+    raw = rate_text.strip()
+    text = raw.lower()
+
+    # Detect currency
+    currency = "USD"
+    if "php" in text or "₱" in text:
+        currency = "PHP"
+    elif "myr" in text or re.search(r"\brm\s*[\d,]", text):
+        currency = "MYR"
+
+    # Detect period
+    period = "monthly"  # default
+    if re.search(r"(/hr|/hour|hourly|per\s*hour)", text):
+        period = "hourly"
+
+    # Extract numeric value(s)
+    # Remove currency symbols and letters for number extraction
+    cleaned = re.sub(r"[₱$]", "", text)
+    # Find numbers (with optional commas and decimals)
+    numbers = re.findall(r"[\d,]+\.?\d*", cleaned)
+
+    if not numbers:
+        return None
+
+    # Use the first number (lower bound if range)
+    try:
+        amount = float(numbers[0].replace(",", ""))
+    except ValueError:
+        return None
+
+    if amount <= 0:
+        return None
+
+    return {
+        "amount": amount,
+        "period": period,
+        "currency": currency,
+        "raw": raw,
+    }
+
+
+# Approximate local currency to USD conversion rates
+PHP_TO_USD = 1 / 56
+MYR_TO_USD = 1 / 4.5
+
+
+def check_rate_in_bounds(parsed_rate: dict, rate_bounds: dict) -> tuple[bool, str]:
+    """
+    Check if a parsed rate falls within the configured bounds.
+
+    Args:
+        parsed_rate: Output from parse_target_rate()
+        rate_bounds: {"monthly": {"min": N, "max": N}, "hourly": {"min": N, "max": N}}
+
+    Returns:
+        (in_bounds: bool, reason: str)
+    """
+    amount = parsed_rate["amount"]
+    period = parsed_rate["period"]
+    currency = parsed_rate["currency"]
+    raw = parsed_rate["raw"]
+
+    # Convert local currencies to USD equivalent
+    usd_amount = amount
+    if currency == "PHP":
+        usd_amount = amount * PHP_TO_USD
+    elif currency == "MYR":
+        usd_amount = amount * MYR_TO_USD
+
+    bounds = rate_bounds.get(period)
+    if not bounds:
+        return True, ""
+
+    min_val = bounds.get("min", 0)
+    max_val = bounds.get("max", float("inf"))
+
+    currency_note = f" (~${usd_amount:.0f} USD)" if currency in ("PHP", "MYR") else ""
+
+    if usd_amount > max_val:
+        return False, f"Target rate {raw}{currency_note} exceeds {period} cap of ${max_val}"
+    if usd_amount < min_val:
+        return False, f"Target rate {raw}{currency_note} below {period} floor of ${min_val}"
+
+    return True, ""
+
+
+def get_rate_bounds_for_job(opening_id: str | None) -> dict:
+    """
+    Load rate bounds from job-type-mapping.json based on opening ID.
+
+    Falls back to default bounds if job type is unknown.
+    """
+    from libraries.rubric_registry import (
+        JOB_TYPE_MAPPINGS,
+        DEFAULT_MAPPING,
+        extract_job_type_from_opening_id,
+    )
+
+    job_type = extract_job_type_from_opening_id(opening_id)
+    if job_type and job_type in JOB_TYPE_MAPPINGS:
+        mapping = JOB_TYPE_MAPPINGS[job_type]
+    else:
+        mapping = DEFAULT_MAPPING
+
+    return mapping.get("rate_bounds", {})
+
+
+def update_notion_rating_skip(notion_key: str, page_id: str, reason: str) -> None:
+    """Write skip status to Notion Kimi fields (no recommendation set)."""
+    url = f"https://api.notion.com/v1/pages/{page_id}"
+    headers = {
+        "Authorization": f"Bearer {notion_key}",
+        "Notion-Version": "2022-06-28",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "properties": {
+            "Kimi Rating": {
+                "rich_text": [{"text": {"content": "Skipped - Out of Criteria"}}]
+            },
+            "Kimi Rationale": {
+                "rich_text": [{"text": {"content": reason[:2000]}}]
+            },
+        }
+    }
+
+    response = requests.patch(url, headers=headers, json=payload, timeout=30)
+    response.raise_for_status()
+
+
 def process_candidate(candidate: dict, notion_key: str, moonshot_key: str) -> dict:
     """Process a single candidate: extract, score, save, update."""
     name = candidate["name"]
@@ -500,6 +658,26 @@ def process_candidate(candidate: dict, notion_key: str, moonshot_key: str) -> di
                 print(f"  [POST] No Opening ID found in Post")
         else:
             print(f"  [POST] No Post relation set")
+
+        # Check rate bounds (before PDF download to save bandwidth)
+        target_rate_text = candidate.get("target_rate", "")
+        if target_rate_text:
+            parsed_rate = parse_target_rate(target_rate_text)
+            if parsed_rate:
+                rate_bounds = get_rate_bounds_for_job(job_opening)
+                if rate_bounds:
+                    in_bounds, reason = check_rate_in_bounds(parsed_rate, rate_bounds)
+                    if not in_bounds:
+                        update_notion_rating_skip(notion_key, page_id, reason)
+                        result["status"] = "skipped"
+                        result["error"] = reason
+                        print(f"  [SKIP] {reason}")
+                        return result
+                print(f"  [RATE] {target_rate_text} → in bounds")
+            else:
+                print(f"  [RATE] Could not parse '{target_rate_text}' — proceeding anyway")
+        else:
+            print(f"  [RATE] No target rate set — proceeding")
 
         # Load rubric based on Opening ID
         print(f"  [RUBRIC] Opening ID: {job_opening or 'Not specified (using default)'}")
