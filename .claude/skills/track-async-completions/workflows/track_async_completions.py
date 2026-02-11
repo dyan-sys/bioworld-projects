@@ -303,8 +303,6 @@ def process_email(
         result["status"] = "dry_run"
         print(f"  [DRY RUN] Would create Interaction: R1 Async - {matched_name}")
         print(f"  [DRY RUN] Would set 1R → '{R1_COMPLETED_STATUS}'")
-        receipt_data = {**result, "processed_at": datetime.now(timezone.utc).isoformat()}
-        save_receipt(msg_id, candidate_name, receipt_data)
         return result
 
     # Create Interaction record
