@@ -1,0 +1,19 @@
+{
+  "olj": {
+    "name": "OnlineJobs.ph",
+    "format_guide": "olj-format-guide.md",
+    "reference_templates": [
+      ".claude/skills/update-job-posts/templates/EP-OLJ.md"
+    ],
+    "output_filename": "improved-olj-v1.md"
+  },
+  "jobstreet": {
+    "name": "Jobstreet",
+    "format_guide": "jobstreet-format-guide.md",
+    "reference_templates": [
+      ".claude/skills/update-job-posts/templates/EP-Jobstreet.md",
+      ".claude/skills/update-job-posts/templates/EPP-Jobstreet.md"
+    ],
+    "output_filename": "improved-jobstreet-v1.md"
+  }
+}

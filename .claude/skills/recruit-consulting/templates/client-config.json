@@ -1,0 +1,14 @@
+{
+  "care-n-bloom": {
+    "display_name": "Care & Bloom",
+    "notion_parent_page_id": "3042b7ec459780769d60d297a69ca3b5",
+    "slack_channel_id": "C0AE99NGTGA",
+    "default_checklist": [
+      "Compensation framing — does this match your budget and growth plan?",
+      "Tone and brand voice — does this sound like your brand?",
+      "Requirements (must-haves vs nice-to-haves) — anything to add or remove?",
+      "Application process — are the screening prompts right?",
+      "Items marked [CLIENT TO CONFIRM] (timezone, reporting line, team size, hire-by date, form URL)"
+    ]
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "client": "client-slug",
+  "material_type": "job_description | interview_template",
+  "round": null,
+  "date": "YYYY-MM-DD",
+  "scores": {
+    "dimension1": 0,
+    "dimension2": 0,
+    "dimension3": 0,
+    "dimension4": 0
+  },
+  "strengths": [],
+  "issues": [
+    {
+      "severity": "high | medium | low",
+      "category": "category-name",
+      "detail": "specific issue description"
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "must-fix | should-fix | nice-to-have",
+      "action": "specific actionable recommendation"
+    }
+  ],
+  "sample_improved_questions": [],
+  "overall_assessment": "2-3 sentence summary"
+}

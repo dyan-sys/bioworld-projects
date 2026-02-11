@@ -1,0 +1,36 @@
+{
+  "competencies": [
+    {
+      "name": "Customer Communication",
+      "tiers": {
+        "tier1_support": "Clear written and verbal communication, empathy, active listening",
+        "tier2_technical": "Ability to explain complex technical issues simply, escalation judgment",
+        "account_management": "Consultative communication, relationship building, upselling awareness"
+      }
+    },
+    {
+      "name": "Problem Solving",
+      "tiers": {
+        "tier1_support": "Troubleshooting frameworks, resourcefulness, pattern recognition",
+        "tier2_technical": "Root cause analysis, cross-functional collaboration, documentation",
+        "account_management": "Strategic thinking, proactive issue prevention, data-driven decisions"
+      }
+    },
+    {
+      "name": "Technical Aptitude",
+      "tiers": {
+        "tier1_support": "Basic software navigation, ticketing systems, knowledge base usage",
+        "tier2_technical": "API basics, logs interpretation, tool administration",
+        "account_management": "Product expertise, integration understanding, technical scoping"
+      }
+    },
+    {
+      "name": "Ownership & Initiative",
+      "tiers": {
+        "tier1_support": "Follow-through, accountability, proactive updates",
+        "tier2_technical": "Process improvement suggestions, knowledge sharing, mentorship",
+        "account_management": "Strategic account planning, growth initiatives, executive presence"
+      }
+    }
+  ]
+}
