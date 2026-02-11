@@ -15,9 +15,9 @@ Usage:
 
     # (User manually publishes page to web in Notion)
 
-    # Phase 2: Post to Slack
+    # Phase 2: Post to Slack (with summary)
     python3.11 send_client_review.py --client care-n-bloom \
-        --send --page-id <id>
+        --send --page-id <id> --summary "Updated comp range based on your feedback"
 
     # Dry run (either phase)
     python3.11 send_client_review.py --client care-n-bloom \
@@ -131,39 +131,95 @@ def create_notion_page(api_key: str, parent_page_id: str, title: str, md_content
     return {"id": page["id"], "url": page["url"], "block_count": len(blocks)}
 
 
-def get_public_url(api_key: str, page_id: str) -> str | None:
-    """Fetch page and return public_url (None if not published)."""
+def get_page_url(api_key: str, page_id: str) -> str:
+    """Fetch page and return its internal Notion URL."""
     headers = notion_headers(api_key)
     resp = requests.get(
         f"{NOTION_API_BASE}/pages/{page_id}", headers=headers, timeout=REQUEST_TIMEOUT
     )
     resp.raise_for_status()
-    return resp.json().get("public_url")
+    return resp.json().get("url", f"https://notion.so/{page_id.replace('-', '')}")
 
 
-def build_message(client_name: str, intent: str, checklist: list[str], notion_url: str) -> str:
-    """Build the Slack review message."""
-    intent_labels = {
-        "update": "Updated Draft",
-        "initial-review": "Initial Review",
-        "final-approval": "Final Approval",
-    }
-    intent_label = intent_labels.get(intent, intent.replace("-", " ").title())
+INTENT_LABELS = {
+    "update": "Updated Draft",
+    "initial-review": "Initial Review",
+    "final-approval": "Final Approval",
+}
 
+
+def load_stage_templates() -> dict[str, str]:
+    """Parse client-comms-guide.md and return {intent: template_body} mapping."""
+    guide_path = TEMPLATES_DIR / "client-comms-guide.md"
+    if not guide_path.exists():
+        return {}
+
+    text = guide_path.read_text(encoding="utf-8")
+    templates = {}
+    current_intent = None
+    current_lines = []
+
+    for line in text.split("\n"):
+        if line.startswith("## Stage: "):
+            # Save previous stage
+            if current_intent is not None:
+                templates[current_intent] = "\n".join(current_lines).strip()
+            current_intent = line[len("## Stage: "):].strip()
+            current_lines = []
+        elif current_intent is not None:
+            current_lines.append(line)
+
+    # Save last stage
+    if current_intent is not None:
+        templates[current_intent] = "\n".join(current_lines).strip()
+
+    return templates
+
+
+def build_message(
+    client_name: str,
+    intent: str,
+    checklist: list[str],
+    notion_url: str,
+    summary: str | None = None,
+    next_steps: str | None = None,
+) -> str:
+    """Build the Slack review message from stage template."""
+    intent_label = INTENT_LABELS.get(intent, intent.replace("-", " ").title())
     checklist_text = "\n".join(f"• {item}" for item in checklist)
+    summary_text = summary or "We've prepared materials for your review."
+    next_steps_text = next_steps or ""
 
+    templates = load_stage_templates()
+    template = templates.get(intent)
+
+    if template:
+        rendered = (
+            template
+            .replace("{{intent_label}}", intent_label)
+            .replace("{{client_name}}", client_name)
+            .replace("{{summary}}", summary_text)
+            .replace("{{notion_url}}", notion_url)
+            .replace("{{checklist}}", checklist_text)
+            .replace("{{next_steps}}", next_steps_text)
+        )
+        # Clean up blank lines from empty optional variables
+        while "\n\n\n" in rendered:
+            rendered = rendered.replace("\n\n\n", "\n\n")
+        return rendered.strip()
+
+    # Fallback if template not found
     return (
         f"*{intent_label} — {client_name}*\n"
         f"\n"
-        f"We've prepared materials for your review. "
-        f"Please review the document and share feedback in this thread.\n"
+        f"{summary_text}\n"
         f"\n"
         f":link: *Document:* {notion_url}\n"
         f"\n"
         f"*Areas to confirm:*\n"
         f"{checklist_text}\n"
         f"\n"
-        f"Please reply in this thread with changes, questions, or approvals."
+        f"Let us know in this thread — happy to adjust anything."
     )
 
 
@@ -197,7 +253,9 @@ def main():
 
     # Phase 2 args
     parser.add_argument("--page-id", help="Notion page ID from Phase 1")
-    parser.add_argument("--checklist", nargs="+", help="Custom checklist items (or uses config default)")
+    parser.add_argument("--summary", help="1-2 sentence context line for the Slack message")
+    parser.add_argument("--next-steps", help="What's deferred or coming next (e.g., \"We'll look at the form URL separately!\")")
+    parser.add_argument("--checklist", nargs="+", help="Custom checklist items (curated for this round)")
     parser.add_argument("--channel", help="Override Slack channel ID from config")
 
     # Shared
@@ -257,8 +315,7 @@ def main():
         print(f"Page created: {result['url']}")
         print(f"  ID: {result['id']}")
         print(f"  Blocks: {result['block_count']}")
-        print(f"\nNext: Publish this page to web in Notion (... menu → Publish).")
-        print(f"Then run Phase 2:")
+        print(f"\nNext — run Phase 2 to post to Slack:")
         print(f"  python3.11 {Path(__file__).name} --client {args.client} --send --page-id {result['id']}")
 
     # --- Phase 2: Post to Slack ---
@@ -274,10 +331,13 @@ def main():
         if args.dry_run:
             print("=== DRY RUN — Phase 2: Post to Slack ===\n")
             print(f"  Channel: {channel}")
+            print(f"  Intent: {intent}")
             print(f"  Page ID: {args.page_id}")
-            print(f"  Fetching public_url... (skipped in dry run)")
             notion_url = f"https://notion.so/{args.page_id.replace('-', '')}"
-            message = build_message(config["display_name"], intent, checklist, notion_url)
+            message = build_message(
+                config["display_name"], intent, checklist, notion_url,
+                args.summary, args.next_steps,
+            )
             print(f"\n--- Message preview ---\n{message}\n--- End preview ---")
             return
 
@@ -291,22 +351,15 @@ def main():
             print("Error: SLACK_BOT_TOKEN not set in .env")
             sys.exit(1)
 
-        public_url = get_public_url(notion_key, args.page_id)
-        if not public_url:
-            print("Warning: Page has no public_url — it may not be published to web yet.")
-            print("Falling back to internal Notion URL.")
-            # Build internal URL as fallback
-            page = requests.get(
-                f"{NOTION_API_BASE}/pages/{args.page_id}",
-                headers=notion_headers(notion_key),
-                timeout=REQUEST_TIMEOUT,
-            ).json()
-            public_url = page.get("url", f"https://notion.so/{args.page_id.replace('-', '')}")
+        notion_url = get_page_url(notion_key, args.page_id)
 
-        message = build_message(config["display_name"], intent, checklist, public_url)
+        message = build_message(
+            config["display_name"], intent, checklist, notion_url,
+            args.summary, args.next_steps,
+        )
         result = post_to_slack(slack_token, channel, message)
         print(f"Message posted to #{channel} (ts={result['ts']})")
-        print(f"  Notion link: {public_url}")
+        print(f"  Notion link: {notion_url}")
 
 
 if __name__ == "__main__":
