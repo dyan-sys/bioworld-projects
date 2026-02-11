@@ -89,6 +89,7 @@ Status values: `success` (exit 0), `failed` (exit non-zero), `network_unavailabl
 | Scheduled Job Posts | 08:00 Mon + Thu | `com.ally.job-posts.plist` |
 | Resume Screener (Kimi) | 08:00, 12:00, 16:00, 20:00 | `com.ally.resume-screener.plist` |
 | Slack Mention Monitor | 09:00, 13:00, 17:00 | `com.ally.slack-mentions.plist` |
+| Async Completion Tracker | 08:00, 12:00, 18:00 | `com.ally.async-completions.plist` |
 | Service Health Check | 09:00 daily | `com.ally.service-check.plist` |
 
 ### Adding a New Scheduled Job
