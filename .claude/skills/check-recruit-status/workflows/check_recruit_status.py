@@ -248,6 +248,10 @@ def compute_pipeline_overview(candidates: list[dict], days: int) -> dict:
     now_sgt = datetime.now(SGT)
     today_start = now_sgt.replace(hour=0, minute=0, second=0, microsecond=0)
 
+    # Rolling 24-hour windows
+    cutoff_24h = now_sgt - timedelta(hours=24)
+    cutoff_prior_24h = now_sgt - timedelta(hours=48)
+
     # Full calendar days: yesterday vs day before
     yesterday_start = today_start - timedelta(days=1)
     day_before_start = today_start - timedelta(days=2)
@@ -259,6 +263,8 @@ def compute_pipeline_overview(candidates: list[dict], days: int) -> dict:
     m_start = today_start - timedelta(days=30)
     m_prior_start = m_start - timedelta(days=30)
 
+    in_24h = 0
+    in_prior_24h = 0
     yesterday = 0
     day_before = 0
     in_window = 0
@@ -270,6 +276,12 @@ def compute_pipeline_overview(candidates: list[dict], days: int) -> dict:
         created = c.get("created_sgt")
         if not created:
             continue
+        # L24H tracking
+        if created >= cutoff_24h:
+            in_24h += 1
+        if cutoff_prior_24h <= created < cutoff_24h:
+            in_prior_24h += 1
+        # Calendar day tracking
         if yesterday_start <= created < today_start:
             yesterday += 1
         if day_before_start <= created < yesterday_start:
@@ -284,6 +296,8 @@ def compute_pipeline_overview(candidates: list[dict], days: int) -> dict:
             in_prior_30d += 1
 
     return {
+        "24h": in_24h,
+        "prior_24h": in_prior_24h,
         "yesterday": yesterday,
         "day_before": day_before,
         "in_window": in_window,
@@ -320,13 +334,18 @@ def compute_channel_breakdown(
     post_channels: dict[str, str],
     role_code: str = "EP",
 ) -> dict:
-    """Count candidates by Post Channel for a specific role, for yesterday and last 7d.
+    """Count candidates by Post Channel for a specific role, for L24H, yesterday, and last 7d.
 
     Args:
         role_code: Job type code to filter on (matched in opening name, e.g. "EP" matches "251003-EP ...").
     """
     now_sgt = datetime.now(SGT)
     today_start = now_sgt.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # Rolling 24h
+    cutoff_24h = now_sgt - timedelta(hours=24)
+
+    # Calendar day windows
     yesterday_start = today_start - timedelta(days=1)
     cutoff_7d = today_start - timedelta(days=7)
 
@@ -342,6 +361,7 @@ def compute_channel_breakdown(
             if code == role_code:
                 role_post_ids.add(pid)
 
+    counter_24h = Counter()
     yesterday_counter = Counter()
     week_counter = Counter()
 
@@ -353,12 +373,18 @@ def compute_channel_breakdown(
 
         channel = post_channels.get(pid, "Unknown")
 
+        # L24H tracking
+        if created >= cutoff_24h:
+            counter_24h[channel] += 1
+
+        # Calendar day tracking
         if yesterday_start <= created < today_start:
             yesterday_counter[channel] += 1
         if cutoff_7d <= created < today_start:
             week_counter[channel] += 1
 
     return {
+        "24h": counter_24h,
         "yesterday": yesterday_counter,
         "7d": week_counter,
     }
@@ -547,6 +573,8 @@ def build_report(
     p()
     p(f"*1. Pipeline Overview*")
     p(f"```")
+    l24h_trend = _trend(pipeline['24h'], pipeline['prior_24h'])
+    p(f"Last 24h     {pipeline['24h']:>5}  (prior 24h: {pipeline['prior_24h']})    {l24h_trend}")
     p(f"Yesterday    {pipeline['yesterday']:>5}  (day before: {pipeline['day_before']})  {day_trend}")
     p(f"Last {days}d      {pipeline['in_window']:>5}  (prior {days}d: {pipeline['in_prior_window']})    {window_trend}")
     p(f"Last 30d     {pipeline['in_30d']:>5}  (prior 30d: {pipeline['in_prior_30d']})   {month_trend}")
@@ -574,23 +602,26 @@ def build_report(
         p()
         p(f"*3. EP Channel Breakdown*")
         p(f"```")
+        counter_24h = channel_breakdown["24h"]
         week = channel_breakdown["7d"]
         yesterday = channel_breakdown["yesterday"]
-        # Collect all channels across both periods
-        all_channels = sorted(set(list(week.keys()) + list(yesterday.keys())))
+        # Collect all channels across all periods
+        all_channels = sorted(set(list(week.keys()) + list(yesterday.keys()) + list(counter_24h.keys())))
         if all_channels:
             week_total = sum(week.values())
             yest_total = sum(yesterday.values())
+            l24h_total = sum(counter_24h.values())
             max_count = max(week.values()) if week else 0
-            p(f"{'Channel':<15} {'Last 7d':>7} {'%':>5}  {'':15} {'Yest':>5}")
+            p(f"{'Channel':<15} {'Last 7d':>7} {'%':>5}  {'':15} {'Yest':>5} {'L24H':>5}")
             for ch in all_channels:
                 w = week.get(ch, 0)
                 y = yesterday.get(ch, 0)
+                h24 = counter_24h.get(ch, 0)
                 pct = w / week_total * 100 if week_total else 0
                 bar = _bar(w, max_count)
-                p(f"{ch:<15} {w:>7} {pct:>4.0f}%  {bar:<15} {y:>5}")
-            p(f"{'─' * 15} {'─' * 7} {'─' * 5}  {'':15} {'─' * 5}")
-            p(f"{'Total':<15} {week_total:>7}  {'':4}  {'':15} {yest_total:>5}")
+                p(f"{ch:<15} {w:>7} {pct:>4.0f}%  {bar:<15} {y:>5} {h24:>5}")
+            p(f"{'─' * 15} {'─' * 7} {'─' * 5}  {'':15} {'─' * 5} {'─' * 5}")
+            p(f"{'Total':<15} {week_total:>7}  {'':4}  {'':15} {yest_total:>5} {l24h_total:>5}")
         else:
             p("No EP candidates with channel data.")
         p(f"```")

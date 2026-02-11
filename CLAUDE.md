@@ -695,6 +695,96 @@ local-data/linkedin/
 - `research-prompt.md` — System prompt for Kimi when researching
 - `pillar-config.json` — Pillar definitions with topic seeds
 
+## Client Recruitment Consulting Skill
+
+Located in `.claude/skills/recruit-consulting/`:
+
+Enables AI-assisted review and improvement of client recruitment materials (job descriptions and interview templates) for CS agent roles. Provides structured, repeatable consulting process with full audit trails.
+
+**Approach:** This is a **process documentation skill** (like update-resume-screener) where Claude Code guides the user through analysis interactively. No Python workflows — Claude reads materials, analyzes them directly, and helps save structured artifacts.
+
+### When to Use
+
+**Trigger phrases:**
+- "Review this job description"
+- "Analyze this interview template"
+- "Improve this JD for [client]"
+- "Evaluate CS recruitment materials"
+
+### Quick Start
+
+```bash
+# 1. Create client workspace
+mkdir -p local-data/client-consulting/{client-slug}/{jd,interviews}
+
+# 2. Save original material to:
+#    - local-data/client-consulting/{client-slug}/jd/original.md
+#    - local-data/client-consulting/{client-slug}/interviews/r1-original.md
+
+# 3. Ask Claude: "Analyze the JD for {client-slug}"
+
+# 4. Claude will:
+#    - Read analysis framework
+#    - Evaluate the material
+#    - Save structured analysis JSON
+#    - Provide recommendations
+
+# 5. Improve and save to improved.md
+```
+
+### Analysis Dimensions
+
+**Job Description Analysis:**
+- Clarity & Structure (0-10): Role definition, specific responsibilities, success metrics
+- Candidate Sell (0-10): Value proposition, benefits, company culture
+- Requirements Calibration (0-10): Realistic expectations, must-haves vs nice-to-haves
+- Inclusive Language (0-10): Gender-neutral, avoids barriers, no coded language
+
+**Interview Template Analysis:**
+- Question Quality (0-10): Behavioral questions, STAR method, follow-up guidance
+- Rubric Alignment (0-10): Clear scoring criteria, maps to CS competencies
+- Candidate Experience (0-10): Logical flow, respectful, gives candidates space
+- Depth & Coverage (0-10): Appropriate for round (R1=breadth, R2=depth), all competencies covered
+
+### CS Competency Framework
+
+All analysis references 4 core CS competencies across 3 tiers (Tier 1 Support, Tier 2 Technical, Account Management):
+
+- **Customer Communication**: Empathy, clarity, active listening
+- **Problem Solving**: Troubleshooting, resourcefulness, analytical thinking
+- **Technical Aptitude**: Tool proficiency, technical learning, system thinking
+- **Ownership & Initiative**: Accountability, proactiveness, follow-through
+
+### Data Output
+
+```
+local-data/client-consulting/{client-slug}/
+├── jd/
+│   ├── original.md              # Client's original JD
+│   ├── analysis.json            # Claude's analysis (scores, issues, recommendations)
+│   └── improved.md              # Improved version
+└── interviews/
+    ├── r1-original.md           # Original R1 template
+    ├── r1-analysis.json         # Claude's R1 analysis
+    ├── r1-improved.md           # Improved R1
+    ├── r2-original.md
+    ├── r2-analysis.json
+    └── r2-improved.md
+```
+
+### Templates
+
+- `jd-analysis-framework.md` — Job description evaluation criteria
+- `interview-analysis-framework.md` — Interview template evaluation criteria
+- `cs-competency-framework.json` — CS role competencies by tier
+- `analysis-template.json` — JSON structure reference for analysis output
+
+### Requirements
+
+- No special dependencies (uses Claude Code directly)
+- No API keys required
+- Files stored locally in `local-data/client-consulting/`
+
 ## Scheduling
 
 Scheduled jobs run via macOS `launchd`. All jobs use a shared generic wrapper (`run-job.sh`) that handles network readiness, logging, and status tracking.
@@ -716,13 +806,15 @@ Status values: `success` (exit 0), `failed` (exit non-zero), `network_unavailabl
 
 ### Scheduled Jobs
 
+Note: All times are in SGT (macOS launchd uses local time).
+
 | Job | Schedule | Plist |
 |-----|----------|-------|
-| Daily Pipeline Report | 00:00 UTC (08:00 SGT) daily | `com.ally.pipeline-report.plist` |
-| EP Channel Issue Flagging | 00:00 UTC (08:00 SGT) daily | `com.ally.ep-issues.plist` |
-| Scheduled Job Posts | 00:00 UTC (08:00 SGT) Mon + Thu | `com.ally.job-posts.plist` |
-| Resume Screener (Kimi) | 00:00, 04:00, 08:00, 12:00 UTC (8am, noon, 4pm, 8pm SGT) | `com.ally.resume-screener.plist` |
-| Service Health Check | 02:00 UTC (10:00 SGT) daily | `com.ally.service-check.plist` |
+| Daily Pipeline Report | 08:00 SGT daily | `com.ally.pipeline-report.plist` |
+| EP Channel Issue Flagging | 08:00 SGT daily | `com.ally.ep-issues.plist` |
+| Scheduled Job Posts | 08:00 SGT Mon + Thu | `com.ally.job-posts.plist` |
+| Resume Screener (Kimi) | 08:00, 12:00, 16:00, 20:00 SGT (8am, noon, 4pm, 8pm) | `com.ally.resume-screener.plist` |
+| Service Health Check | 09:00 SGT daily | `com.ally.service-check.plist` |
 
 **Required:**
 - Environment variable: `SLACK_WEBHOOK_URL` (Incoming Webhook URL, optional)

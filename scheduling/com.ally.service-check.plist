@@ -12,11 +12,11 @@
         <string>.claude/skills/check-service-status/workflows/check_service_status.py</string>
     </array>
 
-    <!-- 02:00 UTC = 10:00 SGT -->
+    <!-- 09:00 SGT -->
     <key>StartCalendarInterval</key>
     <dict>
         <key>Hour</key>
-        <integer>2</integer>
+        <integer>9</integer>
         <key>Minute</key>
         <integer>0</integer>
     </dict>

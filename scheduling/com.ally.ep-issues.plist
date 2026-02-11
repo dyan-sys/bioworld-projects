@@ -12,11 +12,11 @@
         <string>.claude/skills/flag-ep-issues/workflows/flag_ep_issues.py</string>
     </array>
 
-    <!-- 00:00 UTC = 08:00 SGT -->
+    <!-- 08:00 SGT (launchd uses local time) -->
     <key>StartCalendarInterval</key>
     <dict>
         <key>Hour</key>
-        <integer>0</integer>
+        <integer>8</integer>
         <key>Minute</key>
         <integer>0</integer>
     </dict>

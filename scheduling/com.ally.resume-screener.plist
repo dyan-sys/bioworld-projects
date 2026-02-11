@@ -14,22 +14,9 @@
         <string>20</string>
     </array>
 
-    <!-- Four times daily: 8am, noon, 4pm, 8pm SGT (UTC+8) -->
-    <!-- UTC times: 0, 4, 8, 12 -->
+    <!-- Four times daily: 8am, noon, 4pm, 8pm SGT (launchd uses local time) -->
     <key>StartCalendarInterval</key>
     <array>
-        <dict>
-            <key>Hour</key>
-            <integer>0</integer>
-            <key>Minute</key>
-            <integer>0</integer>
-        </dict>
-        <dict>
-            <key>Hour</key>
-            <integer>4</integer>
-            <key>Minute</key>
-            <integer>0</integer>
-        </dict>
         <dict>
             <key>Hour</key>
             <integer>8</integer>
@@ -39,6 +26,18 @@
         <dict>
             <key>Hour</key>
             <integer>12</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+        <dict>
+            <key>Hour</key>
+            <integer>16</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+        <dict>
+            <key>Hour</key>
+            <integer>20</integer>
             <key>Minute</key>
             <integer>0</integer>
         </dict>
