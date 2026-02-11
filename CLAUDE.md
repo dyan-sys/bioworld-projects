@@ -193,6 +193,8 @@ local-data/
 │   ├── {job-id}_{timestamp}.json
 │   └── reports/                  # Service check report snapshots
 │       └── {YYYY-MM-DD_HHMM_SGT}.txt
+├── slack-mentions/               # Mention monitor state
+│   └── state.json               # Dedup state (notified mentions)
 ├── linkedin/                     # LinkedIn content engine artifacts
 │   ├── research/                 # Raw research results + summaries
 │   │   └── {YYYY-MM-DD}_{topic-slug}.json
@@ -206,9 +208,11 @@ local-data/
     │   └── {CandidateName}_Kimi.json
     ├── pipeline_reports/         # Daily pipeline report snapshots
     │   └── {YYYY-MM-DD_HHMM_SGT}.txt
-    └── ep_reviews/               # EP channel review artifacts
-        ├── {YYYY-MM-DD}_review.json
-        └── {YYYY-MM-DD}_report.txt
+    ├── ep_reviews/               # EP channel review artifacts
+    │   ├── {YYYY-MM-DD}_review.json
+    │   └── {YYYY-MM-DD}_report.txt
+    └── async_completions/        # Hireflix completion tracking receipts
+        └── {CandidateName}_{gmail_message_id}.json
 ```
 
 ## Update Resume Screener Skill
@@ -519,6 +523,84 @@ After sending drafts from Gmail, the human manually updates Notion `1R` from "No
 - **Single mode (`--page-id`):** Works regardless of Screener status (skips if no template)
 - **Duplicate runs:** Creates duplicate drafts (no Notion status tracking)
 
+## Track Async Completions Skill
+
+Located in `.claude/skills/track-async-completions/`:
+
+Reads Hireflix async interview completion emails from Gmail, matches candidates in Notion, and creates Interaction records in the Interactions DB.
+
+### Workflow
+
+**File:** `.claude/skills/track-async-completions/workflows/track_async_completions.py`
+
+```bash
+# Discovery mode — inspect raw Hireflix emails
+python3.11 .claude/skills/track-async-completions/workflows/track_async_completions.py --discover
+
+# Default: last 7 days, up to 10 emails
+python3.11 .claude/skills/track-async-completions/workflows/track_async_completions.py
+
+# Dry run
+python3.11 .claude/skills/track-async-completions/workflows/track_async_completions.py --dry-run
+
+# Custom lookback and limit
+python3.11 .claude/skills/track-async-completions/workflows/track_async_completions.py --days 3 --limit 5
+
+# Force-link a specific Gmail message to a candidate
+python3.11 .claude/skills/track-async-completions/workflows/track_async_completions.py --message-id <gmail_id> --page-id <notion_page_id>
+```
+
+**Required:**
+- Gmail OAuth2 credentials (shared with invite-candidates skill)
+- Environment variables: `NOTION_KEY`, `NOTION_DB_ID`
+- Python 3.11+
+- Dependencies: `requests`, `python-dotenv`, `google-api-python-client`, `google-auth-httplib2`, `google-auth-oauthlib`
+
+**One-time setup:** First run triggers browser re-auth to add `gmail.readonly` scope to the existing token.
+
+### How It Works
+
+1. Searches Gmail for Hireflix completion emails (`from:no-reply@hireflix.com subject:"Interview Completed"`)
+2. Parses each email: extracts candidate name and job title from subject, assessment link from body
+3. Matches candidate in Notion Candidates DB by Full Name
+4. Checks for existing Interaction record (dedup)
+5. Creates Interaction record with assessment link
+6. Saves receipt to `local-data/talent/async_completions/`
+
+### Candidate Matching
+
+Primary match is by **Full Name** (Hireflix emails don't contain candidate email). For unmatched candidates, use `--message-id` + `--page-id` to force-link.
+
+### Dedup
+
+Two layers: (1) local receipt files keyed by Gmail message ID, (2) Notion query for existing Interaction with same Candidate + Type.
+
+### Interaction Record Fields
+
+| Field | Value |
+|-------|-------|
+| `Name` (title) | `R1 Async - {Candidate Name}` |
+| `Candidate` (relation) | Link to candidate page |
+| `Type` (select) | `1st Round (Async)` |
+| `Assessment Link` (url) | Hireflix admin interview URL |
+| `Interaction Date` (date) | Date from completion email |
+
+### Notion Databases
+
+- **Candidates DB**: env var `NOTION_DB_ID`
+- **Interactions DB**: `28c2b7ec459780c9bf6ffb86f3b9aa9c`
+
+### Configuration
+
+Email parsing is config-driven via `templates/platform-config.json`. To tune patterns (e.g., if Hireflix changes email format), edit the JSON — no code changes needed.
+
+### Data Output
+
+```
+local-data/talent/async_completions/
+└── {CandidateName}_{gmail_message_id}.json
+```
+
 ## Flag EP Issues Skill
 
 Located in `.claude/skills/flag-ep-issues/`:
@@ -629,6 +711,59 @@ The service status report includes a Moonshot API balance/usage section:
 - Computes spend delta by comparing today's balance to yesterday's snapshot
 - Counts daily API calls from Kimi receipt files (resume receipts + EP reviews)
 - Graceful fallback: if balance fetch fails, the section is omitted
+
+## Slack Mention Monitor Skill
+
+Located in `.claude/skills/slack-mentions/`:
+
+Scans all Slack channels the bot is in for unactioned @ mentions of a monitored user. Sends a DM summary with deep links so nothing falls through the cracks. Runs 3x daily (9am, 1pm, 5pm SGT).
+
+### Workflow
+
+**File:** `.claude/skills/slack-mentions/workflows/check_mentions.py`
+
+```bash
+# Default (8-hour lookback)
+python3.11 .claude/skills/slack-mentions/workflows/check_mentions.py
+
+# Dry run (preview without sending DM)
+python3.11 .claude/skills/slack-mentions/workflows/check_mentions.py --dry-run
+
+# Custom lookback window
+python3.11 .claude/skills/slack-mentions/workflows/check_mentions.py --lookback-hours 24
+
+# Override monitored user
+python3.11 .claude/skills/slack-mentions/workflows/check_mentions.py --user-id U0975UFHDB8
+```
+
+**Required:**
+- Environment variable: `SLACK_BOT_TOKEN`
+- Slack bot scopes: `channels:history`, `channels:read`, `users:read`, `chat:write`
+- Optional for private channels: `groups:read`, `groups:history`
+- Python 3.11+
+- Dependencies: `slack-sdk`, `python-dotenv`
+
+### How It Works
+
+1. Auto-discovers all channels the bot is a member of (no manual registry)
+2. Scans top-level messages for `<@USER_ID>` mentions within the lookback window
+3. Checks if each mention is actioned (user reacted or replied in thread)
+4. Filters out already-notified mentions via state file (48h retention)
+5. Sends a DM grouped by channel with deep links to each mention
+6. No DM when all clear (avoids notification fatigue)
+
+### Configuration
+
+Edit `templates/mention-config.json` — no code changes needed.
+
+| Field | Description |
+|-------|-------------|
+| `monitored_user_id` | Slack user ID to watch for mentions |
+| `lookback_hours` | How far back to scan (default: 8) |
+| `channel_types` | Channel types to scan |
+| `exclude_channels` | Channel IDs to skip |
+| `exclude_bot_messages` | Skip messages from bots |
+| `state_retention_hours` | How long to keep notified state (default: 48) |
 
 ## LinkedIn Content Engine Skill
 
@@ -814,6 +949,7 @@ Note: All times are in SGT (macOS launchd uses local time).
 | EP Channel Issue Flagging | 08:00 SGT daily | `com.ally.ep-issues.plist` |
 | Scheduled Job Posts | 08:00 SGT Mon + Thu | `com.ally.job-posts.plist` |
 | Resume Screener (Kimi) | 08:00, 12:00, 16:00, 20:00 SGT (8am, noon, 4pm, 8pm) | `com.ally.resume-screener.plist` |
+| Slack Mention Monitor | 09:00, 13:00, 17:00 SGT (9am, 1pm, 5pm) | `com.ally.slack-mentions.plist` |
 | Service Health Check | 09:00 SGT daily | `com.ally.service-check.plist` |
 
 **Required:**
@@ -838,6 +974,10 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.ep-issues.plist
 cp scheduling/com.ally.resume-screener.plist ~/Library/LaunchAgents/
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.resume-screener.plist
 
+# Slack mention monitor (3x daily)
+cp scheduling/com.ally.slack-mentions.plist ~/Library/LaunchAgents/
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.slack-mentions.plist
+
 # Service check
 cp scheduling/com.ally.service-check.plist ~/Library/LaunchAgents/
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.ally.service-check.plist
@@ -856,6 +996,9 @@ rm ~/Library/LaunchAgents/com.ally.job-posts.plist
 
 launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.ally.resume-screener.plist
 rm ~/Library/LaunchAgents/com.ally.resume-screener.plist
+
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.ally.slack-mentions.plist
+rm ~/Library/LaunchAgents/com.ally.slack-mentions.plist
 
 launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.ally.service-check.plist
 rm ~/Library/LaunchAgents/com.ally.service-check.plist
