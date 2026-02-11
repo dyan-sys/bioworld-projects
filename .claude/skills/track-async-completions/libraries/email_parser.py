@@ -5,6 +5,7 @@ Config-driven via platform-config.json. No code changes needed to tune patterns.
 Supports multiple config entries — the parser tries each until one matches.
 """
 
+import html as html_mod
 import json
 import re
 from pathlib import Path
@@ -42,10 +43,10 @@ def parse_subject(subject: str, config: dict) -> dict | None:
     match = re.match(pattern, subject)
     if not match:
         return None
-    return {
-        "candidate_name": match.group(groups["candidate_name"]).strip(),
-        "job_title": match.group(groups["job_title"]).strip(),
-    }
+    result = {}
+    for key, group_idx in groups.items():
+        result[key] = match.group(group_idx).strip()
+    return result
 
 
 def _unwrap_tracking_url(url: str) -> str:
@@ -68,7 +69,7 @@ def extract_assessment_link(html_body: str, config: dict) -> str | None:
     direct_pattern = config["body_link_pattern"]
     match = re.search(direct_pattern, html_body)
     if match:
-        return match.group(0)
+        return html_mod.unescape(match.group(0))
 
     # Try tracking links that wrap an admin URL
     tracking_prefix = config.get("tracking_link_prefix", "")
@@ -125,9 +126,13 @@ def parse_completion_email(subject: str, html_body: str, config: dict | None = N
         if body_name:
             subject_data["candidate_name"] = body_name
 
+    # Must have at least candidate_name to be useful
+    if not subject_data.get("candidate_name"):
+        return None
+
     return {
         "candidate_name": subject_data["candidate_name"],
-        "job_title": subject_data["job_title"],
+        "job_title": subject_data.get("job_title"),
         "assessment_link": assessment_link,
     }
 

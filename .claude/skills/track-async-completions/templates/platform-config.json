@@ -12,19 +12,15 @@
     "tracking_link_prefix": "https://webhooks.hireflix.com/hook/tracking/click/",
     "interaction_type": "1st Round (Async)"
   },
-  "_comment_hiretruffle": "HireTruffle completion notification emails (sent to recruitment@withally.com). Patterns are PLACEHOLDERS — run --discover after enabling notifications to capture the real format and update these.",
   "hiretruffle": {
-    "gmail_search_query": "from:hiretruffle.com subject:\"completed\"",
-    "sender": "",
-    "subject_pattern": "^(.+?)\\s+(?:has )?completed.+?(?:interview|assessment)\\s+(?:for\\s+)?(.+)$",
+    "gmail_search_query": "from:hello@hiretruffle.com subject:\"completed screening\"",
+    "sender": "hello@hiretruffle.com",
+    "subject_pattern": "^New candidate completed screening for (.+)$",
     "subject_groups": {
-      "candidate_name": 1,
-      "job_title": 2
+      "job_title": 1
     },
-    "body_candidate_pattern": "(.+?)\\s+(?:has )?completed",
-    "body_link_pattern": "https://(?:app\\.)?hiretruffle\\.com/[^\\s\"<>]+",
-    "tracking_link_prefix": "",
-    "interaction_type": "1st Round (Async)",
-    "_status": "PLACEHOLDER — update patterns after inspecting first real notification email with --discover"
+    "body_candidate_pattern": "Name:\\s*([^<\\n]+)",
+    "body_link_pattern": "https://app\\.hiretruffle\\.com/applications/[^\"\\s]+",
+    "interaction_type": "1st Round (Async)"
   }
 }
