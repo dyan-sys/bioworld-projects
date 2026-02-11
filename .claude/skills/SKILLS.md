@@ -10,3 +10,4 @@ Available skills for Claude Code in this project.
 | [invite-candidates](./invite-candidates/SKILL.md) | Create Gmail draft R1 invite emails routed by Screener status (Live/Async). Config-driven via R1-invite-mapping.json. Never sends — drafts only. |
 | [flag-ep-issues](./flag-ep-issues/SKILL.md) | Daily review of EP Slack channels. Reads yesterday's messages, analyzes via Kimi AI, flags missed items and stalled progress. Posts to #ally-jarvis. |
 | [linkedin-content](./linkedin-content/SKILL.md) | Generate LinkedIn post drafts. Combines user creative direction with Kimi web research and Ally's voice/strategy. Outputs draft .md files for human review. |
+| [mac-status](./mac-status/SKILL.md) | Quick Mac health diagnostic — memory pressure, swap, disk, top CPU/memory processes, and Ally scheduled job status. |
