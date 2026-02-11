@@ -2,6 +2,7 @@
 Email Parser — Extract candidate info from Hireflix completion emails.
 
 Config-driven via platform-config.json. No code changes needed to tune patterns.
+Supports multiple config entries — the parser tries each until one matches.
 """
 
 import json
@@ -20,6 +21,14 @@ def load_platform_config(platform: str = "hireflix") -> dict:
     if platform not in config:
         raise ValueError(f"Unknown platform: {platform}. Available: {list(config.keys())}")
     return config[platform]
+
+
+def load_all_platform_configs() -> dict[str, dict]:
+    """Load all platform configs (excluding comment keys)."""
+    config_path = TEMPLATES_DIR / "platform-config.json"
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = json.load(f)
+    return {k: v for k, v in config.items() if not k.startswith("_")}
 
 
 def parse_subject(subject: str, config: dict) -> dict | None:
@@ -96,6 +105,7 @@ def parse_completion_email(subject: str, html_body: str, config: dict | None = N
         - candidate_name: str
         - job_title: str
         - assessment_link: str | None
+        - matched_config: str (config key that matched — only set when trying all configs)
     Or None if the email doesn't match expected format.
     """
     if config is None:
@@ -120,3 +130,20 @@ def parse_completion_email(subject: str, html_body: str, config: dict | None = N
         "job_title": subject_data["job_title"],
         "assessment_link": assessment_link,
     }
+
+
+def parse_completion_email_multi(subject: str, html_body: str) -> dict | None:
+    """
+    Try all platform configs in order and return the first successful parse.
+
+    Returns dict with candidate_name, job_title, assessment_link, matched_config,
+    interaction_type. Or None if no config matched.
+    """
+    configs = load_all_platform_configs()
+    for name, config in configs.items():
+        result = parse_completion_email(subject, html_body, config)
+        if result:
+            result["matched_config"] = name
+            result["interaction_type"] = config.get("interaction_type", "1st Round (Async)")
+            return result
+    return None

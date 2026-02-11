@@ -1,8 +1,8 @@
 """
 Track Async Interview Completions
 
-Reads Hireflix completion emails from Gmail, matches candidates in Notion,
-and creates Interaction records in the Interactions DB.
+Reads async interview completion emails from Gmail (Hireflix, HireTruffle),
+matches candidates in Notion, and creates Interaction records in the Interactions DB.
 
 Usage:
     # Discovery mode — inspect raw email format
@@ -56,7 +56,12 @@ from libraries.gmail_reader import (  # noqa: E402
     get_message_date,
     extract_email_body,
 )
-from libraries.email_parser import load_platform_config, parse_completion_email  # noqa: E402
+from libraries.email_parser import (  # noqa: E402
+    load_platform_config,
+    load_all_platform_configs,
+    parse_completion_email,
+    parse_completion_email_multi,
+)
 from libraries.notion_interactions import (  # noqa: E402
     fetch_async_invited_candidates,
     fuzzy_match_candidate,
@@ -123,18 +128,28 @@ def save_receipt(gmail_message_id: str, candidate_name: str, data: dict) -> Path
     return filepath
 
 
-def run_discover(service, config: dict, days: int, limit: int):
-    """Discovery mode — print raw email structure for inspection."""
-    print("\n[DISCOVER] Searching Gmail...")
-    query = config["gmail_search_query"]
-    if days:
-        query += f" newer_than:{days}d"
-    print(f"  Query: {query}")
+def run_discover(service, configs: dict[str, dict], days: int, limit: int):
+    """Discovery mode — search all configured sources and print raw email structure."""
+    print("\n[DISCOVER] Searching Gmail across all configs...")
 
-    messages = search_messages(service, query, max_results=limit)
-    print(f"  Found {len(messages)} message(s)\n")
+    # Collect unique messages from all config search queries
+    seen_ids = set()
+    all_messages = []
+    for name, config in configs.items():
+        query = config["gmail_search_query"]
+        if days:
+            query += f" newer_than:{days}d"
+        print(f"  [{name}] Query: {query}")
+        msgs = search_messages(service, query, max_results=limit)
+        print(f"  [{name}] Found {len(msgs)} message(s)")
+        for m in msgs:
+            if m["id"] not in seen_ids:
+                seen_ids.add(m["id"])
+                all_messages.append(m)
 
-    for i, msg_ref in enumerate(messages, 1):
+    print(f"\n  Total unique messages: {len(all_messages)}\n")
+
+    for i, msg_ref in enumerate(all_messages, 1):
         msg = get_full_message(service, msg_ref["id"])
         headers = get_message_headers(msg)
         body = extract_email_body(msg)
@@ -147,16 +162,16 @@ def run_discover(service, config: dict, days: int, limit: int):
         print(f"  Date:    {date}")
         print(f"  Snippet: {msg.get('snippet', '')[:120]}")
 
-        # Try parsing
+        # Try parsing with all configs
         subject = headers.get("subject", "")
-        parsed = parse_completion_email(subject, body.get("html", ""), config)
+        parsed = parse_completion_email_multi(subject, body.get("html", ""))
         if parsed:
-            print(f"  [PARSED]")
+            print(f"  [PARSED] via config: {parsed['matched_config']}")
             print(f"    Candidate: {parsed['candidate_name']}")
             print(f"    Job Title: {parsed['job_title']}")
             print(f"    Link:      {parsed['assessment_link'] or 'NOT FOUND'}")
         else:
-            print(f"  [NOT PARSED] Subject did not match expected pattern")
+            print(f"  [NOT PARSED] No config matched this email")
 
         # Show body excerpt
         html_text = body.get("html", "")
@@ -202,8 +217,11 @@ def process_email(
     result["subject"] = subject
     result["date"] = date
 
-    # Parse email
-    parsed = parse_completion_email(subject, body.get("html", ""), config)
+    # Parse email — try all configs if no specific config passed
+    if config:
+        parsed = parse_completion_email(subject, body.get("html", ""), config)
+    else:
+        parsed = parse_completion_email_multi(subject, body.get("html", ""))
     if not parsed:
         result["status"] = "skipped"
         result["reason"] = f"Could not parse email: {subject}"
@@ -214,6 +232,9 @@ def process_email(
     result["candidate_name"] = candidate_name
     result["job_title"] = parsed["job_title"]
     result["assessment_link"] = assessment_link
+    if parsed.get("matched_config"):
+        result["matched_config"] = parsed["matched_config"]
+        print(f"  Config:    {parsed['matched_config']}")
 
     print(f"  Candidate: {candidate_name}")
     print(f"  Job Title: {parsed['job_title']}")
@@ -268,7 +289,7 @@ def process_email(
             return result
 
     # Dedup check in Notion
-    interaction_type = config.get("interaction_type", "1st Round (Async)")
+    interaction_type = parsed.get("interaction_type") or (config.get("interaction_type") if config else None) or "1st Round (Async)"
     if interaction_exists(notion_key, INTERACTIONS_DB_ID, candidate_page_id, interaction_type):
         result["status"] = "skipped"
         result["reason"] = "Interaction already exists in Notion"
@@ -373,8 +394,9 @@ def main():
     if args.discover:
         print("[MODE] Discovery — inspecting raw email format")
 
-    # Load config
-    config = load_platform_config("hireflix")
+    # Load all configs
+    all_configs = load_all_platform_configs()
+    print(f"  Loaded {len(all_configs)} config(s): {', '.join(all_configs.keys())}")
 
     # Authenticate Gmail
     print("\n[1/3] Authenticating Gmail...")
@@ -390,7 +412,7 @@ def main():
 
     # Discovery mode
     if args.discover:
-        run_discover(service, config, args.days, args.limit)
+        run_discover(service, all_configs, args.days, args.limit)
         return
 
     # Load Notion keys
@@ -419,12 +441,20 @@ def main():
             print(f"  Force-link to: {args.page_id}")
         messages = [{"id": args.message_id}]
     else:
-        # Search Gmail
-        query = config["gmail_search_query"]
-        query += f" newer_than:{args.days}d"
-        print(f"  Query: {query}")
-        messages = search_messages(service, query, max_results=args.limit)
-        print(f"  Found {len(messages)} email(s)")
+        # Search Gmail across all configs
+        seen_ids = set()
+        messages = []
+        for name, cfg in all_configs.items():
+            query = cfg["gmail_search_query"]
+            query += f" newer_than:{args.days}d"
+            print(f"  [{name}] Query: {query}")
+            msgs = search_messages(service, query, max_results=args.limit)
+            for m in msgs:
+                if m["id"] not in seen_ids:
+                    seen_ids.add(m["id"])
+                    messages.append(m)
+            print(f"  [{name}] Found {len(msgs)} email(s)")
+        print(f"  Total unique: {len(messages)}")
 
     if not messages:
         print("\n  No emails to process. Exiting.")
@@ -438,7 +468,7 @@ def main():
         result = process_email(
             service=service,
             msg_ref=msg_ref,
-            config=config,
+            config=None,
             notion_key=notion_key,
             candidates_db_id=candidates_db_id,
             candidate_pool=candidate_pool,

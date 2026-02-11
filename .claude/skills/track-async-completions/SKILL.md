@@ -1,6 +1,6 @@
 # Track Async Interview Completions
 
-Reads Hireflix async interview completion emails from Gmail, matches candidates in the Notion Candidates DB, and creates Interaction records in the Interactions DB.
+Reads async interview completion emails from Gmail (Hireflix and HireTruffle), matches candidates in the Notion Candidates DB, and creates Interaction records in the Interactions DB.
 
 ## Quick Start
 
@@ -21,12 +21,13 @@ python3.11 .claude/skills/track-async-completions/workflows/track_async_completi
 ## How It Works
 
 1. Authenticates Gmail with `compose + readonly` scopes (shared auth with invite-candidates)
-2. Searches Gmail for Hireflix completion emails (`from:no-reply@hireflix.com subject:"Interview Completed"`)
-3. Parses each email: extracts candidate name, job title, and assessment link from subject + body
-4. Matches candidate in Notion Candidates DB by Full Name
-5. Checks for existing Interaction record (dedup)
-6. Creates Interaction record with assessment link
-7. Saves receipt to `local-data/talent/async_completions/`
+2. Loads all platform configs from `templates/platform-config.json`
+3. Searches Gmail using each config's search query (deduped by message ID)
+4. Parses each email by trying all configs in order until one matches
+5. Matches candidate in Notion Candidates DB by Full Name (pool-scoped fuzzy matching)
+6. Checks for existing Interaction record (dedup)
+7. Creates Interaction record with assessment link
+8. Saves receipt to `local-data/talent/async_completions/`
 
 ## Candidate Matching
 
@@ -53,7 +54,26 @@ Two layers prevent duplicate records:
 
 ## Configuration
 
-Email parsing is config-driven via `templates/platform-config.json`. To tune patterns (e.g., if Hireflix changes their email format), edit the JSON — no code changes needed.
+Email parsing is config-driven via `templates/platform-config.json`. Multiple config entries are supported — the parser tries each in order until one matches. To tune patterns (e.g., if Hireflix changes their email format), edit the JSON — no code changes needed.
+
+### Active Configs
+
+| Config Key | Source | Status |
+|------------|--------|--------|
+| `hireflix` | `no-reply@hireflix.com` completion emails | Active |
+| `hiretruffle` | HireTruffle notification emails to `recruitment@withally.com` | **PLACEHOLDER** — patterns need updating |
+
+### Activating HireTruffle Completion Tracking
+
+When HireTruffle notification emails are enabled:
+
+1. Enable "For all completed interviews" in HireTruffle Settings > Notifications
+2. Notifications go to `recruitment@withally.com`
+3. Wait for the first completion email to arrive
+4. Run `--discover` to inspect the email format
+5. Update `hiretruffle` patterns in `platform-config.json` to match the real format (sender, subject pattern, body patterns, assessment link pattern)
+6. Remove the `_status` field from the config entry
+7. Run `--dry-run` to verify parsing works
 
 ## Requirements
 
