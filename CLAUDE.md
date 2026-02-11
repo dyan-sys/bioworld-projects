@@ -47,6 +47,7 @@ SLACK_BOT_TOKEN=xoxb-xxx                                     # Slack Bot Token (
 | LinkedIn Content | `.claude/skills/linkedin-content/` | Generates LinkedIn post drafts via Kimi research + synthesis. Drafts to local files for human review. |
 | Recruit Consulting | `.claude/skills/recruit-consulting/` | AI-assisted review of client JDs and interview templates for CS roles. Interactive process, no Python workflows. |
 | Adapt Client JD | `.claude/skills/adapt-client-jd/` | Adapts client JDs for specific job platforms (OLJ, Jobstreet) with format rules. |
+| Background Check | `.claude/skills/background-check/` | Screens candidates' online presence via Kimi web search. Checks LinkedIn consistency, news/legal, social media. On-demand only. |
 
 ## Data Architecture
 
