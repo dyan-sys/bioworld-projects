@@ -262,6 +262,7 @@ The JSON must have this exact structure:
   "final_score": <0-100>,
   "tier": "<Tier 1 Strong|Tier 2 Viable|Tier 3 Below>",
   "recommendation": "<STRONG PROCEED|PROCEED|PROCEED WITH QUESTIONS|PROCEED WITH CAUTION|DO NOT PROCEED>",
+  "suggested_route": "<Live Interview|Async Assessment|—>",
   "threshold_assessment": {{
     "experience_raw": <number>,
     "experience_pass": <true|false>,
@@ -433,9 +434,11 @@ def format_detailed_rationale(score_result: dict) -> str:
     gaps = detailed.get("key_gaps", "N/A")
     reasoning = detailed.get("recommendation_reasoning", "N/A")
     interview = detailed.get("interview_focus", "N/A")
+    suggested_route = score_result.get("suggested_route", "—")
 
     lines = [
         f"FINAL SCORE: {final_score}/100 | THRESHOLDS: {thresh_passed} ({thresh_str})",
+        f"SUGGESTED ROUTE: {suggested_route}",
         "",
         f"BUCKET SCORES: {bucket_str}",
         "",
