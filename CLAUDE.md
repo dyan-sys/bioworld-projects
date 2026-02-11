@@ -15,7 +15,7 @@ Each skill has a `SKILL.md` with full documentation (workflows, templates, edge 
 
 ```bash
 # Python Requirements
-# Requires Python 3.11+ with OpenSSL 3.x for API compatibility
+# Always use python3.11 (not python3) — dependencies are installed under 3.11
 python3.11 --version  # Should show Python 3.11.x with OpenSSL 3.x
 
 # Install dependencies
