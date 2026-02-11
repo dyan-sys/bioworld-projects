@@ -18,6 +18,83 @@ def _notion_headers(notion_key: str) -> dict:
     }
 
 
+def fetch_async_invited_candidates(notion_key: str, db_id: str) -> list[dict]:
+    """
+    Fetch all candidates with Screener = "To invite (Async)".
+
+    Returns list of page dicts — the pool of candidates who were invited
+    to async interviews. Used to scope fuzzy name matching.
+    """
+    url = f"{NOTION_BASE}/databases/{db_id}/query"
+    all_results = []
+    start_cursor = None
+
+    while True:
+        payload = {
+            "filter": {
+                "property": "Screener",
+                "status": {"equals": "To invite (Async)"},
+            },
+            "page_size": 100,
+        }
+        if start_cursor:
+            payload["start_cursor"] = start_cursor
+
+        resp = requests.post(url, headers=_notion_headers(notion_key), json=payload, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        all_results.extend(data.get("results", []))
+
+        if not data.get("has_more"):
+            break
+        start_cursor = data.get("next_cursor")
+
+    return all_results
+
+
+def _normalize_name(name: str) -> set[str]:
+    """Normalize a name into a set of lowercase word tokens."""
+    return set(name.lower().split())
+
+
+def fuzzy_match_candidate(email_name: str, pool: list[dict]) -> dict | None:
+    """
+    Fuzzy match a candidate name from an email against a pool of Notion pages.
+
+    Strategy:
+    1. Exact match (case-insensitive)
+    2. All words from email name appear in Notion name (or vice versa)
+    3. Accept only if exactly one candidate matches
+
+    Returns the matched page dict, or None.
+    """
+    email_tokens = _normalize_name(email_name)
+    if not email_tokens:
+        return None
+
+    # Build name → page mapping
+    candidates = []
+    for page in pool:
+        notion_name = get_candidate_name(page)
+        if not notion_name:
+            continue
+        notion_tokens = _normalize_name(notion_name)
+
+        # Exact match (case-insensitive)
+        if email_name.lower().strip() == notion_name.lower().strip():
+            return page
+
+        # All email tokens found in Notion name, or all Notion tokens found in email name
+        if email_tokens.issubset(notion_tokens) or notion_tokens.issubset(email_tokens):
+            candidates.append((page, notion_name))
+
+    # Accept only single match to avoid ambiguity
+    if len(candidates) == 1:
+        return candidates[0][0]
+
+    return None
+
+
 def find_candidate_by_name(notion_key: str, db_id: str, full_name: str) -> dict | None:
     """
     Search Candidates DB for a candidate by Full Name (title field).
@@ -85,7 +162,7 @@ def interaction_exists(
         "filter": {
             "and": [
                 {
-                    "property": "Candidate",
+                    "property": "\U0001f465 Candidates DB",
                     "relation": {"contains": candidate_page_id},
                 },
                 {
@@ -100,6 +177,34 @@ def interaction_exists(
     resp.raise_for_status()
     results = resp.json().get("results", [])
     return len(results) > 0
+
+
+def get_candidate_1r_status(page: dict) -> str | None:
+    """Extract 1R status name from a Notion candidate page."""
+    props = page.get("properties", {})
+    r1_prop = props.get("1R", {})
+    if r1_prop.get("type") == "status":
+        status_obj = r1_prop.get("status")
+        if status_obj:
+            return status_obj.get("name")
+    return None
+
+
+def update_candidate_1r_status(
+    notion_key: str,
+    candidate_page_id: str,
+    status_name: str,
+) -> dict:
+    """Update the 1R status field on a candidate page."""
+    url = f"{NOTION_BASE}/pages/{candidate_page_id}"
+    payload = {
+        "properties": {
+            "1R": {"status": {"name": status_name}},
+        },
+    }
+    resp = requests.patch(url, headers=_notion_headers(notion_key), json=payload, timeout=30)
+    resp.raise_for_status()
+    return resp.json()
 
 
 def create_interaction(
@@ -131,7 +236,7 @@ def create_interaction(
         "Name": {
             "title": [{"text": {"content": f"R1 Async - {candidate_name}"}}],
         },
-        "Candidate": {
+        "\U0001f465 Candidates DB": {
             "relation": [{"id": candidate_page_id}],
         },
         "Type": {

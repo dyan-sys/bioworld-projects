@@ -58,12 +58,21 @@ from libraries.gmail_reader import (  # noqa: E402
 )
 from libraries.email_parser import load_platform_config, parse_completion_email  # noqa: E402
 from libraries.notion_interactions import (  # noqa: E402
+    fetch_async_invited_candidates,
+    fuzzy_match_candidate,
     find_candidate_by_name,
     find_candidate_by_email,
     get_candidate_name,
+    get_candidate_1r_status,
+    update_candidate_1r_status,
     interaction_exists,
     create_interaction,
 )
+
+# 1R status that confirms a candidate was invited (guard)
+R1_GUARD_STATUS = "Invitation Sent"
+# 1R status to set after async interview completion
+R1_COMPLETED_STATUS = "Async Done - Awaiting Review"
 
 # Load .env
 load_dotenv(PROJECT_ROOT / ".env")
@@ -165,6 +174,7 @@ def process_email(
     config: dict,
     notion_key: str,
     candidates_db_id: str,
+    candidate_pool: list[dict] | None = None,
     dry_run: bool = False,
     force_page_id: str | None = None,
 ) -> dict:
@@ -228,13 +238,18 @@ def process_email(
             result["reason"] = f"Failed to fetch page {force_page_id}: {e}"
             return result
     else:
-        # Try matching by name
-        print(f"  [MATCH] Searching by name: {candidate_name}")
-        candidate_page = find_candidate_by_name(notion_key, candidates_db_id, candidate_name)
+        # Match only against async-invited pool (no full DB fallback)
+        if candidate_pool:
+            print(f"  [MATCH] Fuzzy matching against {len(candidate_pool)} invited candidates...")
+            candidate_page = fuzzy_match_candidate(candidate_name, candidate_pool)
+            if candidate_page:
+                print(f"  [MATCH] Pool match found")
+            else:
+                print(f"  [MATCH] No match in invited pool")
 
     if not candidate_page:
         result["status"] = "unmatched"
-        result["reason"] = f"No candidate found for: {candidate_name}"
+        result["reason"] = f"No match in async-invited pool for: {candidate_name}"
         return result
 
     candidate_page_id = candidate_page["id"]
@@ -242,6 +257,15 @@ def process_email(
     result["notion_page_id"] = candidate_page_id
     result["matched_name"] = matched_name
     print(f"  [MATCH] Found: {matched_name} ({candidate_page_id})")
+
+    # 1R guard: verify candidate was actually invited
+    if not force_page_id:
+        current_1r = get_candidate_1r_status(candidate_page)
+        if current_1r != R1_GUARD_STATUS:
+            result["status"] = "skipped"
+            result["reason"] = f"1R status is '{current_1r}', expected '{R1_GUARD_STATUS}'"
+            print(f"  [GUARD] 1R = '{current_1r}' (expected '{R1_GUARD_STATUS}') — skipping")
+            return result
 
     # Dedup check in Notion
     interaction_type = config.get("interaction_type", "1st Round (Async)")
@@ -257,6 +281,7 @@ def process_email(
     if dry_run:
         result["status"] = "dry_run"
         print(f"  [DRY RUN] Would create Interaction: R1 Async - {matched_name}")
+        print(f"  [DRY RUN] Would set 1R → '{R1_COMPLETED_STATUS}'")
         receipt_data = {**result, "processed_at": datetime.now(timezone.utc).isoformat()}
         save_receipt(msg_id, candidate_name, receipt_data)
         return result
@@ -284,6 +309,11 @@ def process_email(
         result["status"] = "created"
         result["interaction_page_id"] = page.get("id")
         print(f"  [CREATED] Interaction: {page.get('id')}")
+
+        # Update candidate 1R status
+        update_candidate_1r_status(notion_key, candidate_page_id, R1_COMPLETED_STATUS)
+        result["1r_updated"] = R1_COMPLETED_STATUS
+        print(f"  [1R] Set to '{R1_COMPLETED_STATUS}'")
 
         # Save receipt
         receipt_data = {**result, "processed_at": datetime.now(timezone.utc).isoformat()}
@@ -374,6 +404,11 @@ def main():
         print(f"  ERROR: {e}")
         sys.exit(1)
 
+    # Load async-invited candidate pool for scoped fuzzy matching
+    print("  Loading async-invited candidate pool...")
+    candidate_pool = fetch_async_invited_candidates(notion_key, candidates_db_id)
+    print(f"  Pool: {len(candidate_pool)} candidates with Screener = 'To invite (Async)'")
+
     # Fetch emails
     print(f"\n[3/3] Processing emails (last {args.days} days, limit {args.limit})...")
 
@@ -406,6 +441,7 @@ def main():
             config=config,
             notion_key=notion_key,
             candidates_db_id=candidates_db_id,
+            candidate_pool=candidate_pool,
             dry_run=args.dry_run,
             force_page_id=args.page_id if args.message_id else None,
         )
