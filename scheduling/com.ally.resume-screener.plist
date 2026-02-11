@@ -12,6 +12,8 @@
         <string>.claude/skills/screen-resume/workflows/resume_screener_kimi.py</string>
         <string>--limit</string>
         <string>20</string>
+        <string>--batch-size</string>
+        <string>5</string>
     </array>
 
     <!-- Four times daily: 8am, noon, 4pm, 8pm SGT (launchd uses local time) -->

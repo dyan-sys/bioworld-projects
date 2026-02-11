@@ -13,6 +13,7 @@ import json
 import os
 import re
 import sys
+import time
 from pathlib import Path
 
 import requests
@@ -754,8 +755,14 @@ def main():
     parser.add_argument(
         '--limit',
         type=int,
+        default=20,
+        help='Total candidates to process in batch mode (default: 20)'
+    )
+    parser.add_argument(
+        '--batch-size',
+        type=int,
         default=5,
-        help='Number of candidates to process in batch mode (default: 5)'
+        help='Candidates per batch before pausing (default: 5)'
     )
     args = parser.parse_args()
 
@@ -796,15 +803,29 @@ def main():
         print("\n  No candidates to process. Exiting.")
         return
 
-    # Process candidates
-    print("\n[3/3] Processing candidates...")
+    # Process candidates in batches
+    batch_size = args.batch_size if not args.page_id else len(candidates)
+    total = len(candidates)
+    num_batches = (total + batch_size - 1) // batch_size
+    print(f"\n[3/3] Processing {total} candidates in batches of {batch_size} ({num_batches} batch{'es' if num_batches != 1 else ''})...")
     print("-" * 60)
 
     results = []
-    for i, candidate in enumerate(candidates, 1):
-        print(f"\n[{i}/{len(candidates)}] {candidate['name']}")
-        result = process_candidate(candidate, notion_key, moonshot_key)
-        results.append(result)
+    for batch_idx in range(num_batches):
+        start = batch_idx * batch_size
+        end = min(start + batch_size, total)
+        batch = candidates[start:end]
+
+        if batch_idx > 0:
+            print(f"\n  -- pausing 10s between batches --")
+            time.sleep(10)
+
+        print(f"\n  Batch {batch_idx + 1}/{num_batches} ({len(batch)} candidates)")
+
+        for i, candidate in enumerate(batch, start + 1):
+            print(f"\n[{i}/{total}] {candidate['name']}")
+            result = process_candidate(candidate, notion_key, moonshot_key)
+            results.append(result)
 
     # Summary
     print("\n" + "=" * 60)

@@ -8,8 +8,10 @@
 
 set -euo pipefail
 
-JOB_ID="${1:?Usage: run-job.sh <job-id> <python-script>}"
-SCRIPT="${2:?Usage: run-job.sh <job-id> <python-script>}"
+JOB_ID="${1:?Usage: run-job.sh <job-id> <python-script> [script-args...]}"
+SCRIPT="${2:?Usage: run-job.sh <job-id> <python-script> [script-args...]}"
+shift 2
+SCRIPT_ARGS=("$@")
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PYTHON="/opt/homebrew/bin/python3.11"
@@ -111,7 +113,7 @@ START_ISO="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 START_EPOCH="$(date +%s)"
 
 EXIT_CODE=0
-"$PYTHON" "$PROJECT_ROOT/$SCRIPT" >> "$LOGFILE" 2>&1 || EXIT_CODE=$?
+"$PYTHON" "$PROJECT_ROOT/$SCRIPT" "${SCRIPT_ARGS[@]}" >> "$LOGFILE" 2>&1 || EXIT_CODE=$?
 
 END_ISO="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 END_EPOCH="$(date +%s)"
