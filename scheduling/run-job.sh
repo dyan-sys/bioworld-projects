@@ -113,7 +113,7 @@ START_ISO="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 START_EPOCH="$(date +%s)"
 
 EXIT_CODE=0
-"$PYTHON" "$PROJECT_ROOT/$SCRIPT" "${SCRIPT_ARGS[@]}" >> "$LOGFILE" 2>&1 || EXIT_CODE=$?
+"$PYTHON" "$PROJECT_ROOT/$SCRIPT" ${SCRIPT_ARGS[@]+"${SCRIPT_ARGS[@]}"} >> "$LOGFILE" 2>&1 || EXIT_CODE=$?
 
 END_ISO="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 END_EPOCH="$(date +%s)"
