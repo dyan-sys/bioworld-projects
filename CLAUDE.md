@@ -30,6 +30,7 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...        # Slack Incoming W
 SLACK_WEBHOOK_URL_JARVIS=https://hooks.slack.com/services/... # Slack webhook for #ally-jarvis (service status)
 SLACK_BOT_TOKEN=xoxb-xxx                                     # Slack Bot Token (channels:history, users:read)
 GEMINI_API_KEY=xxx                                            # Google AI Studio API key (Gemini, for background check)
+SERPER_API_KEY=xxx                                            # Serper.dev API key (Google Search, for background check)
 NOTION_SPEND_DB_ID=xxx                                        # Notion database ID for AI Spend tracking
 ```
 
@@ -49,9 +50,10 @@ NOTION_SPEND_DB_ID=xxx                                        # Notion database 
 | LinkedIn Content | `.claude/skills/linkedin-content/` | Generates LinkedIn post drafts via Kimi research + synthesis. Drafts to local files for human review. |
 | Recruit Consulting | `.claude/skills/recruit-consulting/` | AI-assisted review of client JDs and interview templates for CS roles. Interactive process, no Python workflows. |
 | Adapt Client JD | `.claude/skills/adapt-client-jd/` | Adapts client JDs for specific job platforms (OLJ, Jobstreet) with format rules. |
-| Background Check | `.claude/skills/background-check/` | Screens candidates' online presence via Gemini + Google Search grounding. Checks LinkedIn consistency, news/legal, social media. On-demand only. |
+| Background Check | `.claude/skills/background-check/` | Screens candidates' online presence via Serper.dev (Google Search) + Gemini analysis. Checks LinkedIn consistency, news/legal, social media. On-demand only. |
 | Track AI Spend | `.claude/skills/track-ai-spend/` | Parses billing emails from Gmail, extracts AUD amounts, upserts monthly rows to Notion "AI Spend" DB. Runs monthly. |
 | Markdown to Slides | `.claude/skills/md-to-slides/` | Converts `.md` slide files into styled Google Slides presentations via template deck cloning. On-demand. |
+| CS Digest | `.claude/skills/cs-digest/` | Generates structured digest reports from mixed CS text files via Kimi AI. On-demand only. |
 
 ## Data Architecture
 
