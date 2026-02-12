@@ -89,13 +89,7 @@ Detects Calendly "New Event" emails for R1 Live interviews and sets 1R → "Sche
 - **Action:** `status_update_only` — no Interaction record, just 1R status update
 - **Limitation:** Reschedules/cancellations are not auto-tracked (Gmail parsing constraint)
 
-To activate after initial deployment:
-1. Run `--discover --days 30` to find Calendly booking emails
-2. Inspect the raw email format (sender, subject, body structure)
-3. Update `calendly` patterns in `platform-config.json` to match real format
-4. Remove the `_status` field from the config entry
-5. Run `--dry-run` to verify matching works
-6. Add "Scheduled" to the 1R status property in Notion Candidates DB
+Activated Feb 2026 — patterns tuned from real Calendly emails, dry-run verified.
 
 ### Activating HireTruffle Completion Tracking
 

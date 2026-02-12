@@ -1,15 +1,16 @@
 """
 Notion Spend Database — Query and upsert monthly AI spend rows.
 
-Schema:
-  Month (title)         — "2026-02"
-  Charge (number)       — raw amount from receipt (e.g. 20.00)
+Ledger-style schema:
+  Month (title)         — "2026-02" for expenses, description for reimbursements
+  Type (select)         — "Expense" (auto) or "Reimbursement" (manual)
+  Charge (number)       — raw amount from receipt
   Currency (select)     — original currency code (e.g. "AUD", "USD")
-  AUD Amount (number)   — amount in AUD (= Charge when currency is AUD)
-  Reimbursed (AUD) (number) — manual entry, how much has been reimbursed
-  Balance (AUD) (formula)   — = AUD Amount - Reimbursed (AUD)
+  AUD Amount (number)   — positive for expenses, negative for reimbursements
   Updated At (rich_text)
   Notes (rich_text)
+
+Footer Sum on AUD Amount = outstanding balance.
 """
 
 import requests
@@ -70,15 +71,15 @@ def upsert_spend_row(
         updated_at: ISO timestamp
         notes: optional notes/warnings
 
-    Does NOT touch Reimbursed (AUD) — that's manual entry.
     Returns the Notion page object.
     """
     headers = notion_headers(api_key)
     existing = find_month_row(api_key, db_id, month)
 
-    # Build properties (only script-managed fields)
+    # Build properties
     properties = {
         "Month": {"title": [{"text": {"content": month}}]},
+        "Type": {"select": {"name": "Expense"}},
         "Charge": {"number": charge},
         "Currency": {"select": {"name": currency}},
         "AUD Amount": {"number": aud_amount},

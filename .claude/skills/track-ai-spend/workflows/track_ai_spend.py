@@ -46,7 +46,7 @@ sys.path.remove(str(INVITE_SKILL))
 for mod_name in [k for k in sys.modules if k == "libraries" or k.startswith("libraries.")]:
     del sys.modules[mod_name]
 
-ASYNC_SKILL = PROJECT_ROOT / ".claude" / "skills" / "track-async-completions"
+ASYNC_SKILL = PROJECT_ROOT / ".claude" / "skills" / "track-recruitment-events"
 sys.path.insert(0, str(ASYNC_SKILL))
 from libraries.gmail_reader import (  # noqa: E402
     get_full_message,
