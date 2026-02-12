@@ -51,6 +51,7 @@ NOTION_SPEND_DB_ID=xxx                                        # Notion database 
 | Adapt Client JD | `.claude/skills/adapt-client-jd/` | Adapts client JDs for specific job platforms (OLJ, Jobstreet) with format rules. |
 | Background Check | `.claude/skills/background-check/` | Screens candidates' online presence via Gemini + Google Search grounding. Checks LinkedIn consistency, news/legal, social media. On-demand only. |
 | Track AI Spend | `.claude/skills/track-ai-spend/` | Parses billing emails from Gmail, extracts AUD amounts, upserts monthly rows to Notion "AI Spend" DB. Runs monthly. |
+| Markdown to Slides | `.claude/skills/md-to-slides/` | Converts `.md` slide files into styled Google Slides presentations via template deck cloning. On-demand. |
 
 ## Data Architecture
 
@@ -66,6 +67,7 @@ local-data/
 │   ├── research/
 │   └── drafts/
 ├── ai-spend/                     # AI spend tracking receipts
+├── slides/                       # Slides generation receipts
 └── talent/
     ├── resume_raw_txt/           # Extracted resume text
     ├── resume_receipts/          # Full scoring JSON (Claude + Kimi)

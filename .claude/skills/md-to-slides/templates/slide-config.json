@@ -1,0 +1,11 @@
+{
+  "template_presentation_id": "<PASTE_TEMPLATE_ID_HERE>",
+  "layout_mapping": {
+    "title": "Title Slide",
+    "section": "Section Header",
+    "content": "Title and Body",
+    "two_column": "Two Column",
+    "blank": "Blank"
+  },
+  "default_layout": "content"
+}
