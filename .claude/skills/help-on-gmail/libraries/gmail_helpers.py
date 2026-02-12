@@ -20,8 +20,9 @@ from gmail_auth import get_gmail_service  # noqa: E402
 
 CREDENTIALS_PATH = PROJECT_ROOT / "Google-credentials.json"
 TOKEN_PATH = PROJECT_ROOT / "local-data" / "gmail_token_ivan_help.json"
-# gmail.modify covers read + label management + draft creation, but NOT send.
-# gmail.compose and gmail.send are intentionally excluded — drafts only, never send.
+# gmail.modify covers read + label management + draft creation.
+# The scope technically allows send at the API level, but this module has no send
+# function — sending is enforced as impossible at the code level.
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
 
 # Cache label name → ID lookups within a session

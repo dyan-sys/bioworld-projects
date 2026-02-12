@@ -30,9 +30,10 @@ Run on-demand when user mentions checking help emails, ally-os-help, or Gmail he
 ## Authentication
 
 - Token: `local-data/gmail_token_ivan_help.json` (separate from readonly token)
-- Scopes: `gmail.modify` + `gmail.compose` (read, label management, draft creation)
+- Scopes: `gmail.modify` (read, label management, draft creation)
+- No send function exists in the code — sending is blocked at the code level
 - First run triggers browser OAuth consent for ivan@withally.com
-- Credentials: shared `credentials.json` in project root
+- Credentials: shared `Google-credentials.json` in project root
 
 ## Output
 
@@ -40,5 +41,5 @@ No persistent artifacts — interactive session only. Gmail drafts are created d
 
 ## Requirements
 
-- `credentials.json` in project root (Google OAuth2 client)
+- `Google-credentials.json` in project root (Google OAuth2 client)
 - Python 3.11+ with `google-auth`, `google-auth-oauthlib`, `google-api-python-client`

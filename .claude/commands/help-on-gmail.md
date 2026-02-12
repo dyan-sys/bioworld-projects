@@ -1,7 +1,7 @@
 ---
 description: Check and triage ally-os-help emails from Gmail
 argument-hint: [--limit N] [--unread-only]
-allowed-tools: Bash(python3:*), Read, WebSearch, WebFetch, AskUserQuestion
+allowed-tools: Bash(python3:*), Read, WebSearch, WebFetch, AskUserQuestion, ToolSearch, mcp__claude_ai_Linear__create_issue, mcp__claude_ai_Linear__list_users, mcp__claude_ai_Linear__list_projects, mcp__claude_ai_Linear__list_issue_labels, mcp__claude_ai_Linear__list_teams
 ---
 
 Fetch emails labeled `ally-os-help` from ivan@withally.com, analyze each one interactively, and take action based on user direction.
@@ -43,6 +43,7 @@ Ask the user: **"What's your direction and objective for this email?"**
 
 Offer these options as suggestions:
 - **Draft a reply** — you'll compose a reply and create it as a Gmail draft
+- **Create a Linear ticket** — create a task in Linear with context from the email
 - **Research first** — do web research before deciding
 - **Skip** — move to the next email
 - Or any custom instruction
@@ -67,6 +68,19 @@ print(f\"Draft created: ID {result['id']}\")
 "
 ```
 Replace MESSAGE_ID, THREAD_ID, TO_ADDRESS, SUBJECT, and REPLY_BODY_HERE with actual values from the email being processed.
+
+**If creating a Linear ticket:**
+1. Use ToolSearch to load the Linear MCP tools (`+linear create issue`)
+2. Propose a ticket with:
+   - **Title**: concise summary derived from the email subject/content
+   - **Description**: include key context from the email — who sent it, what they need, any deadlines or action items. Quote relevant parts of the email body. Include the sender's email address for reference.
+3. Ask the user: **"What's the approach for this ticket?"** — let them refine the description, add acceptance criteria, or provide additional context
+4. Ask the user: **"Want to assign this to someone?"** — if yes, use `mcp__claude_ai_Linear__list_users` to show available team members and let the user pick
+5. Ask the user: **"Which project should this go under?"** — if yes, use `mcp__claude_ai_Linear__list_projects` to show available projects and let the user pick. If they say none/skip, leave it unset.
+6. Create the issue using `mcp__claude_ai_Linear__create_issue` with:
+   - `teamId`: `f3fb95e8-5a4d-4949-b49e-4cf4c95f81d9` (With Ally)
+   - The agreed title, description, assignee (if any), and project (if any)
+6. Report the created ticket URL/ID to the user
 
 **If researching:**
 - Use WebSearch to find relevant information
@@ -96,5 +110,5 @@ print('Label removed' if result else 'Label not found')
 
 Summarize what was done:
 - How many emails were processed
-- Actions taken (drafts created, researched, skipped)
+- Actions taken (drafts created, Linear tickets created, researched, skipped)
 - Any emails still labeled ally-os-help

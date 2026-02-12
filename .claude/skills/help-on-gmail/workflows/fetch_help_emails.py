@@ -40,7 +40,8 @@ from gmail_reader import (  # noqa: E402
 
 CREDENTIALS_PATH = PROJECT_ROOT / "Google-credentials.json"
 TOKEN_PATH = PROJECT_ROOT / "local-data" / "gmail_token_ivan_help.json"
-# gmail.modify covers read + label management + draft creation, but NOT send.
+# gmail.modify: read + label management + draft creation.
+# No send function exists in this skill — sending is blocked at the code level.
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
 
 
