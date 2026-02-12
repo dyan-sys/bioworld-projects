@@ -10,18 +10,37 @@
         <string>/Users/yikfaiivanli/Projects/ally-os/scheduling/run-job.sh</string>
         <string>ai-spend</string>
         <string>.claude/skills/track-ai-spend/workflows/track_ai_spend.py</string>
+        <string>--current</string>
     </array>
 
-    <!-- 2nd of each month at 08:00 SGT (launchd uses local time) -->
+    <!-- 8th, 18th, 28th of each month at 08:00 SGT (launchd uses local time) -->
     <key>StartCalendarInterval</key>
-    <dict>
-        <key>Day</key>
-        <integer>2</integer>
-        <key>Hour</key>
-        <integer>8</integer>
-        <key>Minute</key>
-        <integer>0</integer>
-    </dict>
+    <array>
+        <dict>
+            <key>Day</key>
+            <integer>8</integer>
+            <key>Hour</key>
+            <integer>8</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+        <dict>
+            <key>Day</key>
+            <integer>18</integer>
+            <key>Hour</key>
+            <integer>8</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+        <dict>
+            <key>Day</key>
+            <integer>28</integer>
+            <key>Hour</key>
+            <integer>8</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+    </array>
 
     <key>StandardOutPath</key>
     <string>/Users/yikfaiivanli/Projects/ally-os/local-data/logs/launchd-stdout.log</string>

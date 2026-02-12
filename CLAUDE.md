@@ -94,7 +94,7 @@ Status values: `success` (exit 0), `failed` (exit non-zero), `network_unavailabl
 | Slack Mention Monitor | 09:00, 13:00, 17:00 | `com.ally.slack-mentions.plist` |
 | Recruitment Completion Tracker | 08:00, 12:00, 18:00 | `com.ally.recruitment-events.plist` |
 | Service Health Check | 09:00 daily | `com.ally.service-check.plist` |
-| AI Spend Tracker | 08:00 on 2nd of month | `com.ally.ai-spend.plist` |
+| AI Spend Tracker | 08:00 on 8th, 18th, 28th | `com.ally.ai-spend.plist` |
 
 ### Adding a New Scheduled Job
 

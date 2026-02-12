@@ -66,6 +66,8 @@ from libraries.gmail_billing import (  # noqa: E402
     search_billing_emails_days,
     extract_charge,
     extract_paid_date,
+    extract_receipt_details,
+    download_pdf_attachments,
 )
 from libraries.notion_spend import upsert_spend_row  # noqa: E402
 
@@ -78,6 +80,7 @@ GMAIL_SCOPES = [
 ]
 GMAIL_TOKEN_PATH = PROJECT_ROOT / "local-data" / "gmail_token_ivan.json"
 RECEIPTS_DIR = PROJECT_ROOT / "local-data" / "ai-spend"
+PDF_RECEIPTS_DIR = PROJECT_ROOT / "local-data" / "receipts" / "ai-spend"
 
 
 def load_env_keys() -> tuple[str, str]:
@@ -178,7 +181,7 @@ def run_discover(service, configs: dict, days: int):
             # Try parsing paid date
             paid_date = extract_paid_date(full_text)
             if paid_date:
-                print(f"    [PAID]   {paid_date[0]}-{paid_date[1]:02d}")
+                print(f"    [PAID]   {paid_date[0]}-{paid_date[1]:02d}-{paid_date[2]:02d}")
             else:
                 print(f"    [PAID]   NOT FOUND")
 
@@ -192,16 +195,14 @@ def run_discover(service, configs: dict, days: int):
 
 def process_month(service, configs: dict, year: int, month: int, month_label: str,
                   notion_key: str | None, spend_db_id: str | None, dry_run: bool):
-    """Process billing emails for a specific month."""
+    """Process billing emails for a specific month. One Notion row per service."""
     print(f"\n[PROCESS] Target month: {month_label}")
 
-    # Aggregate charges across all configs for the month
-    total_charge = 0.0
-    total_currency = None
-    notes_parts: list[str] = []
-    found_any = False
+    results_summary = []
 
     for name, config in configs.items():
+        company = config.get("company", name.title())
+        product = config.get("product", "")
         query = config["gmail_search_query"]
         print(f"\n  [{name}] Searching Gmail...")
 
@@ -212,7 +213,7 @@ def process_month(service, configs: dict, year: int, month: int, month_label: st
         print(f"    Found {len(msgs)} email(s) in last 90 days")
 
         if not msgs:
-            notes_parts.append(f"{name}: no email found")
+            print(f"    No emails found for {name}")
             continue
 
         # Find email whose "Paid" date matches target month
@@ -230,80 +231,107 @@ def process_month(service, configs: dict, year: int, month: int, month_label: st
                 print(f"    [{msg_id}] No 'Paid' date found — skipping")
                 continue
 
-            paid_year, paid_month = paid_date
+            paid_year, paid_month, paid_day = paid_date
             paid_label = f"{paid_year}-{paid_month:02d}"
+            paid_date_iso = f"{paid_year}-{paid_month:02d}-{paid_day:02d}"
 
             if paid_year != year or paid_month != month:
                 print(f"    [{msg_id}] Paid {paid_label} — not target month, skipping")
                 continue
 
-            result = extract_charge(full_text, config["amount_pattern"])
-            if result:
-                amount, currency = result
-                print(f"    [{msg_id}] Paid {paid_label} — {currency} {amount:.2f}")
-                total_charge += amount
-                total_currency = currency
-                found_any = True
+            charge_result = extract_charge(full_text, config["amount_pattern"])
+            if not charge_result:
+                print(f"    [{msg_id}] Paid {paid_label} — charge NOT FOUND")
+                continue
 
-                # Save receipt
-                receipt_data = {
+            amount, currency = charge_result
+            print(f"    [{msg_id}] Paid {paid_label} — {currency} {amount:.2f}")
+
+            # Extract receipt details for page body
+            details = extract_receipt_details(full_text, subject)
+            details["amount_display"] = f"{currency} {amount:.2f}"
+            details["email_subject"] = subject
+            details["gmail_message_id"] = msg_id
+
+            # Download PDF receipts from email attachments
+            pdf_dir = PDF_RECEIPTS_DIR / paid_label
+            pdf_paths = download_pdf_attachments(service, msg, pdf_dir)
+            if pdf_paths:
+                print(f"    [{msg_id}] Saved {len(pdf_paths)} PDF(s) to {pdf_dir}/")
+                for p in pdf_paths:
+                    print(f"      → {p.name}")
+                details["pdf_files"] = [p.name for p in pdf_paths]
+            else:
+                print(f"    [{msg_id}] No PDF attachments found")
+
+            # Build descriptive title: "2026-01 | Anthropic Claude"
+            title = f"{month_label} | {company} {product}".strip()
+            aud_amount = round(amount, 2)
+            updated_at = datetime.now(timezone.utc).isoformat()
+
+            # Save local receipt
+            if not dry_run:
+                save_receipt(msg_id, name, {
                     "service": name,
+                    "title": title,
                     "month": month_label,
                     "charge": amount,
                     "currency": currency,
                     "gmail_message_id": msg_id,
                     "paid_date": paid_label,
-                    "processed_at": datetime.now(timezone.utc).isoformat(),
-                }
-                if not dry_run:
-                    save_receipt(msg_id, name, receipt_data)
+                    "receipt_details": details,
+                    "processed_at": updated_at,
+                })
+
+            results_summary.append({
+                "title": title,
+                "charge": amount,
+                "currency": currency,
+                "aud_amount": aud_amount,
+                "details": details,
+            })
+
+            # Upsert to Notion
+            if dry_run:
+                print(f"    [DRY RUN] Would upsert: {title}")
             else:
-                print(f"    [{msg_id}] Paid {paid_label} — charge NOT FOUND")
-                notes_parts.append(f"{name}: email found but charge not parsed")
+                if not notion_key or not spend_db_id:
+                    print(f"    [SKIP] Notion env vars not set")
+                    continue
 
-    if not found_any:
-        notes_parts.append("no charges found for this month")
+                print(f"    [NOTION] Upserting: {title}...")
+                try:
+                    page = upsert_spend_row(
+                        api_key=notion_key,
+                        db_id=spend_db_id,
+                        title=title,
+                        charge=amount,
+                        currency=currency,
+                        aud_amount=aud_amount,
+                        updated_at=updated_at,
+                        paid_date_iso=paid_date_iso,
+                        receipt_details=details,
+                    )
+                    print(f"    [NOTION] Done — page ID: {page.get('id')}")
+                except Exception as e:
+                    print(f"    [NOTION] ERROR: {type(e).__name__}: {e}")
 
-    # For AUD charges, AUD Amount = Charge. For other currencies,
-    # AUD Amount is left equal to Charge (user can manually adjust).
-    aud_amount = round(total_charge, 2)
-    notes = "; ".join(notes_parts) if notes_parts else ""
-    currency_label = total_currency or "AUD"
-    updated_at = datetime.now(timezone.utc).isoformat()
+            # Only process first matching email per service per month
+            break
 
     # Print summary
     print(f"\n{'='*60}")
     print("SUMMARY")
     print("=" * 60)
-    print(f"  Month:    {month_label}")
-    print(f"  Charge:   {currency_label} {total_charge:.2f}")
-    print(f"  AUD Amount: {aud_amount:.2f}")
-    if notes:
-        print(f"  Notes:    {notes}")
-
-    # Upsert to Notion
-    if dry_run:
-        print(f"\n  [DRY RUN] Would upsert row for {month_label}")
+    print(f"  Month: {month_label}")
+    total = 0.0
+    for r in results_summary:
+        print(f"  {r['title']}: {r['currency']} {r['charge']:.2f}")
+        total += r["aud_amount"]
+    if not results_summary:
+        print("  No charges found")
     else:
-        if not notion_key or not spend_db_id:
-            print(f"\n  [SKIP] NOTION_KEY or NOTION_SPEND_DB_ID not set — skipping Notion upsert")
-            return
-
-        print(f"\n  [NOTION] Upserting row for {month_label}...")
-        try:
-            page = upsert_spend_row(
-                api_key=notion_key,
-                db_id=spend_db_id,
-                month=month_label,
-                charge=total_charge,
-                currency=currency_label,
-                aud_amount=aud_amount,
-                updated_at=updated_at,
-                notes=notes,
-            )
-            print(f"  [NOTION] Done — page ID: {page.get('id')}")
-        except Exception as e:
-            print(f"  [NOTION] ERROR: {type(e).__name__}: {e}")
+        print(f"  Total AUD: {total:.2f}")
 
 
 def main():

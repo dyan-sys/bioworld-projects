@@ -5,6 +5,7 @@ Reuses get_gmail_service from invite-candidates skill (shared OAuth).
 Uses gmail_reader from track-recruitment-events for message fetching.
 """
 
+import base64
 import json
 import re
 from pathlib import Path
@@ -76,17 +77,17 @@ MONTH_NAMES = {
 }
 
 
-def extract_paid_date(text: str) -> tuple[int, int] | None:
+def extract_paid_date(text: str) -> tuple[int, int, int] | None:
     """
-    Extract billing month from "Paid <Month> <Day>, <Year>" in email body.
+    Extract billing date from "Paid <Month> <Day>, <Year>" in email body.
 
     Receipts forwarded from personal email have the forward date in headers,
     so we need to parse the actual billing date from the body.
 
-    Returns (year, month) tuple or None.
+    Returns (year, month, day) tuple or None.
     """
     match = re.search(
-        r"Paid\s+(\w+)\s+\d{1,2},\s+(\d{4})",
+        r"Paid\s+(\w+)\s+(\d{1,2}),\s+(\d{4})",
         text,
         re.IGNORECASE,
     )
@@ -94,12 +95,13 @@ def extract_paid_date(text: str) -> tuple[int, int] | None:
         return None
 
     month_name = match.group(1).lower()
-    year = int(match.group(2))
+    day = int(match.group(2))
+    year = int(match.group(3))
     month_num = MONTH_NAMES.get(month_name)
     if not month_num:
         return None
 
-    return year, month_num
+    return year, month_num, day
 
 
 # Map currency symbol prefixes to ISO codes
@@ -111,6 +113,78 @@ CURRENCY_PREFIX_MAP = {
     "HK": "HKD",
     "S": "SGD",
 }
+
+
+def extract_receipt_details(text: str, subject: str) -> dict:
+    """
+    Extract receipt metadata from email text.
+
+    Returns dict with receipt_number, invoice_number, payment_method, paid_date_str.
+    """
+    details = {}
+
+    # Receipt number from subject: "receipt from Anthropic, PBC #2298-0017-5136"
+    m = re.search(r"#([\d-]+)", subject)
+    if m:
+        details["receipt_number"] = m.group(1)
+
+    # Invoice number from body: "Invoice number   E3170EB9-0005"
+    m = re.search(r"Invoice\s+number\s+([A-Z0-9]+-\d+)", text, re.IGNORECASE)
+    if m:
+        details["invoice_number"] = m.group(1)
+
+    # Payment method: "Visa - 85" or similar
+    m = re.search(r"Payment\s+method\s+.*?(Visa|Mastercard|Amex)\s*[-–]\s*(\d+)", text, re.IGNORECASE)
+    if m:
+        details["payment_method"] = f"{m.group(1)} ending {m.group(2)}"
+
+    # Full paid date string: "Paid January 23, 2026"
+    m = re.search(r"Paid\s+(\w+\s+\d{1,2},\s+\d{4})", text, re.IGNORECASE)
+    if m:
+        details["paid_date"] = m.group(1)
+
+    return details
+
+
+def download_pdf_attachments(service, message: dict, output_dir: Path) -> list[Path]:
+    """
+    Download all PDF attachments from a Gmail message to output_dir.
+
+    Returns list of saved file paths.
+    """
+    saved = []
+    payload = message.get("payload", {})
+    msg_id = message["id"]
+    parts = payload.get("parts", [])
+
+    for part in parts:
+        mime_type = part.get("mimeType", "")
+        filename = part.get("filename", "")
+        if mime_type != "application/pdf" or not filename:
+            continue
+
+        body = part.get("body", {})
+        att_id = body.get("attachmentId")
+        if not att_id:
+            continue
+
+        att = (
+            service.users()
+            .messages()
+            .attachments()
+            .get(userId="me", messageId=msg_id, id=att_id)
+            .execute()
+        )
+        data = att.get("data", "")
+        pdf_bytes = base64.urlsafe_b64decode(data)
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+        filepath = output_dir / filename
+        with open(filepath, "wb") as f:
+            f.write(pdf_bytes)
+        saved.append(filepath)
+
+    return saved
 
 
 def extract_charge(text: str, amount_pattern: str) -> tuple[float, str] | None:

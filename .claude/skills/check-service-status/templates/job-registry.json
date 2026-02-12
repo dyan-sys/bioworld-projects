@@ -112,7 +112,7 @@
       "schedule": {
         "expected_hour_utc": 0,
         "frequency": "monthly",
-        "expected_day": 2
+        "expected_days": [8, 18, 28]
       },
       "tolerance_minutes": 1440,
       "artifact_checks": [

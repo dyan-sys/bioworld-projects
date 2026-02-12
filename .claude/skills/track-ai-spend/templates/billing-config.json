@@ -2,6 +2,8 @@
   "anthropic": {
     "gmail_search_query": "subject:\"receipt from Anthropic\"",
     "amount_pattern": "([A-Z]{1,2})\\$([\\d,]+\\.\\d{2})",
-    "date_from_header": true
+    "date_from_header": true,
+    "company": "Anthropic",
+    "product": "Claude"
   }
 }
