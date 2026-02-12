@@ -1,15 +1,16 @@
 """
 Background Check Workflow
 
-Screens candidates' online presence using Gemini + Google Search grounding
-to flag red flags before they advance in the pipeline.
+Screens candidates' online presence using Serper.dev (Google search) +
+Kimi k2.5 (analysis only) to flag red flags before they advance in the pipeline.
 
 Steps per candidate:
 1. Load candidate data from Notion + resume text from local files
-2. Kimi — Generate targeted search queries
-3. Gemini + Google Search — Search google.com and analyze findings
-4. Save receipt to local-data/talent/background_checks/
-5. Update Notion with BG Check status and notes
+2. Deterministic template — Generate ~15-18 targeted search queries
+3. Serper.dev — Execute queries against Google (full site: operator support)
+4. Kimi k2.5 — Analyze search results (no web search)
+5. Save receipt to local-data/talent/background_checks/
+6. Update Notion with Socials Check status and notes
 """
 
 import argparse
@@ -18,6 +19,7 @@ import os
 import re
 import sys
 import time
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
@@ -29,11 +31,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(SKILL_ROOT))
 
 from libraries.kimi_web_checker import (
-    GEMINI_MODEL,
-    MOONSHOT_MODEL,
-    gemini_search_and_analyze,
+    KIMI_MODEL,
     generate_search_queries,
+    kimi_analyze,
     save_receipt,
+    serper_search,
 )
 
 # Load .env file if present
@@ -50,8 +52,8 @@ def load_env_keys() -> dict:
     keys = {
         "notion_key": os.environ.get("NOTION_KEY"),
         "notion_db_id": os.environ.get("NOTION_DB_ID"),
+        "serper_api_key": os.environ.get("SERPER_API_KEY"),
         "moonshot_key": os.environ.get("MOONSHOT_API_KEY"),
-        "gemini_api_key": os.environ.get("GEMINI_API_KEY"),
     }
 
     missing = [name for name, val in keys.items() if not val]
@@ -59,8 +61,8 @@ def load_env_keys() -> dict:
         var_names = {
             "notion_key": "NOTION_KEY",
             "notion_db_id": "NOTION_DB_ID",
+            "serper_api_key": "SERPER_API_KEY",
             "moonshot_key": "MOONSHOT_API_KEY",
-            "gemini_api_key": "GEMINI_API_KEY",
         }
         raise EnvironmentError(
             f"Missing required environment variables: {', '.join(var_names[k] for k in missing)}"
@@ -74,6 +76,59 @@ def clean_name_for_filename(name: str) -> str:
     cleaned = re.sub(r"[^\w\s-]", "", name)
     cleaned = re.sub(r"\s+", "_", cleaned)
     return cleaned.strip("_")
+
+
+def extract_email_prefix(resume_text: str) -> str:
+    """Extract email prefix (part before @) from resume text."""
+    if not resume_text:
+        return ""
+    # Handle spaced-out PDF text: e.g. "j o h n @ g m a i l . c o m"
+    collapsed = re.sub(r"(?<=\w) (?=\w)", "", resume_text[:3000])
+    match = re.search(r"([\w.+-]+)@[\w.-]+\.\w{2,}", collapsed)
+    if match:
+        return match.group(1).lower()
+    # Try original text too
+    match = re.search(r"([\w.+-]+)@[\w.-]+\.\w{2,}", resume_text[:3000])
+    if match:
+        return match.group(1).lower()
+    return ""
+
+
+def extract_school(resume_text: str) -> str:
+    """Extract the most prominent school/university name from resume text."""
+    if not resume_text:
+        return ""
+    patterns = [
+        r"(?:University|College|Institute|School|Academia|Polytechnic)\s+(?:of\s+)?[\w\s]+",
+        r"[\w\s]+(?:University|College|Institute|Polytechnic)",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, resume_text, re.IGNORECASE)
+        if match:
+            school = match.group().strip()
+            # Clean up: remove leading common words that aren't part of the name
+            school = re.sub(r"^(?:at|from|in)\s+", "", school, flags=re.IGNORECASE)
+            if len(school) > 5:
+                return school[:80]
+    return ""
+
+
+def extract_job_title(resume_text: str) -> str:
+    """Extract the most recent/prominent job title from resume text."""
+    if not resume_text:
+        return ""
+    # Look for common title patterns near the top of the resume
+    title_patterns = [
+        r"(?:Senior|Lead|Junior|Sr\.|Jr\.)?\s*(?:Software|Web|Full[ -]?Stack|Front[ -]?End|Back[ -]?End|Data|DevOps|Cloud|QA|UI/?UX|Mobile|Android|iOS)\s+(?:Engineer|Developer|Architect|Analyst|Scientist|Designer|Specialist)",
+        r"(?:Project|Product|Program|Account|Operations|Marketing|HR|Finance)\s+(?:Manager|Director|Lead|Coordinator|Officer|Specialist|Analyst)",
+        r"(?:Virtual|Executive|Administrative|Office)\s+(?:Assistant|Secretary|Manager|Coordinator)",
+        r"(?:Customer\s+(?:Service|Support|Success)|Technical\s+Support)\s+(?:Representative|Specialist|Agent|Lead|Manager)",
+    ]
+    for pattern in title_patterns:
+        match = re.search(pattern, resume_text[:2000], re.IGNORECASE)
+        if match:
+            return match.group().strip()[:60]
+    return ""
 
 
 def fetch_notion_page(notion_key: str, page_id: str) -> dict:
@@ -103,11 +158,14 @@ def query_notion_candidates(
     db_id: str,
     limit: int = 10,
     status_filter: tuple[str, str] | None = None,
+    recent_days: int | None = 5,
 ) -> list[dict]:
     """
     Query Notion for candidates ready for background check.
 
-    Default filter: 2R = "Proceed" AND BG Check is empty.
+    Default filter: 2R = "Proceed" AND Socials Check is empty.
+    In batch mode, also filters to candidates edited in the last `recent_days` days.
+    Pass recent_days=None to skip the date filter (e.g. for single-candidate mode).
     """
     url = f"https://api.notion.com/v1/databases/{db_id}/query"
     headers = {
@@ -121,19 +179,29 @@ def query_notion_candidates(
     filters = [
         {
             "property": stage_prop,
-            "select": {"equals": stage_value},
+            "status": {"equals": stage_value},
         },
         {
-            "property": "BG Check",
+            "property": "Socials Check",
             "select": {"is_empty": True},
         },
     ]
+
+    if recent_days is not None:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=recent_days)
+        cutoff_iso = cutoff.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        filters.append(
+            {
+                "timestamp": "last_edited_time",
+                "last_edited_time": {"on_or_after": cutoff_iso},
+            }
+        )
 
     payload = {
         "filter": {"and": filters},
         "sorts": [
             {
-                "property": "Date Created",
+                "timestamp": "last_edited_time",
                 "direction": "descending",
             }
         ],
@@ -279,7 +347,7 @@ def update_notion_bg_check(
     recommendation: str,
     notes: str,
 ) -> None:
-    """Update Notion page with BG Check status and notes."""
+    """Update Notion page with Socials Check status and notes."""
     url = f"https://api.notion.com/v1/pages/{page_id}"
     headers = {
         "Authorization": f"Bearer {notion_key}",
@@ -288,10 +356,10 @@ def update_notion_bg_check(
     }
     payload = {
         "properties": {
-            "BG Check": {
+            "Socials Check": {
                 "select": {"name": recommendation},
             },
-            "BG Check Notes": {
+            "Socials Check Notes": {
                 "rich_text": [{"text": {"content": notes}}],
             },
         }
@@ -324,40 +392,76 @@ def process_candidate(
             print(f"  [SKIP] No resume text found and no resume URL")
             return result
 
-        # Extract employer hints from resume
+        # Extract structured data from resume
         employers = extract_employers_from_resume(resume_text)
+        email_prefix = extract_email_prefix(resume_text)
+        school = extract_school(resume_text)
+        job_title = extract_job_title(resume_text)
+
         if employers:
-            print(f"  [INFO] Employers detected: {employers[:100]}")
+            print(f"  [INFO] Employers: {employers[:100]}")
+        if email_prefix:
+            print(f"  [INFO] Email prefix: {email_prefix}")
+        if school:
+            print(f"  [INFO] School: {school}")
+        if job_title:
+            print(f"  [INFO] Job title: {job_title}")
 
         candidate_data = {
             "name": name,
             "location": location,
             "employers": employers,
+            "email_prefix": email_prefix,
+            "school": school,
+            "job_title": job_title,
             "resume_text": resume_text,
         }
 
-        # Step 1: Generate search queries (Kimi)
+        # Step 1: Generate search queries (deterministic template)
         print(f"  [QUERIES] Generating search queries...")
-        queries = generate_search_queries(candidate_data, env_keys["moonshot_key"])
+        queries = generate_search_queries(candidate_data)
         print(f"  [QUERIES] Generated {len(queries)} queries:")
         for q in queries:
             print(f"    - {q}")
 
-        # Step 2: Search + Analyze (Gemini with Google Search grounding)
-        print(f"  [SEARCH] Gemini + Google Search grounding...")
-        gemini_result = gemini_search_and_analyze(
-            candidate_data, queries, env_keys["gemini_api_key"]
+        # Step 2: Search via Serper.dev (skip if serper file already exists)
+        serper_dir = BG_CHECK_DIR / "serper"
+        serper_dir.mkdir(parents=True, exist_ok=True)
+        serper_file = serper_dir / f"{clean_name_for_filename(name)}.json"
+
+        if serper_file.exists():
+            print(f"  [SEARCH] Loading cached Serper results from serper/{serper_file.name}")
+            with open(serper_file, "r", encoding="utf-8") as f:
+                serper_payload = json.load(f)
+            search_results = serper_payload["results"]
+            print(f"  [SEARCH] {len(search_results)} cached results")
+        else:
+            print(f"  [SEARCH] Querying Serper.dev...")
+            search_results = serper_search(queries, env_keys["serper_api_key"])
+            print(f"  [SEARCH] {len(search_results)} unique results from Serper")
+
+            serper_payload = {
+                "candidate": name,
+                "results": [
+                    {"title": r["title"], "link": r["link"], "snippet": r["snippet"]}
+                    for r in search_results
+                ],
+            }
+            with open(serper_file, "w", encoding="utf-8") as f:
+                json.dump(serper_payload, f, indent=2, ensure_ascii=False)
+            print(f"  [SAVE] Serper results -> serper/{serper_file.name}")
+
+        # Step 3: Analyze with Kimi k2.5 (cap at 15 results to stay within limits)
+        analysis_results = search_results[:15]
+        if len(search_results) > 15:
+            print(f"  [ANALYZE] Sending top 25 of {len(search_results)} results to Kimi")
+        print(f"  [ANALYZE] Kimi analysis...")
+        kimi_result = kimi_analyze(
+            candidate_data, analysis_results, env_keys["moonshot_key"]
         )
 
-        check_result = gemini_result["result"]
-        sources = gemini_result["sources"]
-        search_queries_used = gemini_result["search_queries_used"]
-        raw_response = gemini_result["raw_response"]
-
-        if sources:
-            print(f"  [SOURCES] {len(sources)} grounding sources found")
-        if search_queries_used:
-            print(f"  [QUERIES] Gemini searched: {search_queries_used[:3]}")
+        check_result = kimi_result["result"]
+        raw_response = kimi_result["raw_response"]
 
         recommendation = check_result.get("overall_recommendation", "Review Recommended")
         confidence = check_result.get("confidence", "Unknown")
@@ -367,14 +471,21 @@ def process_candidate(
         receipt_data = {
             "candidate_name": name,
             "page_id": page_id,
+            "candidate_data_extracted": {
+                "location": location,
+                "employers": employers,
+                "email_prefix": email_prefix,
+                "school": school,
+                "job_title": job_title,
+            },
             "queries_generated": queries,
-            "queries_used_by_gemini": search_queries_used,
-            "grounding_sources": sources,
+            "serper_results": search_results,
             "result": check_result,
             "raw_response": raw_response,
             "models": {
-                "query_generation": f"Kimi ({MOONSHOT_MODEL})",
-                "search_and_analysis": f"Gemini ({GEMINI_MODEL}) + Google Search",
+                "query_generation": "Deterministic template",
+                "search": "Serper.dev (Google Search)",
+                "analysis": f"Kimi ({KIMI_MODEL})",
             },
         }
         receipt_path = save_receipt(receipt_data, name)
@@ -382,10 +493,10 @@ def process_candidate(
 
         # Update Notion (unless dry run)
         if dry_run:
-            print(f"  [DRY RUN] Would update Notion: BG Check={recommendation}")
+            print(f"  [DRY RUN] Would update Notion: Socials Check={recommendation}")
         else:
             notes = format_bg_check_notes(check_result)
-            print(f"  [UPDATE] Notion: BG Check={recommendation}")
+            print(f"  [UPDATE] Notion: Socials Check={recommendation}")
             update_notion_bg_check(env_keys["notion_key"], page_id, recommendation, notes)
 
         result["status"] = "success"
@@ -407,7 +518,7 @@ def process_candidate(
 def main():
     """Main workflow entry point."""
     parser = argparse.ArgumentParser(
-        description="Run background checks using Gemini + Google Search grounding"
+        description="Run background checks using Serper.dev + Kimi analysis"
     )
     parser.add_argument(
         "--page-id",
@@ -438,7 +549,7 @@ def main():
     args = parser.parse_args()
 
     print("=" * 60)
-    print("BACKGROUND CHECK (Gemini + Google Search Grounding)")
+    print("BACKGROUND CHECK (Serper.dev + Kimi Analysis)")
     print("=" * 60)
 
     # Ensure directories exist
@@ -448,7 +559,7 @@ def main():
     print("\n[1/3] Loading environment...")
     try:
         env_keys = load_env_keys()
-        print("  NOTION_KEY, NOTION_DB_ID, MOONSHOT_API_KEY, GEMINI_API_KEY loaded.")
+        print("  NOTION_KEY, NOTION_DB_ID, SERPER_API_KEY, MOONSHOT_API_KEY loaded.")
     except EnvironmentError as e:
         print(f"  ERROR: {e}")
         sys.exit(1)
@@ -475,12 +586,13 @@ def main():
     else:
         filter_desc = f"{status_filter[0]}={status_filter[1]}" if status_filter else "2R=Proceed"
         print(f"  Mode: Batch (limit={args.limit})")
-        print(f"  Filters: {filter_desc} | BG Check empty")
+        print(f"  Filters: {filter_desc} | Socials Check empty | edited in last 5 days")
         candidates_raw = query_notion_candidates(
             env_keys["notion_key"],
             env_keys["notion_db_id"],
             limit=args.limit,
             status_filter=status_filter,
+            recent_days=5,
         )
         candidates = [get_candidate_info(c) for c in candidates_raw]
 

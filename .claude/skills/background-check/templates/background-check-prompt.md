@@ -1,12 +1,13 @@
-You are conducting an online background check for a job candidate. Use Google Search to investigate the candidate's online presence using the provided search queries.
+You are conducting an online background check for a job candidate. Analyze the provided search results to assess the candidate's online presence.
 
 ## Instructions
 
-1. Search for each provided query using Google Search
+1. Review all search results provided below
 2. Analyze the results across the four categories below
 3. Only report findings that are clearly about THIS specific candidate — not someone with the same name
 4. If you cannot confidently distinguish this candidate from others with similar names, note this in your confidence assessment
 5. Pay close attention to Facebook group posts, forum discussions, and complaint sites — these often contain the most relevant signals
+6. Use the URLs provided in the search results as your sources
 
 ## Categories
 

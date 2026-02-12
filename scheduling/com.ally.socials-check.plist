@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.ally.socials-check</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/yikfaiivanli/Projects/ally-os/scheduling/run-job.sh</string>
+        <string>socials-check</string>
+        <string>.claude/skills/background-check/workflows/background_check.py</string>
+        <string>--limit</string>
+        <string>10</string>
+        <string>--batch-size</string>
+        <string>3</string>
+    </array>
+
+    <!-- Twice daily: 2pm and 9pm SGT (launchd uses local time) -->
+    <key>StartCalendarInterval</key>
+    <array>
+        <dict>
+            <key>Hour</key>
+            <integer>14</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+        <dict>
+            <key>Hour</key>
+            <integer>21</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+    </array>
+
+    <key>StandardOutPath</key>
+    <string>/Users/yikfaiivanli/Projects/ally-os/local-data/logs/launchd-stdout.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/yikfaiivanli/Projects/ally-os/local-data/logs/launchd-stderr.log</string>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/yikfaiivanli/Projects/ally-os</string>
+</dict>
+</plist>
