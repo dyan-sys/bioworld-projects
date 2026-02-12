@@ -76,3 +76,35 @@ Hi {{client_name}} team :wave:
 {{checklist}}
 
 Once you're happy, a thumbs up in this thread and we'll go live.
+
+## Stage: follow-up
+
+Hey {{client_name}}! {{acknowledgment}}
+
+{{blocker_context}}
+
+{{pending_items}}
+
+{{momentum}}
+
+---
+
+### Follow-up Design Rules
+
+Follow-ups are **not** "just checking in." Every follow-up should:
+
+1. **Acknowledge progress** — reference what the client already gave you. Show you're tracking.
+2. **Name the blocker clearly** — explain *why* you need these items (e.g., "Before I can finalize X and get Y to you...").
+3. **Keep it to 2-4 specific items** — numbered, decision-framed, with enough context to answer without re-reading the doc.
+4. **Show momentum** — end with what happens once they respond ("Once I have those three, I can finalize the OLJ post + get the Jobstreet JD over to you right away").
+5. **Tag the right people** — if the primary contact isn't responding, loop in others who were asked to review.
+
+**Tone:**
+- Confident, not nagging. You're keeping the project moving, not chasing.
+- Lead with gratitude for what they *did* respond to.
+- Frame the ask as "quick confirms" not "outstanding items."
+
+**When NOT to follow up:**
+- Less than 2 business days since last send (unless urgent)
+- Client said they'd get back to you at a specific time (wait for that)
+- You're about to send new deliverables anyway (bundle the ask)

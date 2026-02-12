@@ -12,13 +12,16 @@ This skill enables AI-assisted review, improvement, and delivery of client recru
 - "Work on the interview templates for [client]"
 - "Prepare deliverables for [client]"
 - "Adapt the intake form blurb for [client]"
+- "What's pending on [client]?"
+- "Follow up on [client]"
+- "Check on client updates"
 
 ## Workflow
 
 The workflow is iterative and Notion-first:
 
 ```
-Ingest → Review & Improve (iterative) → Deliver (Notion + Slack)
+Ingest → Review & Improve (iterative) → Deliver (Notion + Slack) → Track & Follow-up
 ```
 
 There is no mandatory formal scoring phase. The value is in improving the materials and delivering them to the client — not in producing analysis artifacts.
@@ -89,6 +92,44 @@ Once materials are ready:
 - Use Slack link format: `<https://notion.so/page-id|Document Title>`
 - Close with a specific ask (e.g., "feedback on the assessment strategy so we can align before finalizing templates")
 - Keep it warm and collaborative, not formal
+
+### Phase 4: Track & Follow-up
+
+After delivery, update the client's **status file** so you always have a clear picture of what's pending. The judgment to follow up stays with the human — this phase gives you the map.
+
+**Status file:** `local-data/client-consulting/{client-slug}/status.json`
+
+**After each delivery, log:**
+- What was sent (label, type, Notion URL)
+- What confirms or feedback are pending (specific items, not vague "please review")
+- What's been resolved so far
+
+**After each client response, update:**
+- Move items from `pending_confirms` → `resolved`
+- Update `client_feedback` with what they said
+- Update `status` (`pending-confirms` → `approved` / `revision-requested`)
+- Add any new blocked items that got unblocked
+
+**When asked "what's pending on [client]?" or "follow up on [client]":**
+
+1. Read `local-data/client-consulting/{client-slug}/status.json`
+2. Read the Slack channel (from `slack_channel_id`) for any untracked responses
+3. Reconcile — update status.json if the client responded since last update
+4. Present a summary: what's pending, what's blocked, what's been resolved
+5. If a follow-up is needed, draft using the `follow-up` stage template from the client-comms-guide
+
+**Status values:**
+- `pending-confirms` — we sent something, waiting on specific decisions
+- `pending-feedback` — we sent something, waiting on general feedback
+- `in-progress` — we're still working on it (not yet delivered)
+- `approved` — client confirmed, ready to act on
+- `revision-requested` — client wants changes
+
+**Keeping it lightweight:**
+- One status.json per client, updated as things happen
+- No automation — just a structured file the skill reads when you ask
+- The `follow_ups` array is a log of nudges sent, so you don't double-send
+- The `blocked` array tracks downstream work waiting on upstream confirms
 
 ## Candidate Intake Form Blurb
 
@@ -185,6 +226,7 @@ All analysis references 4 core CS competencies across 3 tiers:
 ```
 local-data/client-consulting/
 └── {client-slug}/
+    ├── status.json                  # Delivery tracking — what's sent, pending, resolved
     ├── jd/
     │   ├── original.md              # Client's original JD
     │   └── improved.md              # Improved version (synced from Notion)
