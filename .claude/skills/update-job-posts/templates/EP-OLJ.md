@@ -9,7 +9,7 @@
 
 ---
 
-Full Time | Remote | 2 Sold Openings | Hire by {{hiring_target_date_short}} | Asia / US Time
+Starting {{advertised_range}} | Full Time | Remote | 2 Sold Openings | Hire by {{hiring_target_date_short}} | Asia / US Time
 
 —
 

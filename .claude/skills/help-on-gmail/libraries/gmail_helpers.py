@@ -18,18 +18,20 @@ sys.path.insert(
 
 from gmail_auth import get_gmail_service  # noqa: E402
 
+CREDENTIALS_PATH = PROJECT_ROOT / "Google-credentials.json"
 TOKEN_PATH = PROJECT_ROOT / "local-data" / "gmail_token_ivan_help.json"
-SCOPES = [
-    "https://www.googleapis.com/auth/gmail.modify",
-    "https://www.googleapis.com/auth/gmail.compose",
-]
+# gmail.modify covers read + label management + draft creation, but NOT send.
+# gmail.compose and gmail.send are intentionally excluded — drafts only, never send.
+SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
 
 # Cache label name → ID lookups within a session
 _label_cache: dict[str, str] = {}
 
 
 def _get_service():
-    return get_gmail_service(token_path=TOKEN_PATH, scopes=SCOPES)
+    return get_gmail_service(
+        credentials_path=CREDENTIALS_PATH, token_path=TOKEN_PATH, scopes=SCOPES
+    )
 
 
 def create_reply_draft(

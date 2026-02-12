@@ -38,16 +38,17 @@ from gmail_reader import (  # noqa: E402
     search_messages,
 )
 
+CREDENTIALS_PATH = PROJECT_ROOT / "Google-credentials.json"
 TOKEN_PATH = PROJECT_ROOT / "local-data" / "gmail_token_ivan_help.json"
-SCOPES = [
-    "https://www.googleapis.com/auth/gmail.modify",
-    "https://www.googleapis.com/auth/gmail.compose",
-]
+# gmail.modify covers read + label management + draft creation, but NOT send.
+SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
 
 
 def fetch_help_emails(limit: int = 10, unread_only: bool = False) -> list[dict]:
     """Fetch emails with the ally-os-help label."""
-    service = get_gmail_service(token_path=TOKEN_PATH, scopes=SCOPES)
+    service = get_gmail_service(
+        credentials_path=CREDENTIALS_PATH, token_path=TOKEN_PATH, scopes=SCOPES
+    )
 
     query = "label:ally-os-help"
     if unread_only:

@@ -60,7 +60,7 @@ python3.11 -c "
 import sys; sys.path.insert(0, '.claude/skills/invite-candidates/libraries'); sys.path.insert(0, '.claude/skills/help-on-gmail/libraries')
 from gmail_auth import get_gmail_service
 from gmail_helpers import create_reply_draft
-service = get_gmail_service(token_path='local-data/gmail_token_ivan_help.json', scopes=['https://www.googleapis.com/auth/gmail.modify', 'https://www.googleapis.com/auth/gmail.compose'])
+service = get_gmail_service(credentials_path='Google-credentials.json', token_path='local-data/gmail_token_ivan_help.json', scopes=['https://www.googleapis.com/auth/gmail.modify'])
 import html; body = html.escape('''REPLY_BODY_HERE''').replace(chr(10), '<br>')
 result = create_reply_draft(service, 'MESSAGE_ID', 'THREAD_ID', 'TO_ADDRESS', 'SUBJECT', body)
 print(f\"Draft created: ID {result['id']}\")
@@ -86,7 +86,7 @@ python3.11 -c "
 import sys; sys.path.insert(0, '.claude/skills/invite-candidates/libraries'); sys.path.insert(0, '.claude/skills/help-on-gmail/libraries')
 from gmail_auth import get_gmail_service
 from gmail_helpers import remove_label
-service = get_gmail_service(token_path='local-data/gmail_token_ivan_help.json', scopes=['https://www.googleapis.com/auth/gmail.modify', 'https://www.googleapis.com/auth/gmail.compose'])
+service = get_gmail_service(credentials_path='Google-credentials.json', token_path='local-data/gmail_token_ivan_help.json', scopes=['https://www.googleapis.com/auth/gmail.modify'])
 result = remove_label(service, 'MESSAGE_ID', 'ally-os-help')
 print('Label removed' if result else 'Label not found')
 "

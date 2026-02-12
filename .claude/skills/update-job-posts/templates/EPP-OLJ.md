@@ -9,7 +9,7 @@
 
 ---
 
-Remote | 2 New Sold Openings | Closing by {{hiring_target_date_short}} | Asia / US Time
+Starting {{advertised_range_local}} | Remote | 2 New Sold Openings | Closing by {{hiring_target_date_short}} | Asia / US Time
 
 —
 
