@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.ally.async-completions</string>
+    <string>com.ally.recruitment-events</string>
 
     <key>ProgramArguments</key>
     <array>
         <string>/Users/yikfaiivanli/Projects/ally-os/scheduling/run-job.sh</string>
-        <string>async-completions</string>
-        <string>.claude/skills/track-async-completions/workflows/track_async_completions.py</string>
+        <string>recruitment-events</string>
+        <string>.claude/skills/track-recruitment-events/workflows/track_async_completions.py</string>
     </array>
 
     <!-- Three times daily: 8am, noon, 6pm SGT (launchd uses local time) -->

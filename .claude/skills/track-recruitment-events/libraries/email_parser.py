@@ -98,6 +98,17 @@ def extract_candidate_name_from_body(html_body: str, config: dict) -> str | None
     return None
 
 
+def extract_invitee_email(html_body: str, config: dict) -> str | None:
+    """Extract invitee email from email body using body_email_pattern."""
+    pattern = config.get("body_email_pattern")
+    if not pattern:
+        return None
+    match = re.search(pattern, html_body)
+    if match:
+        return match.group(1).strip()
+    return None
+
+
 def parse_completion_email(subject: str, html_body: str, config: dict | None = None) -> dict | None:
     """
     Parse a Hireflix completion email.
@@ -126,14 +137,20 @@ def parse_completion_email(subject: str, html_body: str, config: dict | None = N
         if body_name:
             subject_data["candidate_name"] = body_name
 
-    # Must have at least candidate_name to be useful
+    # Extract invitee email (Calendly-style configs)
+    invitee_email = extract_invitee_email(html_body, config)
+
+    # For configs without candidate_name in subject, try body extraction
+    # If still no candidate_name but we have an email, that's enough for email-match configs
     if not subject_data.get("candidate_name"):
-        return None
+        if not invitee_email:
+            return None
 
     return {
-        "candidate_name": subject_data["candidate_name"],
+        "candidate_name": subject_data.get("candidate_name"),
         "job_title": subject_data.get("job_title"),
         "assessment_link": assessment_link,
+        "invitee_email": invitee_email,
     }
 
 

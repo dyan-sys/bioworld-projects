@@ -1,8 +1,10 @@
 """
-Track Async Interview Completions
+Track Async Interview Completions & Calendly Bookings
 
-Reads async interview completion emails from Gmail (Hireflix, HireTruffle),
-matches candidates in Notion, and creates Interaction records in the Interactions DB.
+Reads completion/booking emails from Gmail (Hireflix, HireTruffle, Calendly),
+matches candidates in Notion, and takes per-config actions:
+- create_interaction: Create Interaction record + update 1R status
+- status_update_only: Update 1R status only (e.g., Calendly → "Scheduled")
 
 Usage:
     # Discovery mode — inspect raw email format
@@ -26,7 +28,7 @@ import json
 import os
 import re
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
@@ -57,15 +59,12 @@ from libraries.gmail_reader import (  # noqa: E402
     extract_email_body,
 )
 from libraries.email_parser import (  # noqa: E402
-    load_platform_config,
     load_all_platform_configs,
-    parse_completion_email,
     parse_completion_email_multi,
 )
 from libraries.notion_interactions import (  # noqa: E402
-    fetch_async_invited_candidates,
+    fetch_invited_candidates,
     fuzzy_match_candidate,
-    find_candidate_by_name,
     find_candidate_by_email,
     get_candidate_name,
     get_candidate_1r_status,
@@ -73,11 +72,6 @@ from libraries.notion_interactions import (  # noqa: E402
     interaction_exists,
     create_interaction,
 )
-
-# 1R status that confirms a candidate was invited (guard)
-R1_GUARD_STATUS = "Invitation Sent"
-# 1R status to set after async interview completion
-R1_COMPLETED_STATUS = "Async Done - Awaiting Review"
 
 # Load .env
 load_dotenv(PROJECT_ROOT / ".env")
@@ -186,16 +180,17 @@ def run_discover(service, configs: dict[str, dict], days: int, limit: int):
 def process_email(
     service,
     msg_ref: dict,
-    config: dict,
+    all_configs: dict[str, dict],
     notion_key: str,
     candidates_db_id: str,
-    candidate_pool: list[dict] | None = None,
+    candidate_pools: dict[str, list[dict]],
     dry_run: bool = False,
     force_page_id: str | None = None,
 ) -> dict:
     """
-    Process a single Hireflix completion email.
+    Process a single completion/booking email.
 
+    Uses per-config behavior fields to determine matching strategy and action.
     Returns a result dict with status and details.
     """
     msg_id = msg_ref["id"]
@@ -217,34 +212,39 @@ def process_email(
     result["subject"] = subject
     result["date"] = date
 
-    # Parse email — try all configs if no specific config passed
-    if config:
-        parsed = parse_completion_email(subject, body.get("html", ""), config)
-    else:
-        parsed = parse_completion_email_multi(subject, body.get("html", ""))
+    # Parse email — try all configs
+    parsed = parse_completion_email_multi(subject, body.get("html", ""))
     if not parsed:
         result["status"] = "skipped"
         result["reason"] = f"Could not parse email: {subject}"
         return result
 
-    candidate_name = parsed["candidate_name"]
-    assessment_link = parsed["assessment_link"]
-    result["candidate_name"] = candidate_name
-    result["job_title"] = parsed["job_title"]
-    result["assessment_link"] = assessment_link
-    if parsed.get("matched_config"):
-        result["matched_config"] = parsed["matched_config"]
-        print(f"  Config:    {parsed['matched_config']}")
+    # Resolve effective config for behavior fields
+    config_key = parsed.get("matched_config", "")
+    effective_config = all_configs.get(config_key, {})
 
-    print(f"  Candidate: {candidate_name}")
-    print(f"  Job Title: {parsed['job_title']}")
+    candidate_name = parsed.get("candidate_name")
+    assessment_link = parsed.get("assessment_link")
+    invitee_email = parsed.get("invitee_email")
+    action = effective_config.get("action", "create_interaction")
+    guard_status = effective_config.get("guard_1r_status", "Invitation Sent")
+    target_status = effective_config.get("target_1r_status", "Async Done - Awaiting Review")
+
+    result["candidate_name"] = candidate_name
+    result["job_title"] = parsed.get("job_title")
+    result["assessment_link"] = assessment_link
+    result["matched_config"] = config_key
+    result["action"] = action
+    print(f"  Config:    {config_key}")
+    print(f"  Candidate: {candidate_name or 'N/A'}")
+    print(f"  Email:     {invitee_email or 'N/A'}")
+    print(f"  Job Title: {parsed.get('job_title')}")
     print(f"  Link:      {assessment_link or 'NOT FOUND'}")
 
     # Match candidate in Notion
     candidate_page = None
 
     if force_page_id:
-        # Force-link mode: use provided page ID
         print(f"  [FORCE] Using page ID: {force_page_id}")
         try:
             url = f"https://api.notion.com/v1/pages/{force_page_id}"
@@ -259,18 +259,29 @@ def process_email(
             result["reason"] = f"Failed to fetch page {force_page_id}: {e}"
             return result
     else:
-        # Match only against async-invited pool (no full DB fallback)
-        if candidate_pool:
-            print(f"  [MATCH] Fuzzy matching against {len(candidate_pool)} invited candidates...")
-            candidate_page = fuzzy_match_candidate(candidate_name, candidate_pool)
+        # Email-based matching (primary for Calendly-style configs)
+        if effective_config.get("match_by_email") and invitee_email:
+            print(f"  [MATCH] Searching by email: {invitee_email}")
+            candidate_page = find_candidate_by_email(notion_key, candidates_db_id, invitee_email)
             if candidate_page:
-                print(f"  [MATCH] Pool match found")
-            else:
-                print(f"  [MATCH] No match in invited pool")
+                print(f"  [MATCH] Email match found")
+
+        # Fall back to pool-based fuzzy name matching
+        if not candidate_page and candidate_name:
+            pool_key = _pool_key(effective_config.get("candidate_pool_statuses", []))
+            pool = candidate_pools.get(pool_key, [])
+            if pool:
+                print(f"  [MATCH] Fuzzy matching against {len(pool)} invited candidates...")
+                candidate_page = fuzzy_match_candidate(candidate_name, pool)
+                if candidate_page:
+                    print(f"  [MATCH] Pool match found")
+                else:
+                    print(f"  [MATCH] No match in invited pool")
 
     if not candidate_page:
+        label = invitee_email or candidate_name or "unknown"
         result["status"] = "unmatched"
-        result["reason"] = f"No match in async-invited pool for: {candidate_name}"
+        result["reason"] = f"No match for: {label}"
         return result
 
     candidate_page_id = candidate_page["id"]
@@ -282,19 +293,69 @@ def process_email(
     # 1R guard: verify candidate was actually invited
     if not force_page_id:
         current_1r = get_candidate_1r_status(candidate_page)
-        if current_1r != R1_GUARD_STATUS:
+        if current_1r != guard_status:
             result["status"] = "skipped"
-            result["reason"] = f"1R status is '{current_1r}', expected '{R1_GUARD_STATUS}'"
-            print(f"  [GUARD] 1R = '{current_1r}' (expected '{R1_GUARD_STATUS}') — skipping")
+            result["reason"] = f"1R status is '{current_1r}', expected '{guard_status}'"
+            print(f"  [GUARD] 1R = '{current_1r}' (expected '{guard_status}') — skipping")
             return result
 
+    # Branch by action type
+    if action == "status_update_only":
+        return _action_status_update(
+            msg_id, candidate_name or matched_name, matched_name,
+            candidate_page_id, target_status, notion_key, result, dry_run,
+        )
+    else:
+        return _action_create_interaction(
+            msg_id, candidate_name or matched_name, matched_name,
+            candidate_page_id, assessment_link, date, target_status,
+            parsed, effective_config, notion_key, result, dry_run,
+        )
+
+
+def _action_status_update(
+    msg_id: str, candidate_name: str, matched_name: str,
+    candidate_page_id: str, target_status: str,
+    notion_key: str, result: dict, dry_run: bool,
+) -> dict:
+    """Action: update 1R status only (no Interaction record)."""
+    if dry_run:
+        result["status"] = "dry_run"
+        print(f"  [DRY RUN] Would set 1R → '{target_status}'")
+        return result
+
+    try:
+        update_candidate_1r_status(notion_key, candidate_page_id, target_status)
+        result["status"] = "updated"
+        result["1r_updated"] = target_status
+        print(f"  [1R] Set to '{target_status}'")
+
+        receipt_data = {**result, "processed_at": datetime.now(timezone.utc).isoformat()}
+        receipt_path = save_receipt(msg_id, candidate_name, receipt_data)
+        print(f"  [SAVE] {receipt_path.name}")
+    except Exception as e:
+        result["status"] = "error"
+        result["reason"] = str(e)
+        print(f"  [ERROR] {type(e).__name__}: {e}")
+
+    return result
+
+
+def _action_create_interaction(
+    msg_id: str, candidate_name: str, matched_name: str,
+    candidate_page_id: str, assessment_link: str | None,
+    date: str | None, target_status: str,
+    parsed: dict, effective_config: dict,
+    notion_key: str, result: dict, dry_run: bool,
+) -> dict:
+    """Action: create Interaction record + update 1R status."""
+    interaction_type = parsed.get("interaction_type") or effective_config.get("interaction_type") or "1st Round (Async)"
+
     # Dedup check in Notion
-    interaction_type = parsed.get("interaction_type") or (config.get("interaction_type") if config else None) or "1st Round (Async)"
     if interaction_exists(notion_key, INTERACTIONS_DB_ID, candidate_page_id, interaction_type):
         result["status"] = "skipped"
         result["reason"] = "Interaction already exists in Notion"
         print(f"  [SKIP] Interaction already exists")
-        # Still save receipt to prevent re-processing
         receipt_data = {**result, "processed_at": datetime.now(timezone.utc).isoformat()}
         save_receipt(msg_id, candidate_name, receipt_data)
         return result
@@ -302,12 +363,10 @@ def process_email(
     if dry_run:
         result["status"] = "dry_run"
         print(f"  [DRY RUN] Would create Interaction: R1 Async - {matched_name}")
-        print(f"  [DRY RUN] Would set 1R → '{R1_COMPLETED_STATUS}'")
+        print(f"  [DRY RUN] Would set 1R → '{target_status}'")
         return result
 
-    # Create Interaction record
     try:
-        # Extract date for interaction (date portion only)
         interaction_date = None
         if date:
             try:
@@ -329,22 +388,24 @@ def process_email(
         result["interaction_page_id"] = page.get("id")
         print(f"  [CREATED] Interaction: {page.get('id')}")
 
-        # Update candidate 1R status
-        update_candidate_1r_status(notion_key, candidate_page_id, R1_COMPLETED_STATUS)
-        result["1r_updated"] = R1_COMPLETED_STATUS
-        print(f"  [1R] Set to '{R1_COMPLETED_STATUS}'")
+        update_candidate_1r_status(notion_key, candidate_page_id, target_status)
+        result["1r_updated"] = target_status
+        print(f"  [1R] Set to '{target_status}'")
 
-        # Save receipt
         receipt_data = {**result, "processed_at": datetime.now(timezone.utc).isoformat()}
         receipt_path = save_receipt(msg_id, candidate_name, receipt_data)
         print(f"  [SAVE] {receipt_path.name}")
-
     except Exception as e:
         result["status"] = "error"
         result["reason"] = str(e)
         print(f"  [ERROR] {type(e).__name__}: {e}")
 
     return result
+
+
+def _pool_key(statuses: list[str]) -> str:
+    """Create a hashable key from a list of statuses."""
+    return "|".join(sorted(statuses))
 
 
 def main():
@@ -424,10 +485,18 @@ def main():
         print(f"  ERROR: {e}")
         sys.exit(1)
 
-    # Load async-invited candidate pool for scoped fuzzy matching
-    print("  Loading async-invited candidate pool...")
-    candidate_pool = fetch_async_invited_candidates(notion_key, candidates_db_id)
-    print(f"  Pool: {len(candidate_pool)} candidates with Screener = 'To invite (Async)'")
+    # Load candidate pools — one per unique set of statuses across all configs
+    print("  Loading candidate pools...")
+    candidate_pools: dict[str, list[dict]] = {}
+    for cfg_name, cfg in all_configs.items():
+        statuses = cfg.get("candidate_pool_statuses", [])
+        if not statuses:
+            continue
+        key = _pool_key(statuses)
+        if key not in candidate_pools:
+            pool = fetch_invited_candidates(notion_key, candidates_db_id, statuses)
+            candidate_pools[key] = pool
+            print(f"  Pool [{key}]: {len(pool)} candidates")
 
     # Fetch emails
     print(f"\n[3/3] Processing emails (last {args.days} days, limit {args.limit})...")
@@ -466,10 +535,10 @@ def main():
         result = process_email(
             service=service,
             msg_ref=msg_ref,
-            config=None,
+            all_configs=all_configs,
             notion_key=notion_key,
             candidates_db_id=candidates_db_id,
-            candidate_pool=candidate_pool,
+            candidate_pools=candidate_pools,
             dry_run=args.dry_run,
             force_page_id=args.page_id if args.message_id else None,
         )
@@ -480,15 +549,17 @@ def main():
     print("SUMMARY")
     print("=" * 60)
     created = sum(1 for r in results if r["status"] == "created")
+    updated = sum(1 for r in results if r["status"] == "updated")
     dry_run_count = sum(1 for r in results if r["status"] == "dry_run")
     skipped = sum(1 for r in results if r["status"] == "skipped")
     unmatched = sum(1 for r in results if r["status"] == "unmatched")
     errors = sum(1 for r in results if r["status"] == "error")
 
     if args.dry_run:
-        print(f"  Would create: {dry_run_count}")
+        print(f"  Would process: {dry_run_count}")
     else:
         print(f"  Created:     {created}")
+        print(f"  Updated:     {updated}")
     print(f"  Skipped:     {skipped}")
     print(f"  Unmatched:   {unmatched}")
     print(f"  Errors:      {errors}")
@@ -497,14 +568,15 @@ def main():
         name = r.get("candidate_name", r.get("subject", r["gmail_message_id"]))
         icon = {
             "created": "+",
+            "updated": "^",
             "dry_run": "~",
             "skipped": "-",
             "unmatched": "?",
             "error": "!",
             "pending": ".",
         }.get(r["status"], ".")
-        if r["status"] in ("created", "dry_run"):
-            print(f"  [{icon}] {name} -> {r.get('matched_name', 'N/A')}")
+        if r["status"] in ("created", "updated", "dry_run"):
+            print(f"  [{icon}] {name} -> {r.get('matched_name', 'N/A')} ({r.get('action', '')})")
         else:
             print(f"  [{icon}] {name}: {r.get('reason', '')}")
 

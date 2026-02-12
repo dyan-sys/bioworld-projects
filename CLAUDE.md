@@ -30,6 +30,7 @@ SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...        # Slack Incoming W
 SLACK_WEBHOOK_URL_JARVIS=https://hooks.slack.com/services/... # Slack webhook for #ally-jarvis (service status)
 SLACK_BOT_TOKEN=xoxb-xxx                                     # Slack Bot Token (channels:history, users:read)
 GEMINI_API_KEY=xxx                                            # Google AI Studio API key (Gemini, for background check)
+NOTION_SPEND_DB_ID=xxx                                        # Notion database ID for AI Spend tracking
 ```
 
 ## Skills
@@ -41,7 +42,7 @@ GEMINI_API_KEY=xxx                                            # Google AI Studio
 | Update Job Posts | `.claude/skills/update-job-posts/` | Creates Notion job post pages per channel (OLJ, Jobstreet, Facebook, Internal) with platform templates. |
 | Check Recruit Status | `.claude/skills/check-recruit-status/` | Queries Candidates DB, generates pipeline report (7 sections), optionally posts to Slack. |
 | Invite Candidates | `.claude/skills/invite-candidates/` | Creates Gmail DRAFT emails for R1 invitations. Routes by Screener status. Never sends — drafts only. |
-| Track Async Completions | `.claude/skills/track-async-completions/` | Reads Hireflix completion emails from Gmail, matches candidates in Notion, creates Interaction records. |
+| Track Recruitment Events | `.claude/skills/track-recruitment-events/` | Tracks async completions (Hireflix/HireTruffle) and Calendly bookings. Matches candidates in Notion, creates Interactions or updates 1R status. |
 | Flag EP Issues | `.claude/skills/flag-ep-issues/` | Reviews EP Slack channels daily via Kimi AI, flags missed items / stalled progress to #ally-jarvis. |
 | Check Service Status | `.claude/skills/check-service-status/` | Monitors scheduled jobs (ran? exit code? artifacts?), posts health summary to Slack. |
 | Slack Mentions | `.claude/skills/slack-mentions/` | Scans Slack for unactioned @mentions, DMs a summary with deep links. Runs 3x daily. |
@@ -49,6 +50,7 @@ GEMINI_API_KEY=xxx                                            # Google AI Studio
 | Recruit Consulting | `.claude/skills/recruit-consulting/` | AI-assisted review of client JDs and interview templates for CS roles. Interactive process, no Python workflows. |
 | Adapt Client JD | `.claude/skills/adapt-client-jd/` | Adapts client JDs for specific job platforms (OLJ, Jobstreet) with format rules. |
 | Background Check | `.claude/skills/background-check/` | Screens candidates' online presence via Gemini + Google Search grounding. Checks LinkedIn consistency, news/legal, social media. On-demand only. |
+| Track AI Spend | `.claude/skills/track-ai-spend/` | Parses billing emails from Gmail, extracts AUD amounts, upserts monthly rows to Notion "AI Spend" DB. Runs monthly. |
 
 ## Data Architecture
 
@@ -63,12 +65,13 @@ local-data/
 ├── linkedin/                     # LinkedIn content engine artifacts
 │   ├── research/
 │   └── drafts/
+├── ai-spend/                     # AI spend tracking receipts
 └── talent/
     ├── resume_raw_txt/           # Extracted resume text
     ├── resume_receipts/          # Full scoring JSON (Claude + Kimi)
     ├── pipeline_reports/         # Daily pipeline report snapshots
     ├── ep_reviews/               # EP channel review artifacts
-    ├── async_completions/        # Hireflix completion tracking receipts
+    ├── async_completions/        # Recruitment event tracking receipts
     └── invite_emails/            # R1 invite draft receipts
 ```
 
@@ -89,8 +92,9 @@ Status values: `success` (exit 0), `failed` (exit non-zero), `network_unavailabl
 | Scheduled Job Posts | 08:00 Mon + Thu | `com.ally.job-posts.plist` |
 | Resume Screener (Kimi) | 08:00, 12:00, 16:00, 20:00 | `com.ally.resume-screener.plist` |
 | Slack Mention Monitor | 09:00, 13:00, 17:00 | `com.ally.slack-mentions.plist` |
-| Async Completion Tracker | 08:00, 12:00, 18:00 | `com.ally.async-completions.plist` |
+| Recruitment Completion Tracker | 08:00, 12:00, 18:00 | `com.ally.recruitment-events.plist` |
 | Service Health Check | 09:00 daily | `com.ally.service-check.plist` |
+| AI Spend Tracker | 08:00 on 2nd of month | `com.ally.ai-spend.plist` |
 
 ### Adding a New Scheduled Job
 

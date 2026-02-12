@@ -18,30 +18,26 @@ def _notion_headers(notion_key: str) -> dict:
     }
 
 
-def fetch_async_invited_candidates(notion_key: str, db_id: str) -> list[dict]:
+def fetch_invited_candidates(
+    notion_key: str, db_id: str, screener_statuses: list[str]
+) -> list[dict]:
     """
-    Fetch all candidates invited to async interviews.
+    Fetch candidates by Screener status(es).
 
-    Matches both Screener statuses:
-    - "To invite (Async)" — HireTruffle
-    - "To invite (Async Hireflix)" — Hireflix
-
+    Builds an OR filter from the provided statuses list.
     Returns list of page dicts used to scope fuzzy name matching.
     """
     url = f"{NOTION_BASE}/databases/{db_id}/query"
     all_results = []
     start_cursor = None
 
+    status_filters = [
+        {"property": "Screener", "status": {"equals": s}} for s in screener_statuses
+    ]
+    filter_clause = {"or": status_filters} if len(status_filters) > 1 else status_filters[0]
+
     while True:
-        payload = {
-            "filter": {
-                "or": [
-                    {"property": "Screener", "status": {"equals": "To invite (Async)"}},
-                    {"property": "Screener", "status": {"equals": "To invite (Async Hireflix)"}},
-                ]
-            },
-            "page_size": 100,
-        }
+        payload = {"filter": filter_clause, "page_size": 100}
         if start_cursor:
             payload["start_cursor"] = start_cursor
 
@@ -55,6 +51,13 @@ def fetch_async_invited_candidates(notion_key: str, db_id: str) -> list[dict]:
         start_cursor = data.get("next_cursor")
 
     return all_results
+
+
+def fetch_async_invited_candidates(notion_key: str, db_id: str) -> list[dict]:
+    """Backward-compat wrapper — fetches async-invited candidates."""
+    return fetch_invited_candidates(
+        notion_key, db_id, ["To invite (Async)", "To invite (Async Hireflix)"]
+    )
 
 
 def _normalize_name(name: str) -> set[str]:
@@ -149,6 +152,15 @@ def get_candidate_name(page: dict) -> str:
         if title_items:
             return title_items[0].get("plain_text", "")
     return ""
+
+
+def get_candidate_email(page: dict) -> str | None:
+    """Extract Email from a Notion candidate page."""
+    props = page.get("properties", {})
+    email_prop = props.get("Email", {})
+    if email_prop.get("type") == "email":
+        return email_prop.get("email")
+    return None
 
 
 def interaction_exists(
