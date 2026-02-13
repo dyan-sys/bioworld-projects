@@ -227,3 +227,43 @@ First run opens a browser for OAuth consent. Token saved to `local-data/slides_t
 - Decks saved to `MD to Slides` folder in Google Drive
 - Receipt JSON saved to `local-data/slides/{date}_{slug}.json`
 - Receipt includes: title, theme, template_id, URL, slide count, mode (create/update)
+
+## Editing Existing Decks via API
+
+When manipulating slides directly through the Google Slides API (outside the markdown→slides pipeline), follow these rules:
+
+### Text replacement destroys formatting
+
+`deleteText` + `insertText` wipes all styles (font, size, bold, color, alignment). After any text replacement on existing slides, **always** re-apply formatting with `updateTextStyle` and `updateParagraphStyle`.
+
+Dark theme font reference for re-application:
+- Titles: Instrument Serif
+- Body / labels: DM Sans, 14pt
+- Emojis: Noto Color Emoji
+
+### Always verify visually
+
+Fetch slide thumbnails via the API after making changes. Formatting issues aren't obvious from text data alone.
+
+```python
+thumb = slides_svc.presentations().pages().getThumbnail(
+    presentationId=DECK_ID,
+    pageObjectId=slide_object_id,
+    thumbnailProperties_thumbnailSize='LARGE'
+).execute()
+```
+
+### Inspect before adding slides
+
+When adding slides to an existing (non-markdown-generated) deck:
+1. Fetch available layouts first (`layoutProperties.displayName`) and their placeholder types
+2. Check existing slide styling to match fonts, sizes, colors
+3. Use `placeholderIdMappings` in `createSlide` to get stable IDs for text insertion
+
+### Reordering shifts indices
+
+`updateSlidesPosition` uses object IDs, but each move shifts all subsequent indices. Do sequential batch updates (one move per `batchUpdate` call), not one big batch with multiple moves.
+
+### Emoji sizing in card layouts
+
+~24pt Noto Color Emoji with 12pt `spaceAbove` on the emoji paragraph works well for rounded-rectangle card layouts. Larger emojis (32pt+) push content into card edges even with `contentAlignment: MIDDLE`.
