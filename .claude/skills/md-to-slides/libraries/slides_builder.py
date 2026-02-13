@@ -439,6 +439,247 @@ def _build_table_requests(
 
 
 # ---------------------------------------------------------------------------
+# Agenda layout (boxes with icons)
+# ---------------------------------------------------------------------------
+
+def _build_agenda_requests(
+    slide_id: str,
+    title: str,
+    items: list[str],
+) -> list[dict]:
+    """Build requests for an agenda slide with icon boxes.
+
+    Creates a title text box and a row of rounded rectangles,
+    each containing an emoji icon and a short label.
+    Uses theme colors so it adapts to any template.
+    """
+    requests: list[dict] = []
+
+    # --- Title text box ---
+    title_id = f"{slide_id}_agenda_title"
+    requests.append({
+        "createShape": {
+            "objectId": title_id,
+            "shapeType": "TEXT_BOX",
+            "elementProperties": {
+                "pageObjectId": slide_id,
+                "size": {
+                    "width": {"magnitude": 648, "unit": "PT"},
+                    "height": {"magnitude": 50, "unit": "PT"},
+                },
+                "transform": {
+                    "scaleX": 1, "scaleY": 1,
+                    "translateX": 36, "translateY": 40,
+                    "unit": "PT",
+                },
+            },
+        }
+    })
+    if title:
+        requests.append({
+            "insertText": {
+                "objectId": title_id, "text": title, "insertionIndex": 0,
+            }
+        })
+        requests.append({
+            "updateTextStyle": {
+                "objectId": title_id,
+                "textRange": {"type": "ALL"},
+                "style": {
+                    "fontSize": {"magnitude": 28, "unit": "PT"},
+                    "bold": True,
+                    "foregroundColor": {
+                        "opaqueColor": {"themeColor": "LIGHT1"}
+                    },
+                },
+                "fields": "fontSize,bold,foregroundColor",
+            }
+        })
+        requests.append({
+            "updateParagraphStyle": {
+                "objectId": title_id,
+                "textRange": {"type": "ALL"},
+                "style": {"alignment": "CENTER"},
+                "fields": "alignment",
+            }
+        })
+
+    # --- Agenda boxes ---
+    n = len(items)
+    if n == 0:
+        return requests
+
+    # Layout math (720 x 405pt page)
+    gap = 12
+    max_box_w = 130
+    total_w = n * max_box_w + (n - 1) * gap
+    # Scale down if too wide
+    if total_w > 660:
+        max_box_w = (660 - (n - 1) * gap) // n
+        total_w = n * max_box_w + (n - 1) * gap
+
+    box_h = 100
+    left_offset = (720 - total_w) / 2
+    top_offset = 170  # below title
+
+    for i, item in enumerate(items):
+        box_id = f"{slide_id}_agenda_{i}"
+        x = left_offset + i * (max_box_w + gap)
+
+        # Split item into emoji icon and label
+        # Expect format like "👋 About You" or just "About You"
+        parts = item.strip()
+        icon = ""
+        label = parts
+        # Check if first character(s) are emoji (non-ASCII start)
+        words = parts.split(" ", 1)
+        if words and len(words) > 1 and not words[0][0].isascii():
+            icon = words[0]
+            label = words[1]
+
+        # Create rounded rectangle
+        requests.append({
+            "createShape": {
+                "objectId": box_id,
+                "shapeType": "ROUND_RECTANGLE",
+                "elementProperties": {
+                    "pageObjectId": slide_id,
+                    "size": {
+                        "width": {"magnitude": max_box_w, "unit": "PT"},
+                        "height": {"magnitude": box_h, "unit": "PT"},
+                    },
+                    "transform": {
+                        "scaleX": 1, "scaleY": 1,
+                        "translateX": x, "translateY": top_offset,
+                        "unit": "PT",
+                    },
+                },
+            }
+        })
+
+        # Style the box — theme-adaptive fill
+        requests.append({
+            "updateShapeProperties": {
+                "objectId": box_id,
+                "shapeProperties": {
+                    "shapeBackgroundFill": {
+                        "solidFill": {
+                            "color": {"themeColor": "LIGHT1"},
+                            "alpha": 0.1,
+                        },
+                    },
+                    "outline": {
+                        "weight": {"magnitude": 1, "unit": "PT"},
+                        "outlineFill": {
+                            "solidFill": {
+                                "color": {"themeColor": "LIGHT1"},
+                                "alpha": 0.25,
+                            }
+                        },
+                    },
+                },
+                "fields": "shapeBackgroundFill,outline",
+            }
+        })
+
+        # Insert text (icon + newline + label)
+        text = f"{icon}\n{label}" if icon else label
+        requests.append({
+            "insertText": {
+                "objectId": box_id, "text": text, "insertionIndex": 0,
+            }
+        })
+
+        # Center text and set style
+        requests.append({
+            "updateParagraphStyle": {
+                "objectId": box_id,
+                "textRange": {"type": "ALL"},
+                "style": {
+                    "alignment": "CENTER",
+                    "lineSpacing": 115,
+                    "spaceAbove": {"magnitude": 4, "unit": "PT"},
+                },
+                "fields": "alignment,lineSpacing,spaceAbove",
+            }
+        })
+
+        # UTF-16 length (Slides API uses UTF-16 offsets, not Python len)
+        def _utf16_len(s: str) -> int:
+            return len(s.encode("utf-16-le")) // 2
+
+        # Style: icon line larger, label smaller
+        if icon:
+            icon_u16 = _utf16_len(icon)
+            label_start = icon_u16 + 1  # +1 for \n
+            label_u16 = _utf16_len(label)
+
+            # Icon style — use Noto Color Emoji font, large size
+            requests.append({
+                "updateTextStyle": {
+                    "objectId": box_id,
+                    "textRange": {
+                        "type": "FIXED_RANGE",
+                        "startIndex": 0,
+                        "endIndex": icon_u16,
+                    },
+                    "style": {
+                        "fontFamily": "Noto Color Emoji",
+                        "fontSize": {"magnitude": 28, "unit": "PT"},
+                    },
+                    "fields": "fontFamily,fontSize",
+                }
+            })
+            # Label style
+            requests.append({
+                "updateTextStyle": {
+                    "objectId": box_id,
+                    "textRange": {
+                        "type": "FIXED_RANGE",
+                        "startIndex": label_start,
+                        "endIndex": label_start + label_u16,
+                    },
+                    "style": {
+                        "fontSize": {"magnitude": 12, "unit": "PT"},
+                        "bold": True,
+                        "foregroundColor": {
+                            "opaqueColor": {"themeColor": "LIGHT1"}
+                        },
+                    },
+                    "fields": "fontSize,bold,foregroundColor",
+                }
+            })
+        else:
+            requests.append({
+                "updateTextStyle": {
+                    "objectId": box_id,
+                    "textRange": {"type": "ALL"},
+                    "style": {
+                        "fontSize": {"magnitude": 13, "unit": "PT"},
+                        "bold": True,
+                        "foregroundColor": {
+                            "opaqueColor": {"themeColor": "LIGHT1"}
+                        },
+                    },
+                    "fields": "fontSize,bold,foregroundColor",
+                }
+            })
+
+        # Vertically center text in the box
+        requests.append({
+            "updateShapeProperties": {
+                "objectId": box_id,
+                "shapeProperties": {
+                    "contentAlignment": "MIDDLE",
+                },
+                "fields": "contentAlignment",
+            }
+        })
+
+    return requests
+
+
+# ---------------------------------------------------------------------------
 # Per-slide request builder
 # ---------------------------------------------------------------------------
 
@@ -469,6 +710,15 @@ def _build_slide_requests(
     """Build all populate + style requests for a single slide."""
     requests: list[dict] = []
     s = styles or {}
+
+    # --- Agenda layout (custom shapes, not placeholders) ---
+    if slide_data.layout == "agenda":
+        requests.extend(
+            _build_agenda_requests(slide_id, slide_data.title, slide_data.body_items)
+        )
+        if slide_data.notes:
+            requests.extend(_build_notes_requests(slide_obj, slide_data.notes))
+        return requests
 
     # Pick style configs based on layout
     if slide_data.layout == "title":
@@ -561,21 +811,26 @@ def generate_presentation(
     title: str,
     styles: dict | None = None,
     drive_folder: str | None = None,
+    update_id: str | None = None,
 ) -> str:
     """Generate a full Google Slides presentation.
 
-    Orchestrator flow:
-    1. Clone template via Drive API (into drive_folder if specified)
-    2. Map layout display names to objectIds
-    3. Delete existing placeholder slides
-    4. Create new slides with correct layouts
-    5. Read back created slides to get placeholder objectIds
-    6. Populate text and apply styling
-    7. Return presentation URL
+    If update_id is provided, updates the existing presentation in-place
+    (deletes all slides and rebuilds). Otherwise clones from template.
+
+    Returns the presentation URL.
     """
-    print(f"Cloning template {template_id}...")
-    pres_id = clone_template(drive_service, template_id, title, drive_folder)
-    print(f"  Created presentation: {pres_id}")
+    if update_id:
+        pres_id = update_id
+        print(f"Updating existing presentation {pres_id}...")
+        # Rename the presentation
+        drive_service.files().update(
+            fileId=pres_id, body={"name": title}
+        ).execute()
+    else:
+        print(f"Cloning template {template_id}...")
+        pres_id = clone_template(drive_service, template_id, title, drive_folder)
+        print(f"  Created presentation: {pres_id}")
 
     # Map layouts
     layout_map = get_layout_map(slides_service, pres_id, layout_mapping)
