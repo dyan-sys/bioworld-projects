@@ -18,7 +18,7 @@ from googleapiclient.discovery import build
 
 DEFAULT_SCOPES = [
     "https://www.googleapis.com/auth/presentations",
-    "https://www.googleapis.com/auth/drive.file",
+    "https://www.googleapis.com/auth/drive",
 ]
 
 
@@ -47,7 +47,7 @@ def get_slides_services(
     if credentials_path is None:
         credentials_path = os.environ.get(
             "GOOGLE_CREDENTIALS_PATH",
-            str(project_root / "credentials.json"),
+            str(project_root / "Google-credentials.json"),
         )
     credentials_path = Path(credentials_path)
 

@@ -1,11 +1,47 @@
 {
-  "template_presentation_id": "<PASTE_TEMPLATE_ID_HERE>",
+  "template_presentation_id": "1xeejTysahnZbnX7GPbitefX-8QgsfEk95xBZOLH04o0",
   "layout_mapping": {
-    "title": "Title Slide",
-    "section": "Section Header",
-    "content": "Title and Body",
-    "two_column": "Two Column",
+    "title": "Title slide",
+    "section": "Section header",
+    "content": "Title and body",
+    "two_column": "Title and two columns",
     "blank": "Blank"
   },
-  "default_layout": "content"
+  "default_layout": "content",
+  "drive_folder": "MD to Slides",
+  "styles": {
+    "title": {
+      "font_size": 36,
+      "bold": true,
+      "color": "#1a1a2e"
+    },
+    "subtitle": {
+      "font_size": 20,
+      "color": "#666680",
+      "line_spacing": 130
+    },
+    "section_title": {
+      "font_size": 32,
+      "bold": true,
+      "color": "#1a1a2e"
+    },
+    "content_title": {
+      "font_size": 28,
+      "bold": true,
+      "color": "#1a1a2e"
+    },
+    "body": {
+      "font_size": 18,
+      "color": "#333344",
+      "line_spacing": 150,
+      "space_above": 6,
+      "bullet_preset": "BULLET_DISC_CIRCLE_SQUARE"
+    },
+    "table": {
+      "font_size": 12,
+      "color": "#333344",
+      "header_bold": true,
+      "header_background": "#e8e8f0"
+    }
+  }
 }

@@ -134,6 +134,8 @@ def cmd_generate(input_path: str, title: str | None) -> None:
         default_layout=config["default_layout"],
         slides_data=pres.slides,
         title=effective_title,
+        styles=config.get("styles"),
+        drive_folder=config.get("drive_folder"),
     )
 
     # Save receipt
