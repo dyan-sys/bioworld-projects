@@ -190,6 +190,10 @@ Accepts a full Google Slides URL or just the presentation ID. Deletes all existi
     },
     "table": {
       "header_bold": true
+    },
+    "agenda": {
+      "title_font": "Instrument Serif",
+      "label_font": "DM Sans"
     }
   }
 }

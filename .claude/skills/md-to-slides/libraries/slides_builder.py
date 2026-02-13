@@ -446,13 +446,19 @@ def _build_agenda_requests(
     slide_id: str,
     title: str,
     items: list[str],
+    agenda_styles: dict | None = None,
 ) -> list[dict]:
     """Build requests for an agenda slide with icon boxes.
 
     Creates a title text box and a row of rounded rectangles,
     each containing an emoji icon and a short label.
     Uses theme colors so it adapts to any template.
+
+    agenda_styles can include:
+        title_font: font family for the slide title (default: template default)
+        label_font: font family for box labels (default: template default)
     """
+    ag = agenda_styles or {}
     requests: list[dict] = []
 
     # --- Title text box ---
@@ -481,18 +487,24 @@ def _build_agenda_requests(
                 "objectId": title_id, "text": title, "insertionIndex": 0,
             }
         })
+        title_style: dict[str, Any] = {
+            "fontSize": {"magnitude": 28, "unit": "PT"},
+            "bold": True,
+            "foregroundColor": {
+                "opaqueColor": {"themeColor": "LIGHT1"}
+            },
+        }
+        title_fields = ["fontSize", "bold", "foregroundColor"]
+        if ag.get("title_font"):
+            title_style["fontFamily"] = ag["title_font"]
+            title_fields.append("fontFamily")
+
         requests.append({
             "updateTextStyle": {
                 "objectId": title_id,
                 "textRange": {"type": "ALL"},
-                "style": {
-                    "fontSize": {"magnitude": 28, "unit": "PT"},
-                    "bold": True,
-                    "foregroundColor": {
-                        "opaqueColor": {"themeColor": "LIGHT1"}
-                    },
-                },
-                "fields": "fontSize,bold,foregroundColor",
+                "style": title_style,
+                "fields": ",".join(title_fields),
             }
         })
         requests.append({
@@ -631,6 +643,18 @@ def _build_agenda_requests(
                 }
             })
             # Label style
+            label_style: dict[str, Any] = {
+                "fontSize": {"magnitude": 12, "unit": "PT"},
+                "bold": True,
+                "foregroundColor": {
+                    "opaqueColor": {"themeColor": "LIGHT1"}
+                },
+            }
+            label_fields = ["fontSize", "bold", "foregroundColor"]
+            if ag.get("label_font"):
+                label_style["fontFamily"] = ag["label_font"]
+                label_fields.append("fontFamily")
+
             requests.append({
                 "updateTextStyle": {
                     "objectId": box_id,
@@ -639,29 +663,29 @@ def _build_agenda_requests(
                         "startIndex": label_start,
                         "endIndex": label_start + label_u16,
                     },
-                    "style": {
-                        "fontSize": {"magnitude": 12, "unit": "PT"},
-                        "bold": True,
-                        "foregroundColor": {
-                            "opaqueColor": {"themeColor": "LIGHT1"}
-                        },
-                    },
-                    "fields": "fontSize,bold,foregroundColor",
+                    "style": label_style,
+                    "fields": ",".join(label_fields),
                 }
             })
         else:
+            no_icon_style: dict[str, Any] = {
+                "fontSize": {"magnitude": 13, "unit": "PT"},
+                "bold": True,
+                "foregroundColor": {
+                    "opaqueColor": {"themeColor": "LIGHT1"}
+                },
+            }
+            no_icon_fields = ["fontSize", "bold", "foregroundColor"]
+            if ag.get("label_font"):
+                no_icon_style["fontFamily"] = ag["label_font"]
+                no_icon_fields.append("fontFamily")
+
             requests.append({
                 "updateTextStyle": {
                     "objectId": box_id,
                     "textRange": {"type": "ALL"},
-                    "style": {
-                        "fontSize": {"magnitude": 13, "unit": "PT"},
-                        "bold": True,
-                        "foregroundColor": {
-                            "opaqueColor": {"themeColor": "LIGHT1"}
-                        },
-                    },
-                    "fields": "fontSize,bold,foregroundColor",
+                    "style": no_icon_style,
+                    "fields": ",".join(no_icon_fields),
                 }
             })
 
@@ -714,7 +738,10 @@ def _build_slide_requests(
     # --- Agenda layout (custom shapes, not placeholders) ---
     if slide_data.layout == "agenda":
         requests.extend(
-            _build_agenda_requests(slide_id, slide_data.title, slide_data.body_items)
+            _build_agenda_requests(
+                slide_id, slide_data.title, slide_data.body_items,
+                agenda_styles=s.get("agenda"),
+            )
         )
         if slide_data.notes:
             requests.extend(_build_notes_requests(slide_obj, slide_data.notes))
