@@ -54,6 +54,7 @@ NOTION_SPEND_DB_ID=xxx                                        # Notion database 
 | Track AI Spend | `.claude/skills/track-ai-spend/` | Parses billing emails from Gmail, extracts AUD amounts, upserts monthly rows to Notion "AI Spend" DB. Runs monthly. |
 | Markdown to Slides | `.claude/skills/md-to-slides/` | Converts `.md` slide files into styled Google Slides presentations via template deck cloning. On-demand. |
 | CS Digest | `.claude/skills/cs-digest/` | Generates structured digest reports from mixed CS text files via Kimi AI. On-demand only. |
+| Daily Pepper | `.claude/skills/daily-pepper/` | Morning calendar summary bot. Fetches Google Calendar events, sends Slack DM overview with free blocks. Runs daily 7 AM SGT. |
 
 ## Data Architecture
 
@@ -99,6 +100,7 @@ Status values: `success` (exit 0), `failed` (exit non-zero), `network_unavailabl
 | Recruitment Completion Tracker | 08:00, 12:00, 18:00 | `com.ally.recruitment-events.plist` |
 | Service Health Check | 09:00 daily | `com.ally.service-check.plist` |
 | AI Spend Tracker | 08:00 on 8th, 18th, 28th | `com.ally.ai-spend.plist` |
+| Daily Pepper | 07:00 daily | `com.ally.daily-pepper.plist` |
 
 ### Adding a New Scheduled Job
 

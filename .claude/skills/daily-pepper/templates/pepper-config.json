@@ -1,0 +1,9 @@
+{
+  "slack_user_id": "U0975UFHDB8",
+  "calendar_ids": ["primary"],
+  "work_hours": {
+    "start": 9,
+    "end": 18
+  },
+  "show_free_blocks": true
+}

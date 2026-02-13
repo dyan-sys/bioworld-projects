@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.ally.daily-pepper</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/yikfaiivanli/Projects/ally-os/scheduling/run-job.sh</string>
+        <string>daily-pepper</string>
+        <string>.claude/skills/daily-pepper/workflows/daily_pepper.py</string>
+    </array>
+
+    <!-- Daily at 7:00 AM SGT (launchd uses local time) -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>7</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/yikfaiivanli/Projects/ally-os/local-data/logs/launchd-stdout.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/yikfaiivanli/Projects/ally-os/local-data/logs/launchd-stderr.log</string>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/yikfaiivanli/Projects/ally-os</string>
+</dict>
+</plist>
