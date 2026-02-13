@@ -26,6 +26,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(SKILL_ROOT / "libraries"))
 from calendar_auth import get_calendar_service
 from calendar_reader import compute_free_blocks, fetch_todays_events
+from linear_reader import get_focus_board
 
 # Load .env
 load_dotenv(PROJECT_ROOT / ".env")
@@ -110,7 +111,7 @@ def main():
     print("=" * 60)
 
     # Phase 1: Config + Auth
-    print("\n[1/4] Loading config and authenticating...")
+    print("\n[1/5] Loading config and authenticating...")
 
     config = load_config()
     slack_user_id = config["slack_user_id"]
@@ -137,7 +138,7 @@ def main():
     print("  Google Calendar authenticated.")
 
     # Phase 2: Fetch events
-    print("\n[2/4] Fetching calendar events...")
+    print("\n[2/5] Fetching calendar events...")
 
     events = fetch_todays_events(service, calendar_ids, target_date)
     print(f"  Found {len(events)} event(s)")
@@ -148,8 +149,29 @@ def main():
         else:
             print(f"    [{format_time(ev['start'])}-{format_time(ev['end'])}] {ev['title']}")
 
-    # Phase 3: Build summary
-    print("\n[3/4] Building summary message...")
+    # Phase 3: Fetch Linear issues
+    print("\n[3/5] Fetching Linear focus board...")
+
+    linear_section = ""
+    linear_team_id = config.get("linear_team_id")
+    linear_api_key = os.environ.get("LINEAR_API_KEY")
+
+    if not linear_team_id:
+        print("  Skipped: no linear_team_id in config")
+    elif not linear_api_key:
+        print("  Skipped: LINEAR_API_KEY not set")
+    else:
+        try:
+            linear_section = get_focus_board(linear_team_id, linear_api_key)
+            if linear_section:
+                print("  Focus board loaded.")
+            else:
+                print("  No issues matched (both buckets empty).")
+        except Exception as e:
+            print(f"  WARNING: Linear fetch failed: {e}")
+
+    # Phase 4: Build summary
+    print("\n[4/5] Building summary message...")
 
     message = build_summary(
         events,
@@ -159,11 +181,14 @@ def main():
         work_end=work_hours["end"],
     )
 
+    if linear_section:
+        message += "\n" + linear_section
+
     print()
     print(message)
 
-    # Phase 4: Send DM
-    print(f"\n[4/4] Sending DM to {slack_user_id}...")
+    # Phase 5: Send DM
+    print(f"\n[5/5] Sending DM to {slack_user_id}...")
 
     if args.dry_run:
         print("  DRY RUN: Skipping DM send.")
