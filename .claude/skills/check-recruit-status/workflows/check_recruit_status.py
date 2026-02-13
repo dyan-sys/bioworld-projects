@@ -2,8 +2,9 @@
 Check Recruit Status Workflow
 
 Queries the Notion Candidates DB and prints a Slack-friendly terminal
-report with 7 sections: pipeline overview, candidate breakdown, EP channel
-breakdown, EP conversion funnel, EP channel quality, and screening backlog.
+report with 8 sections: pipeline overview, candidate breakdown, EP channel
+breakdown, EP conversion funnel, EP channel quality, hiring efficiency,
+and screening backlog.
 
 Usage:
     python3.11 check_recruit_status.py
@@ -158,6 +159,32 @@ def extract_candidate(page: dict) -> dict:
         r2_name = r2_prop["status"].get("name", "")
         r2_proceed = r2_name == "Proceed"
 
+    # R1 conducted (any status beyond "Not started")
+    r1_conducted = False
+    if r1_prop.get("type") == "status" and r1_prop.get("status"):
+        r1_status_name = r1_prop["status"].get("name", "")
+        r1_conducted = r1_status_name != "Not started"
+
+    # R2 conducted (any status beyond "Not started")
+    r2_conducted = False
+    if r2_prop.get("type") == "status" and r2_prop.get("status"):
+        r2_status_name = r2_prop["status"].get("name", "")
+        r2_conducted = r2_status_name != "Not started"
+
+    # Decision R / Alignment (any status beyond "Not started")
+    alignment_conducted = False
+    decision_prop = properties.get("Decision R", {})
+    if decision_prop.get("type") == "status" and decision_prop.get("status"):
+        decision_name = decision_prop["status"].get("name", "")
+        alignment_conducted = decision_name != "Not started"
+
+    # Offer status — hired if "Offer Accepted"
+    hired = False
+    offer_prop = properties.get("Offer", {})
+    if offer_prop.get("type") == "status" and offer_prop.get("status"):
+        offer_name = offer_prop["status"].get("name", "")
+        hired = offer_name == "Offer Accepted"
+
     return {
         "name": name,
         "created_time": created_time,
@@ -167,6 +194,10 @@ def extract_candidate(page: dict) -> dict:
         "invite_type": invite_type,
         "r1_proceed": r1_proceed,
         "r2_proceed": r2_proceed,
+        "r1_conducted": r1_conducted,
+        "r2_conducted": r2_conducted,
+        "alignment_conducted": alignment_conducted,
+        "hired": hired,
     }
 
 
@@ -521,6 +552,60 @@ def compute_screening_backlog(candidates: list[dict]) -> dict:
     }
 
 
+def compute_hiring_efficiency(candidates: list[dict]) -> dict:
+    """Compute hiring efficiency metrics for 30d, 60d, and 90d windows.
+
+    Counts R1 interviews, R2 interviews, alignment (Decision R) interviews,
+    and hires (Offer Accepted) per window, then derives per-hire ratios
+    and a crude cost-of-hire estimate ($5 per R1/R2, $60 per alignment).
+    """
+    now_sgt = datetime.now(SGT)
+    today_start = now_sgt.replace(hour=0, minute=0, second=0, microsecond=0)
+    windows = {
+        "30d": today_start - timedelta(days=30),
+        "60d": today_start - timedelta(days=60),
+        "90d": today_start - timedelta(days=90),
+    }
+
+    COST_R1 = 5
+    COST_R2 = 5
+    COST_ALIGNMENT = 60
+
+    result = {}
+    for label, cutoff in windows.items():
+        group = [
+            c for c in candidates
+            if c.get("created_sgt") and cutoff <= c["created_sgt"] < today_start
+        ]
+
+        r1_count = sum(1 for c in group if c["r1_conducted"])
+        r2_count = sum(1 for c in group if c["r2_conducted"])
+        alignment_count = sum(1 for c in group if c["alignment_conducted"])
+        hire_count = sum(1 for c in group if c["hired"])
+
+        r1_cost = r1_count * COST_R1
+        r2_cost = r2_count * COST_R2
+        alignment_cost = alignment_count * COST_ALIGNMENT
+        total_cost = r1_cost + r2_cost + alignment_cost
+
+        result[label] = {
+            "r1": r1_count,
+            "r2": r2_count,
+            "alignment": alignment_count,
+            "hires": hire_count,
+            "r1_per_hire": r1_count / hire_count if hire_count else None,
+            "r2_per_hire": r2_count / hire_count if hire_count else None,
+            "alignment_per_hire": alignment_count / hire_count if hire_count else None,
+            "cost_r1": r1_cost,
+            "cost_r2": r2_cost,
+            "cost_alignment": alignment_cost,
+            "cost_total": total_cost,
+            "cost_per_hire": total_cost / hire_count if hire_count else None,
+        }
+
+    return result
+
+
 def _bar(count: int, max_count: int, max_width: int = 15) -> str:
     """Render a simple bar chart string."""
     if max_count == 0:
@@ -555,6 +640,7 @@ def build_report(
     channel_breakdown: dict | None = None,
     conversion_funnel: dict | None = None,
     channel_quality: list[dict] | None = None,
+    hiring_efficiency: dict | None = None,
 ) -> str:
     """Build the full Slack-friendly report."""
     now_sgt = datetime.now(SGT)
@@ -692,9 +778,80 @@ def build_report(
             p(f"{row['channel']:<15} {row['applied']:>7}  {row['invited']:>7}  {inv_pct:>5}  {row['r1_proceed']:>7}  {r1_pct:>5}  {row['r2_proceed']:>7}  {r2_pct:>5}")
         p(f"```")
 
-    # 7. Screening Backlog (Kimi)
+    # 7. Hiring Efficiency
+    if hiring_efficiency:
+        p()
+        p(f"*7. Hiring Efficiency [Under Review]*")
+        p(f"```")
+        windows = ["30d", "60d", "90d"]
+        he = {w: hiring_efficiency[w] for w in windows}
+
+        def _val(v):
+            return f"{v:.1f}" if v is not None else "-"
+
+        def _cost(v):
+            return f"${v:,.0f}" if v is not None else "-"
+
+        # Header
+        hdr = f"{'':22}"
+        for w in windows:
+            hdr += f"  {'Last '+w:>10}"
+        p(hdr)
+
+        # Interview counts
+        count_rows = [
+            ("R1 Interviews", "r1"),
+            ("R2 Interviews", "r2"),
+            ("Alignment (Decision)", "alignment"),
+            ("Hires", "hires"),
+        ]
+        for label, key in count_rows:
+            line = f"{label:<22}"
+            for w in windows:
+                line += f"  {he[w][key]:>10}"
+            p(line)
+
+        # Per-hire ratios
+        p()
+        ratio_hdr = f"  {'Per Hire':<20}"
+        for w in windows:
+            ratio_hdr += f"  {w:>10}"
+        p(ratio_hdr)
+        ratio_rows = [
+            ("R1 per Hire", "r1_per_hire"),
+            ("R2 per Hire", "r2_per_hire"),
+            ("Alignment per Hire", "alignment_per_hire"),
+        ]
+        for label, key in ratio_rows:
+            line = f"  {label:<20}"
+            for w in windows:
+                line += f"  {_val(he[w][key]):>10}"
+            p(line)
+
+        # Cost breakdown
+        p()
+        cost_hdr = f"  {'Cost of Hire':<20}"
+        for w in windows:
+            cost_hdr += f"  {w:>10}"
+        p(cost_hdr)
+        cost_rows = [
+            ("R1 ($5 ea)", "cost_r1"),
+            ("R2 ($5 ea)", "cost_r2"),
+            ("Alignment ($60 ea)", "cost_alignment"),
+            ("Total Interview Cost", "cost_total"),
+            ("Cost per Hire", "cost_per_hire"),
+        ]
+        for label, key in cost_rows:
+            line = f"  {label:<20}"
+            for w in windows:
+                line += f"  {_cost(he[w][key]):>10}"
+            p(line)
+
+        p(f"```")
+
+    # 8. Screening Backlog (Kimi)
     p()
-    p(f"*7. Screening Backlog (Kimi)*")
+    p(f"*8. Screening Backlog (Kimi)*")
     p(f"```")
     p(f"{'':10} {'Total':>5}  {'Scored':>6}  {'Unscored':>8}  {'Coverage':>8}")
     b24 = backlog["24h"]
@@ -742,10 +899,10 @@ def main():
 
     headers = notion_headers(notion_key)
 
-    # Query recent candidates (last 60 days covers all metrics)
-    print("Fetching candidates (last 60d)...", end="", flush=True)
+    # Query recent candidates (last 90 days covers all metrics incl. hiring efficiency)
+    print("Fetching candidates (last 90d)...", end="", flush=True)
     try:
-        pages = query_recent_candidates(headers, db_id, since_days=60)
+        pages = query_recent_candidates(headers, db_id, since_days=90)
     except requests.RequestException as e:
         print(f"\nERROR: Could not query candidates: {e}")
         sys.exit(1)
@@ -767,12 +924,14 @@ def main():
     channel_breakdown = compute_channel_breakdown(candidates, opening_names, post_channels, role_code="EP")
     conversion_funnel = compute_conversion_funnel(candidates, opening_names)
     channel_quality = compute_channel_quality(candidates, opening_names, post_channels)
+    hiring_efficiency = compute_hiring_efficiency(candidates)
     backlog = compute_screening_backlog(candidates)
 
     # Build and print report
     report = build_report(
         args.days, pipeline, candidate_breakdown, backlog,
         channel_breakdown, conversion_funnel, channel_quality,
+        hiring_efficiency,
     )
     print(report, end="")
 
