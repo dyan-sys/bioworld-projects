@@ -28,7 +28,18 @@ Future topics:
 
 ## Owner Preferences
 
-*(To be filled in as patterns emerge)*
+- **Client emails always from ivan@withally.com** — use `gmail_token_ivan.json` token (not the recruitment@ default). Pass `credentials_path='Google-credentials.json'` and `token_path='local-data/gmail_token_ivan.json'` to `get_gmail_service()`.
+
+## Templates
+
+Email templates in `templates/`, ready to customize per client:
+
+| File | Use Case |
+|------|----------|
+| `post-deep-dive-email-full.md` | Full post-deep-dive email with partnership recap, EP intro, pricing, attached docs, and contract detail request. Use when client hasn't received a formal overview yet. |
+| `post-deep-dive-email-short.md` | Short thank-you + contract details ask. Use when client already has context and just needs the follow-up. |
+
+**Usage:** Read the template, fill in `{{placeholders}}`, drop `{{OPTIONAL: ...}}` blocks if not needed.
 
 ## Playbooks
 
