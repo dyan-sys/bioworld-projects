@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.ally.reminder-sam-bday-9am</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/yikfaiivanli/Projects/ally-os/scheduling/run-job.sh</string>
+        <string>reminder-sam-bday</string>
+        <string>.claude/skills/pepper/workflows/send_reminder.py</string>
+        <string>:birthday: *Reminder:* It's *Sam Solarte's birthday* today! Don't forget to wish them a happy birthday.</string>
+    </array>
+
+    <!-- Feb 18 at 9:00 AM SGT (local time) -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Month</key>
+        <integer>2</integer>
+        <key>Day</key>
+        <integer>18</integer>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/yikfaiivanli/Projects/ally-os/local-data/logs/launchd-stdout.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/yikfaiivanli/Projects/ally-os/local-data/logs/launchd-stderr.log</string>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/yikfaiivanli/Projects/ally-os</string>
+</dict>
+</plist>
