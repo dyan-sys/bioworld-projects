@@ -10,8 +10,10 @@ import urllib.error
 import json
 
 LINEAR_API_URL = "https://api.linear.app/graphql"
+LINEAR_WORKSPACE_SLUG = "with-ally"
 
 PRIORITY_EMOJI = {
+    0: ":white_circle:",    # No priority
     1: ":rotating_light:",  # Urgent
     2: ":arrow_up:",        # High
     3: ":arrow_right:",     # Normal
@@ -121,21 +123,24 @@ def format_focus_board(buckets: dict[str, list[dict]]) -> str:
     if not strategic and not quick_wins:
         return ""
 
-    lines = ["\n:dart: *Focus Board*", ""]
+    lines = ["\n:dart: *Suggested Focus Board*", ""]
+
+    def _issue_line(issue: dict) -> str:
+        emoji = PRIORITY_EMOJI.get(issue["priority"], "")
+        url = f"https://linear.app/{LINEAR_WORKSPACE_SLUG}/issue/{issue['identifier']}"
+        return f"  {emoji} <{url}|{issue['identifier']}> {issue['title']}"
 
     if strategic:
         lines.append("_Strategic Impact:_")
         for issue in strategic:
-            emoji = PRIORITY_EMOJI.get(issue["priority"], "")
-            lines.append(f"  {emoji} {issue['identifier']} {issue['title']}")
+            lines.append(_issue_line(issue))
 
     if quick_wins:
         if strategic:
             lines.append("")
         lines.append("_Quick Wins:_")
         for issue in quick_wins:
-            emoji = PRIORITY_EMOJI.get(issue["priority"], "")
-            lines.append(f"  {emoji} {issue['identifier']} {issue['title']}")
+            lines.append(_issue_line(issue))
 
     return "\n".join(lines)
 
