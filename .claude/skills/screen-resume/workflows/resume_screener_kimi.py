@@ -496,6 +496,7 @@ def parse_target_rate(rate_text: str) -> dict | None:
     - "MYR 3,500", "RM 3500", "RM3,500/month"
     - "$800-$1200/month" (uses lower bound)
     - "1200" (bare number, defaults to monthly)
+    - "9", "$7-$9" (small bare numbers <$50 USD, assumed hourly)
 
     Returns:
         {"amount": float, "period": "monthly"|"hourly", "currency": "USD"|"PHP"|"MYR", "raw": str}
@@ -514,10 +515,14 @@ def parse_target_rate(rate_text: str) -> dict | None:
     elif "myr" in text or re.search(r"\brm\s*[\d,]", text):
         currency = "MYR"
 
-    # Detect period
+    # Detect explicit period
+    period_explicit = False
     period = "monthly"  # default
     if re.search(r"(/hr|/hour|hourly|per\s*hour)", text):
         period = "hourly"
+        period_explicit = True
+    elif re.search(r"(/mo|/month|monthly|per\s*month)", text):
+        period_explicit = True
 
     # Extract numeric value(s)
     # Remove currency symbols and letters for number extraction
@@ -536,6 +541,17 @@ def parse_target_rate(rate_text: str) -> dict | None:
 
     if amount <= 0:
         return None
+
+    # Heuristic: small USD amounts without explicit period are almost certainly hourly.
+    # Nobody means "$9 per month". Threshold: <50 USD (or local equivalent).
+    if not period_explicit and period == "monthly":
+        heuristic_threshold = 50
+        if currency == "PHP":
+            heuristic_threshold = 2500  # ~$50 USD in PHP
+        elif currency == "MYR":
+            heuristic_threshold = 225   # ~$50 USD in MYR
+        if amount < heuristic_threshold:
+            period = "hourly"
 
     return {
         "amount": amount,
@@ -634,7 +650,7 @@ def update_notion_rating_skip(notion_key: str, page_id: str, reason: str) -> Non
     response.raise_for_status()
 
 
-def process_candidate(candidate: dict, notion_key: str, moonshot_key: str) -> dict:
+def process_candidate(candidate: dict, notion_key: str, moonshot_key: str, force: bool = False) -> dict:
     """Process a single candidate: extract, score, save, update."""
     name = candidate["name"]
     page_id = candidate["page_id"]
@@ -672,11 +688,14 @@ def process_candidate(candidate: dict, notion_key: str, moonshot_key: str) -> di
                 if rate_bounds:
                     in_bounds, reason = check_rate_in_bounds(parsed_rate, rate_bounds)
                     if not in_bounds:
-                        update_notion_rating_skip(notion_key, page_id, reason)
-                        result["status"] = "skipped"
-                        result["error"] = reason
-                        print(f"  [SKIP] {reason}")
-                        return result
+                        if force:
+                            print(f"  [FORCE] Overriding rate check: {reason}")
+                        else:
+                            update_notion_rating_skip(notion_key, page_id, reason)
+                            result["status"] = "skipped"
+                            result["error"] = reason
+                            print(f"  [SKIP] {reason}")
+                            return result
                 print(f"  [RATE] {target_rate_text} → in bounds")
             else:
                 print(f"  [RATE] Could not parse '{target_rate_text}' — proceeding anyway")
@@ -767,6 +786,11 @@ def main():
         default=5,
         help='Candidates per batch before pausing (default: 5)'
     )
+    parser.add_argument(
+        '--force',
+        action='store_true',
+        help='Skip rate bounds check and force scoring'
+    )
     args = parser.parse_args()
 
     print("=" * 60)
@@ -827,7 +851,7 @@ def main():
 
         for i, candidate in enumerate(batch, start + 1):
             print(f"\n[{i}/{total}] {candidate['name']}")
-            result = process_candidate(candidate, notion_key, moonshot_key)
+            result = process_candidate(candidate, notion_key, moonshot_key, force=args.force)
             results.append(result)
 
     # Summary
