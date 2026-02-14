@@ -12,12 +12,21 @@
         <string>.claude/skills/update-job-posts/workflows/scheduled_update_job_posts.py</string>
     </array>
 
-    <!-- Mon + Thu at 08:00 SGT (launchd uses local time) -->
+    <!-- Mon + Wed + Thu at 08:00 SGT (launchd uses local time) -->
+    <!-- Mon: OLJ + Jobstreet, Wed: OLJ, Thu: Jobstreet (per posting-plan.json) -->
     <key>StartCalendarInterval</key>
     <array>
         <dict>
             <key>Weekday</key>
             <integer>1</integer>
+            <key>Hour</key>
+            <integer>8</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+        <dict>
+            <key>Weekday</key>
+            <integer>3</integer>
             <key>Hour</key>
             <integer>8</integer>
             <key>Minute</key>

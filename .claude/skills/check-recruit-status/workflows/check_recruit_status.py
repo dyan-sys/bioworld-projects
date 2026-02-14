@@ -2,9 +2,9 @@
 Check Recruit Status Workflow
 
 Queries the Notion Candidates DB and prints a Slack-friendly terminal
-report with 8 sections: pipeline overview, candidate breakdown, EP channel
-breakdown, EP conversion funnel, EP channel quality, hiring efficiency,
-and screening backlog.
+report with 8 sections: pipeline overview, daily EP applications by channel,
+candidate breakdown, EP channel breakdown, EP conversion funnel,
+EP channel quality, hiring efficiency, and screening backlog.
 
 Usage:
     python3.11 check_recruit_status.py
@@ -527,6 +527,61 @@ def compute_channel_quality(
     return result
 
 
+def compute_daily_channel_volume(
+    candidates: list[dict],
+    opening_names: dict[str, str],
+    post_channels: dict[str, str],
+    days: int = 7,
+) -> dict:
+    """Compute daily EP application counts by channel for the last N completed days.
+
+    Returns:
+        {"dates": [str], "channels": [str], "grid": {date_str: Counter}, "totals": Counter}
+    """
+    now_sgt = datetime.now(SGT)
+    today_start = now_sgt.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    role_post_ids = _get_ep_post_ids(opening_names)
+
+    # Build date buckets for last N completed days (excludes today)
+    date_starts = [today_start - timedelta(days=i) for i in range(days, 0, -1)]
+
+    grid: dict[str, Counter] = {}
+    all_channels: set[str] = set()
+
+    for d in date_starts:
+        date_str = d.strftime("%Y-%m-%d")
+        next_d = d + timedelta(days=1)
+        counter: Counter = Counter()
+
+        for c in candidates:
+            created = c.get("created_sgt")
+            pid = c.get("post_relation_id")
+            if not created or not pid or pid not in role_post_ids:
+                continue
+            if d <= created < next_d:
+                channel = post_channels.get(pid, "Unknown")
+                counter[channel] += 1
+                all_channels.add(channel)
+
+        grid[date_str] = counter
+
+    # Sort channels by total volume desc
+    channel_totals: Counter = Counter()
+    for counter in grid.values():
+        channel_totals.update(counter)
+
+    sorted_channels = [ch for ch, _ in channel_totals.most_common()]
+    date_strings = [d.strftime("%Y-%m-%d") for d in date_starts]
+
+    return {
+        "dates": date_strings,
+        "channels": sorted_channels,
+        "grid": grid,
+        "totals": channel_totals,
+    }
+
+
 def compute_screening_backlog(candidates: list[dict]) -> dict:
     """Compute Kimi screening backlog for last 24h and last 7d."""
     now_sgt = datetime.now(SGT)
@@ -641,6 +696,7 @@ def build_report(
     conversion_funnel: dict | None = None,
     channel_quality: list[dict] | None = None,
     hiring_efficiency: dict | None = None,
+    daily_channel_volume: dict | None = None,
 ) -> str:
     """Build the full Slack-friendly report."""
     now_sgt = datetime.now(SGT)
@@ -666,9 +722,65 @@ def build_report(
     p(f"Last 30d     {pipeline['in_30d']:>5}  (prior 30d: {pipeline['in_prior_30d']})   {month_trend}")
     p(f"```")
 
-    # 2. Candidate Breakdown (last 7 completed days)
+    # 2. Daily EP Applications by Channel (last 7d)
+    if daily_channel_volume and daily_channel_volume["channels"]:
+        p()
+        p(f"*2. Daily EP Applications by Channel (last 7d)*")
+        p(f"```")
+        dates = daily_channel_volume["dates"]
+        channels = daily_channel_volume["channels"]
+        grid = daily_channel_volume["grid"]
+        totals = daily_channel_volume["totals"]
+
+        day_names = {0: "Mon", 1: "Tue", 2: "Wed", 3: "Thu", 4: "Fri", 5: "Sat", 6: "Sun"}
+        col_w = max(max((len(ch) for ch in channels), default=5), 5)
+
+        # Header
+        hdr = f"{'Date':<10} {'Day':<3}"
+        for ch in channels:
+            hdr += f"  {ch:>{col_w}}"
+        hdr += f"  {'Total':>{col_w}}"
+        p(hdr)
+
+        # Daily rows
+        grand_total = 0
+        for date_str in dates:
+            dt = datetime.strptime(date_str, "%Y-%m-%d")
+            dow = day_names[dt.weekday()]
+            row_counter = grid[date_str]
+            row_total = sum(row_counter.values())
+            grand_total += row_total
+
+            line = f"{date_str:<10} {dow:<3}"
+            for ch in channels:
+                v = row_counter.get(ch, 0)
+                line += f"  {v:>{col_w}}"
+            line += f"  {row_total:>{col_w}}"
+            p(line)
+
+        # Separator + totals
+        sep_w = 10 + 1 + 3 + (col_w + 2) * (len(channels) + 1)
+        p(f"{'─' * sep_w}")
+        total_line = f"{'Total':<10} {'':3}"
+        for ch in channels:
+            total_line += f"  {totals.get(ch, 0):>{col_w}}"
+        total_line += f"  {grand_total:>{col_w}}"
+        p(total_line)
+
+        # Avg per day
+        n_days = len(dates)
+        avg_line = f"{'Avg/day':<10} {'':3}"
+        for ch in channels:
+            avg = totals.get(ch, 0) / n_days if n_days else 0
+            avg_line += f"  {avg:>{col_w}.1f}"
+        avg_total = grand_total / n_days if n_days else 0
+        avg_line += f"  {avg_total:>{col_w}.1f}"
+        p(avg_line)
+        p(f"```")
+
+    # 3. Candidate Breakdown (last 7 completed days)
     p()
-    p(f"*2. Candidate Breakdown (last 7d)*")
+    p(f"*3. Candidate Breakdown (last 7d)*")
     p(f"```")
     if candidate_breakdown:
         max_count = candidate_breakdown[0][1]
@@ -683,10 +795,10 @@ def build_report(
         p("No candidates in the last 7 days.")
     p(f"```")
 
-    # 3. EP Channel Breakdown
+    # 4. EP Channel Breakdown
     if channel_breakdown:
         p()
-        p(f"*3. EP Channel Breakdown*")
+        p(f"*4. EP Channel Breakdown*")
         p(f"```")
         counter_24h = channel_breakdown["24h"]
         week = channel_breakdown["7d"]
@@ -921,6 +1033,7 @@ def main():
     # Compute metrics
     pipeline = compute_pipeline_overview(candidates, args.days)
     candidate_breakdown = compute_candidate_breakdown(candidates, opening_names)
+    daily_channel_volume = compute_daily_channel_volume(candidates, opening_names, post_channels, days=args.days)
     channel_breakdown = compute_channel_breakdown(candidates, opening_names, post_channels, role_code="EP")
     conversion_funnel = compute_conversion_funnel(candidates, opening_names)
     channel_quality = compute_channel_quality(candidates, opening_names, post_channels)
@@ -931,7 +1044,7 @@ def main():
     report = build_report(
         args.days, pipeline, candidate_breakdown, backlog,
         channel_breakdown, conversion_funnel, channel_quality,
-        hiring_efficiency,
+        hiring_efficiency, daily_channel_volume,
     )
     print(report, end="")
 

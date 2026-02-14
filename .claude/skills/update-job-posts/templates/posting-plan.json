@@ -2,8 +2,8 @@
   "schedules": [
     {
       "channel": "OLJ",
-      "days": ["Monday"],
-      "description": "OLJ posts every Monday"
+      "days": ["Monday", "Wednesday"],
+      "description": "OLJ posts every Monday and Wednesday"
     },
     {
       "channel": "Jobstreet",

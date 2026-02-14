@@ -94,7 +94,7 @@ Status values: `success` (exit 0), `failed` (exit non-zero), `network_unavailabl
 |-----|----------------|-------|
 | Daily Pipeline Report | 08:00 daily | `com.ally.pipeline-report.plist` |
 | EP Channel Issue Flagging | 08:00 daily | `com.ally.ep-issues.plist` |
-| Scheduled Job Posts | 08:00 Mon + Thu | `com.ally.job-posts.plist` |
+| Scheduled Job Posts | 08:00 Mon + Wed + Thu | `com.ally.job-posts.plist` |
 | Resume Screener (Kimi) | 08:00, 12:00, 16:00, 20:00 | `com.ally.resume-screener.plist` |
 | Slack Mention Monitor | 09:00, 13:00, 17:00 | `com.ally.slack-mentions.plist` |
 | Recruitment Completion Tracker | 08:00, 12:00, 18:00 | `com.ally.recruitment-events.plist` |
