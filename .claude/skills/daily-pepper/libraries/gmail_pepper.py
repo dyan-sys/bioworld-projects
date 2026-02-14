@@ -34,7 +34,7 @@ def fetch_recent_emails(max_results: int = 20) -> list[dict]:
         scopes=GMAIL_SCOPES,
     )
 
-    messages = search_messages(service, query="newer_than:1d", max_results=max_results)
+    messages = search_messages(service, query="newer_than:1d in:inbox", max_results=max_results)
     if not messages:
         return []
 
