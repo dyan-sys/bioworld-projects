@@ -2,9 +2,9 @@
 Check Recruit Status Workflow
 
 Queries the Notion Candidates DB and prints a Slack-friendly terminal
-report with 8 sections: pipeline overview, daily EP applications by channel,
-candidate breakdown, EP channel breakdown, EP conversion funnel,
-EP channel quality, hiring efficiency, and screening backlog.
+report with 7 sections: pipeline overview, daily EP applications by channel,
+candidate breakdown, EP conversion funnel, EP channel quality,
+hiring efficiency, and screening backlog.
 
 Usage:
     python3.11 check_recruit_status.py
@@ -384,67 +384,6 @@ def compute_candidate_breakdown(
     return counter.most_common()
 
 
-def compute_channel_breakdown(
-    candidates: list[dict],
-    opening_names: dict[str, str],
-    post_channels: dict[str, str],
-    role_code: str = "EP",
-) -> dict:
-    """Count candidates by Post Channel for a specific role, for L24H, yesterday, and last 7d.
-
-    Args:
-        role_code: Job type code to filter on (matched in opening name, e.g. "EP" matches "251003-EP ...").
-    """
-    now_sgt = datetime.now(SGT)
-    today_start = now_sgt.replace(hour=0, minute=0, second=0, microsecond=0)
-
-    # Rolling 24h
-    cutoff_24h = now_sgt - timedelta(hours=24)
-
-    # Calendar day windows
-    yesterday_start = today_start - timedelta(days=1)
-    cutoff_7d = today_start - timedelta(days=7)
-
-    # Build set of post_ids that belong to the target role
-    role_post_ids = set()
-    for pid, name in opening_names.items():
-        # Opening names look like "251003-EP Executive Partner (Full-Time)"
-        # Extract the code after the dash: "EP", "EPP", "CPL", etc.
-        parts = name.split()
-        if parts:
-            prefix = parts[0]  # e.g. "251003-EP"
-            code = prefix.split("-", 1)[1] if "-" in prefix else ""
-            if code == role_code:
-                role_post_ids.add(pid)
-
-    counter_24h = Counter()
-    yesterday_counter = Counter()
-    week_counter = Counter()
-
-    for c in candidates:
-        created = c.get("created_sgt")
-        pid = c.get("post_relation_id")
-        if not created or not pid or pid not in role_post_ids:
-            continue
-
-        channel = post_channels.get(pid, "Unknown")
-
-        # L24H tracking
-        if created >= cutoff_24h:
-            counter_24h[channel] += 1
-
-        # Calendar day tracking
-        if yesterday_start <= created < today_start:
-            yesterday_counter[channel] += 1
-        if cutoff_7d <= created < today_start:
-            week_counter[channel] += 1
-
-    return {
-        "24h": counter_24h,
-        "yesterday": yesterday_counter,
-        "7d": week_counter,
-    }
-
 
 def _get_ep_post_ids(opening_names: dict[str, str], role_code: str = "EP") -> set:
     """Return set of post_ids belonging to a role code."""
@@ -694,8 +633,8 @@ def compute_hiring_efficiency(candidates: list[dict]) -> dict:
     }
 
     COST_R1 = 5
-    COST_R2 = 5
-    COST_ALIGNMENT = 60
+    COST_R2 = 10
+    COST_ALIGNMENT = 80
 
     result = {}
     for label, cutoff in windows.items():
@@ -763,7 +702,6 @@ def build_report(
     pipeline: dict,
     candidate_breakdown: list[tuple[str, int]],
     backlog: dict,
-    channel_breakdown: dict | None = None,
     conversion_funnel: dict | None = None,
     channel_quality: list[dict] | None = None,
     hiring_efficiency: dict | None = None,
@@ -866,39 +804,10 @@ def build_report(
         p("No candidates in the last 7 days.")
     p(f"```")
 
-    # 4. EP Channel Breakdown
-    if channel_breakdown:
-        p()
-        p(f"*4. EP Channel Breakdown*")
-        p(f"```")
-        counter_24h = channel_breakdown["24h"]
-        week = channel_breakdown["7d"]
-        yesterday = channel_breakdown["yesterday"]
-        # Collect all channels across all periods
-        all_channels = sorted(set(list(week.keys()) + list(yesterday.keys()) + list(counter_24h.keys())))
-        if all_channels:
-            week_total = sum(week.values())
-            yest_total = sum(yesterday.values())
-            l24h_total = sum(counter_24h.values())
-            max_count = max(week.values()) if week else 0
-            p(f"{'Channel':<15} {'Last 7d':>7} {'%':>5}  {'':15} {'Yest':>5} {'L24H':>5}")
-            for ch in all_channels:
-                w = week.get(ch, 0)
-                y = yesterday.get(ch, 0)
-                h24 = counter_24h.get(ch, 0)
-                pct = w / week_total * 100 if week_total else 0
-                bar = _bar(w, max_count)
-                p(f"{ch:<15} {w:>7} {pct:>4.0f}%  {bar:<15} {y:>5} {h24:>5}")
-            p(f"{'─' * 15} {'─' * 7} {'─' * 5}  {'':15} {'─' * 5} {'─' * 5}")
-            p(f"{'Total':<15} {week_total:>7}  {'':4}  {'':15} {yest_total:>5} {l24h_total:>5}")
-        else:
-            p("No EP candidates with channel data.")
-        p(f"```")
-
-    # 5. EP Conversion Funnel
+    # 4. EP Conversion Funnel
     if conversion_funnel:
         p()
-        p(f"*5. EP Conversion Funnel*")
+        p(f"*4. EP Conversion Funnel*")
         p(f"```")
         windows = ["7d", "30d", "60d"]
         fw = {w: conversion_funnel[w] for w in windows}
@@ -948,10 +857,10 @@ def build_report(
             p(line)
         p(f"```")
 
-    # 6. EP Channel Quality (last 60d)
+    # 5. EP Channel Quality (last 60d)
     if channel_quality:
         p()
-        p(f"*6. EP Channel Quality (last 60d)*")
+        p(f"*5. EP Channel Quality (last 60d)*")
         p(f"```")
         p(f"{'Channel':<15} {'Applied':>7}  {'Invited':>7}  {'Inv%':>5}  {'R1 Proc':>7}  {'R1%':>5}  {'R2 Proc':>7}  {'R2%':>5}")
         for row in channel_quality:
@@ -961,10 +870,10 @@ def build_report(
             p(f"{row['channel']:<15} {row['applied']:>7}  {row['invited']:>7}  {inv_pct:>5}  {row['r1_proceed']:>7}  {r1_pct:>5}  {row['r2_proceed']:>7}  {r2_pct:>5}")
         p(f"```")
 
-    # 7. Hiring Efficiency
+    # 6. Hiring Efficiency
     if hiring_efficiency:
         p()
-        p(f"*7. Hiring Efficiency [Under Review]*")
+        p(f"*6. Hiring Efficiency [Under Review]*")
         p(f"```")
         windows = ["30d", "60d", "90d"]
         he = {w: hiring_efficiency[w] for w in windows}
@@ -1019,8 +928,8 @@ def build_report(
         p(cost_hdr)
         cost_rows = [
             ("R1 ($5 ea)", "cost_r1"),
-            ("R2 ($5 ea)", "cost_r2"),
-            ("Alignment ($60 ea)", "cost_alignment"),
+            ("R2 ($10 ea)", "cost_r2"),
+            ("Alignment ($80 ea)", "cost_alignment"),
             ("Total Interview Cost", "cost_total"),
             ("Cost per Hire", "cost_per_hire"),
         ]
@@ -1032,9 +941,9 @@ def build_report(
 
         p(f"```")
 
-    # 8. Screening Backlog (Kimi)
+    # 7. Screening Backlog (Kimi)
     p()
-    p(f"*8. Screening Backlog (Kimi)*")
+    p(f"*7. Screening Backlog (Kimi)*")
     p(f"```")
     p(f"{'':10} {'Total':>5}  {'Scored':>6}  {'Skipped':>7}  {'Pending':>7}  {'Processed':>9}")
     b24 = backlog["24h"]
@@ -1162,7 +1071,7 @@ def generate_insights(report: str) -> str | None:
     # Wrap in a section header
     return (
         "\n" + "─" * 50 + "\n\n"
-        "*9. 🔍 Key Insights — Top 3 Areas to Improve Hiring*\n\n"
+        "*8. 🔍 Key Insights — Top 3 Areas to Improve Hiring*\n\n"
         + raw + "\n"
     )
 
@@ -1218,7 +1127,6 @@ def main():
     pipeline = compute_pipeline_overview(candidates, args.days)
     candidate_breakdown = compute_candidate_breakdown(candidates, opening_names)
     daily_channel_volume = compute_daily_channel_volume(candidates, opening_names, post_channels, days=args.days)
-    channel_breakdown = compute_channel_breakdown(candidates, opening_names, post_channels, role_code="EP")
     conversion_funnel = compute_conversion_funnel(candidates, opening_names)
     channel_quality = compute_channel_quality(candidates, opening_names, post_channels)
     hiring_efficiency = compute_hiring_efficiency(candidates)
@@ -1227,7 +1135,7 @@ def main():
     # Build and print report
     report = build_report(
         args.days, pipeline, candidate_breakdown, backlog,
-        channel_breakdown, conversion_funnel, channel_quality,
+        conversion_funnel, channel_quality,
         hiring_efficiency, daily_channel_volume,
     )
     print(report, end="")
