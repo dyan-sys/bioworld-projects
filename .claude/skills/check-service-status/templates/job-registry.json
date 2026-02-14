@@ -155,6 +155,22 @@
           "search_string": "SUMMARY"
         }
       ]
+    },
+    "slack-bot": {
+      "label": "Ally Slack Bot",
+      "schedule": {
+        "expected_hour_utc": 0,
+        "frequency": "daily"
+      },
+      "tolerance_minutes": 1440,
+      "artifact_checks": [
+        {
+          "type": "log_contains",
+          "directory": "local-data/logs",
+          "pattern": "slack-bot.log",
+          "search_string": "Ally Bot starting"
+        }
+      ]
     }
   }
 }

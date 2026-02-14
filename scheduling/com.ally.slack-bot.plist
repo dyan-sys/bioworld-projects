@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.ally.slack-bot</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/python3.11</string>
+        <string>/Users/yikfaiivanli/Projects/ally-os/.claude/skills/slack-bot/workflows/bot.py</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/yikfaiivanli/Projects/ally-os</string>
+    <key>KeepAlive</key>
+    <true/>
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+    <key>StandardOutPath</key>
+    <string>/Users/yikfaiivanli/Projects/ally-os/local-data/logs/slack-bot-stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/yikfaiivanli/Projects/ally-os/local-data/logs/slack-bot-stderr.log</string>
+</dict>
+</plist>

@@ -1,0 +1,18 @@
+{
+  "authorized_users": {
+    "U0975UFHDB8": "Ivan",
+    "U097X5H3472": "Dyan"
+  },
+  "commands": {
+    "ally-invite": {
+      "handler": "invite_handler",
+      "authorized_users": ["U0975UFHDB8", "U097X5H3472"],
+      "cooldown_minutes": 120,
+      "requires_confirmation": true,
+      "options": {
+        "default_limit": 10,
+        "max_limit": 50
+      }
+    }
+  }
+}

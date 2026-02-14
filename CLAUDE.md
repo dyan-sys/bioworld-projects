@@ -29,6 +29,7 @@ MOONSHOT_API_KEY_EP=xxx      # Separate Moonshot key for EP channel review (opti
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...        # Slack Incoming Webhook (optional, for daily report)
 SLACK_WEBHOOK_URL_JARVIS=https://hooks.slack.com/services/... # Slack webhook for #ally-jarvis (service status)
 SLACK_BOT_TOKEN=xoxb-xxx                                     # Slack Bot Token (channels:history, users:read)
+SLACK_APP_TOKEN=xapp-1-xxx                                   # Slack App-Level Token (Socket Mode)
 GEMINI_API_KEY=xxx                                            # Google AI Studio API key (Gemini, for background check)
 SERPER_API_KEY=xxx                                            # Serper.dev API key (Google Search, for background check)
 NOTION_SPEND_DB_ID=xxx                                        # Notion database ID for AI Spend tracking
@@ -55,6 +56,7 @@ NOTION_SPEND_DB_ID=xxx                                        # Notion database 
 | Markdown to Slides | `.claude/skills/md-to-slides/` | Converts `.md` slide files into styled Google Slides presentations via template deck cloning. On-demand. |
 | CS Digest | `.claude/skills/cs-digest/` | Generates structured digest reports from mixed CS text files via Kimi AI. On-demand only. |
 | Daily Pepper | `.claude/skills/daily-pepper/` | Morning calendar summary bot. Fetches Google Calendar events, sends Slack DM overview with free blocks. Runs daily 7 AM SGT. |
+| Slack Bot | `.claude/skills/slack-bot/` | General-purpose Slack skill gateway. Exposes skills via slash commands (Socket Mode daemon). Phase 1: `/ally-invite`. |
 
 ## Data Architecture
 
@@ -101,6 +103,7 @@ Status values: `success` (exit 0), `failed` (exit non-zero), `network_unavailabl
 | Service Health Check | 09:00 daily | `com.ally.service-check.plist` |
 | AI Spend Tracker | 08:00 on 8th, 18th, 28th | `com.ally.ai-spend.plist` |
 | Daily Pepper | 07:00 daily | `com.ally.daily-pepper.plist` |
+| Ally Slack Bot | Always (daemon) | `com.ally.slack-bot.plist` |
 
 ### Adding a New Scheduled Job
 
