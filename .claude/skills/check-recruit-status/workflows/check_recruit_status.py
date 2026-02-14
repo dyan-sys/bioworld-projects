@@ -127,8 +127,18 @@ def extract_candidate(page: dict) -> dict:
             created_time.replace("Z", "+00:00")
         ).astimezone(SGT)
 
-    # Kimi Rating (rich_text -> float)
+    # Kimi Rating (rich_text -> float + raw text for skip detection)
     kimi_rating = _parse_rating(properties, "Kimi Rating")
+    kimi_rating_raw = _parse_rich_text(properties, "Kimi Rating")
+
+    # Kimi Recommendation (select)
+    kimi_recommendation = None
+    kimi_rec_prop = properties.get("Kimi Recommendation", {})
+    if kimi_rec_prop.get("type") == "select" and kimi_rec_prop.get("select"):
+        kimi_recommendation = kimi_rec_prop["select"].get("name")
+
+    # Kimi Rationale (rich_text — used to parse skip reasons)
+    kimi_rationale = _parse_rich_text(properties, "Kimi Rationale")
 
     # Post relation ID (for opening breakdown)
     post_relation_id = None
@@ -192,6 +202,9 @@ def extract_candidate(page: dict) -> dict:
         "created_time": created_time,
         "created_sgt": created_sgt,
         "kimi_rating": kimi_rating,
+        "kimi_rating_raw": kimi_rating_raw,
+        "kimi_recommendation": kimi_recommendation,
+        "kimi_rationale": kimi_rationale,
         "post_relation_id": post_relation_id,
         "invite_type": invite_type,
         "r1_proceed": r1_proceed,
@@ -216,6 +229,16 @@ def _parse_rating(properties: dict, prop_name: str) -> float | None:
                 except ValueError:
                     return None
     return None
+
+
+def _parse_rich_text(properties: dict, prop_name: str) -> str:
+    """Extract plain text from a rich_text property (empty string if absent)."""
+    prop = properties.get(prop_name, {})
+    if prop.get("type") == "rich_text":
+        items = prop.get("rich_text", [])
+        if items:
+            return items[0].get("plain_text", "").strip()
+    return ""
 
 
 def resolve_post_details(headers: dict, candidates: list[dict]) -> tuple[dict[str, str], dict[str, str]]:
@@ -584,20 +607,66 @@ def compute_daily_channel_volume(
     }
 
 
+def _classify_screening(c: dict) -> tuple[str, str]:
+    """Classify a candidate's screening state.
+
+    Returns (status, skip_reason) where:
+        status: "scored" | "skipped" | "pending"
+        skip_reason: "" for scored/pending, or reason string for skipped
+    """
+    raw = c.get("kimi_rating_raw", "")
+    if c["kimi_rating"] is not None:
+        return "scored", ""
+    if raw.lower().startswith("skipped"):
+        # Parse skip reason from rationale
+        rationale = c.get("kimi_rationale", "")
+        if "no resume" in rationale.lower():
+            return "skipped", "No resume"
+        if "target rate" in rationale.lower() or "exceeds" in rationale.lower() or "below" in rationale.lower():
+            return "skipped", "Rate out of bounds"
+        return "skipped", "Other"
+    return "pending", ""
+
+
 def compute_screening_backlog(candidates: list[dict]) -> dict:
-    """Compute Kimi screening backlog for last 24h and last 7d."""
+    """Compute Kimi screening backlog for last 24h and last 7d.
+
+    Breaks down into scored / skipped (with reasons) / pending,
+    plus recommendation tier distribution for scored candidates.
+    """
     now_sgt = datetime.now(SGT)
     cutoff_24h = now_sgt - timedelta(hours=24)
     cutoff_7d = now_sgt - timedelta(days=7)
 
     def _kimi_stats(group):
         total = len(group)
-        scored = sum(1 for c in group if c["kimi_rating"] is not None)
+        scored = 0
+        skipped = 0
+        pending = 0
+        skip_reasons: Counter = Counter()
+        tiers: Counter = Counter()
+
+        for c in group:
+            status, reason = _classify_screening(c)
+            if status == "scored":
+                scored += 1
+                rec = c.get("kimi_recommendation") or "Unknown"
+                tiers[rec] += 1
+            elif status == "skipped":
+                skipped += 1
+                skip_reasons[reason] += 1
+            else:
+                pending += 1
+
+        processed = scored + skipped
         return {
             "total": total,
             "scored": scored,
-            "unscored": total - scored,
-            "pct": (scored / total * 100) if total else 0,
+            "skipped": skipped,
+            "pending": pending,
+            "processed_pct": (processed / total * 100) if total else 0,
+            "skip_reasons": skip_reasons,
+            "tiers": tiers,
         }
 
     last_24h = [c for c in candidates if c.get("created_sgt") and c["created_sgt"] >= cutoff_24h]
@@ -967,12 +1036,44 @@ def build_report(
     p()
     p(f"*8. Screening Backlog (Kimi)*")
     p(f"```")
-    p(f"{'':10} {'Total':>5}  {'Scored':>6}  {'Unscored':>8}  {'Coverage':>8}")
+    p(f"{'':10} {'Total':>5}  {'Scored':>6}  {'Skipped':>7}  {'Pending':>7}  {'Processed':>9}")
     b24 = backlog["24h"]
     b7d = backlog["7d"]
-    p(f"{'Last 24h':10} {b24['total']:>5}  {b24['scored']:>6}  {b24['unscored']:>8}  {b24['pct']:>7.0f}%")
-    p(f"{'Last 7d':10} {b7d['total']:>5}  {b7d['scored']:>6}  {b7d['unscored']:>8}  {b7d['pct']:>7.0f}%")
+    p(f"{'Last 24h':10} {b24['total']:>5}  {b24['scored']:>6}  {b24['skipped']:>7}  {b24['pending']:>7}  {b24['processed_pct']:>8.0f}%")
+    p(f"{'Last 7d':10} {b7d['total']:>5}  {b7d['scored']:>6}  {b7d['skipped']:>7}  {b7d['pending']:>7}  {b7d['processed_pct']:>8.0f}%")
     p(f"```")
+
+    # Skip reasons (7d)
+    if b7d["skip_reasons"]:
+        p(f"```")
+        p(f"Skip reasons (7d):")
+        for reason, count in b7d["skip_reasons"].most_common():
+            p(f"  {reason:<25} {count:>4}")
+        p(f"```")
+
+    # Recommendation tier distribution (7d)
+    if b7d["tiers"]:
+        tier_order = [
+            "STRONG PROCEED",
+            "PROCEED",
+            "PROCEED WITH QUESTIONS",
+            "PROCEED WITH CAUTION",
+            "DO NOT PROCEED",
+        ]
+        max_tier = max(b7d["tiers"].values()) if b7d["tiers"] else 0
+        p(f"```")
+        p(f"Scored tiers (7d):")
+        for tier in tier_order:
+            count = b7d["tiers"].get(tier, 0)
+            if count > 0:
+                bar = _bar(count, max_tier, max_width=12)
+                p(f"  {tier:<25} {count:>4}  {bar}")
+        # Any tiers not in the expected list
+        for tier, count in b7d["tiers"].most_common():
+            if tier not in tier_order and count > 0:
+                bar = _bar(count, max_tier, max_width=12)
+                p(f"  {tier:<25} {count:>4}  {bar}")
+        p(f"```")
 
     return out.getvalue()
 
