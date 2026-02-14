@@ -19,8 +19,10 @@ from datetime import datetime, timedelta, timezone
 from io import StringIO
 from pathlib import Path
 
+import httpx
 import requests
 from dotenv import load_dotenv
+from openai import OpenAI
 
 # Path setup
 SKILL_ROOT = Path(__file__).resolve().parents[1]
@@ -989,6 +991,81 @@ def post_to_slack(report: str) -> None:
         print(f"Slack: failed to post — {e}")
 
 
+INSIGHTS_PROMPT = """\
+You are a recruitment operations analyst. Below is today's recruitment pipeline report.
+
+Analyze the data and identify exactly 3 areas we should investigate to ultimately hire more people. For each area:
+- Give it a short bold title with a relevant emoji
+- Write 2-3 sentences: what the data shows, why it matters, and what to investigate
+
+Be specific — cite actual numbers from the report. Keep it concise and actionable. Format for Slack (use *bold* not **bold**).
+
+Report:
+{report}
+"""
+
+
+def generate_insights(report: str) -> str | None:
+    """Call Kimi to analyze the pipeline report and return top 3 insights.
+
+    Returns formatted insights string, or None if MOONSHOT_API_KEY is not set.
+    """
+    moonshot_key = os.environ.get("MOONSHOT_API_KEY")
+    if not moonshot_key:
+        print("Insights: skipped (MOONSHOT_API_KEY not set)")
+        return None
+
+    transport = httpx.HTTPTransport(retries=3, http2=True)
+    http_client = httpx.Client(timeout=120.0, transport=transport, trust_env=False)
+
+    client = OpenAI(
+        api_key=moonshot_key,
+        base_url="https://api.moonshot.ai/v1",
+        http_client=http_client,
+    )
+
+    prompt = INSIGHTS_PROMPT.format(report=report)
+
+    print("Generating insights...", end="", flush=True)
+    stream = client.chat.completions.create(
+        model="kimi-k2.5",
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are a sharp recruitment operations analyst. "
+                    "You give concise, data-backed insights to help hiring teams improve."
+                ),
+            },
+            {"role": "user", "content": prompt},
+        ],
+        stream=True,
+    )
+
+    content_parts = []
+    for chunk in stream:
+        if (
+            hasattr(chunk.choices[0].delta, "reasoning_content")
+            and chunk.choices[0].delta.reasoning_content
+        ):
+            print("·", end="", flush=True)
+        if chunk.choices[0].delta.content:
+            content_parts.append(chunk.choices[0].delta.content)
+            print(".", end="", flush=True)
+    print(" done.")
+
+    raw = "".join(content_parts).strip()
+    if not raw:
+        return None
+
+    # Wrap in a section header
+    return (
+        "\n" + "─" * 50 + "\n\n"
+        "*9. 🔍 Key Insights — Top 3 Areas to Improve Hiring*\n\n"
+        + raw + "\n"
+    )
+
+
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -999,6 +1076,12 @@ def main():
         type=int,
         default=7,
         help="Window in days for 'new candidates' metric (default: 7)",
+    )
+    parser.add_argument(
+        "--insights",
+        action="store_true",
+        default=False,
+        help="Append AI-generated insights (top 3 areas to improve hiring)",
     )
     args = parser.parse_args()
 
@@ -1047,6 +1130,14 @@ def main():
         hiring_efficiency, daily_channel_volume,
     )
     print(report, end="")
+
+    # Generate LLM insights — auto on Mondays, or manually via --insights
+    run_insights = args.insights or datetime.now(SGT).weekday() == 0  # 0 = Monday
+    if run_insights:
+        insights = generate_insights(report)
+        if insights:
+            report += insights
+            print(insights)
 
     # Save to file with SGT timestamp
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)

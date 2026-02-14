@@ -22,10 +22,14 @@ python3.11 .claude/skills/check-recruit-status/workflows/check_recruit_status.py
 
 # Custom window
 python3.11 .claude/skills/check-recruit-status/workflows/check_recruit_status.py --days 14
+
+# With AI insights (Kimi analyzes data, appends top 3 areas to improve hiring)
+python3.11 .claude/skills/check-recruit-status/workflows/check_recruit_status.py --insights
 ```
 
 ## Requirements
 
 - Python 3.11+
 - Environment variables: `NOTION_KEY`, `NOTION_DB_ID`
-- Dependencies: `requests`, `python-dotenv`
+- Optional: `MOONSHOT_API_KEY` (required for `--insights`)
+- Dependencies: `requests`, `python-dotenv`, `openai`, `httpx`
