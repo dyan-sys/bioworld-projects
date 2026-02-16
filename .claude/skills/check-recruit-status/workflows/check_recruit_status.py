@@ -14,6 +14,7 @@ Usage:
 import argparse
 import os
 import sys
+import time
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from io import StringIO
@@ -35,6 +36,37 @@ load_dotenv(PROJECT_ROOT / ".env")
 NOTION_API_BASE = "https://api.notion.com/v1"
 SGT = timezone(timedelta(hours=8))  # Singapore Time (UTC+8)
 REPORTS_DIR = PROJECT_ROOT / "local-data" / "talent" / "pipeline_reports"
+
+# Retry settings for Notion API
+MAX_RETRIES = 3
+RETRY_BACKOFF = [5, 15]  # seconds between retry 1→2, 2→3
+RETRYABLE_EXCEPTIONS = (
+    requests.exceptions.ReadTimeout,
+    requests.exceptions.ConnectionError,
+)
+
+
+def _notion_request(method: str, url: str, headers: dict, timeout: int = 30, **kwargs) -> requests.Response:
+    """Make a Notion API request with retry on transient failures."""
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            response = requests.request(method, url, headers=headers, timeout=timeout, **kwargs)
+            if response.status_code == 429 or response.status_code >= 500:
+                if attempt < MAX_RETRIES:
+                    wait = RETRY_BACKOFF[attempt - 1]
+                    print(f"  [RETRY] HTTP {response.status_code}, waiting {wait}s (attempt {attempt}/{MAX_RETRIES})")
+                    time.sleep(wait)
+                    continue
+            response.raise_for_status()
+            return response
+        except RETRYABLE_EXCEPTIONS as exc:
+            if attempt < MAX_RETRIES:
+                wait = RETRY_BACKOFF[attempt - 1]
+                print(f"  [RETRY] {type(exc).__name__}, waiting {wait}s (attempt {attempt}/{MAX_RETRIES})")
+                time.sleep(wait)
+            else:
+                raise
+    raise RuntimeError("Exhausted retries")
 
 
 def load_env() -> tuple[str, str]:
@@ -84,8 +116,7 @@ def query_recent_candidates(headers: dict, db_id: str, since_days: int = 60) -> 
         if next_cursor:
             payload["start_cursor"] = next_cursor
 
-        response = requests.post(url, headers=headers, json=payload, timeout=30)
-        response.raise_for_status()
+        response = _notion_request("POST", url, headers=headers, json=payload)
         data = response.json()
 
         all_pages.extend(data.get("results", []))
@@ -100,8 +131,7 @@ def query_recent_candidates(headers: dict, db_id: str, since_days: int = 60) -> 
 def fetch_page(headers: dict, page_id: str) -> dict:
     """Fetch a single Notion page by ID."""
     url = f"{NOTION_API_BASE}/pages/{page_id}"
-    response = requests.get(url, headers=headers, timeout=30)
-    response.raise_for_status()
+    response = _notion_request("GET", url, headers=headers)
     return response.json()
 
 
