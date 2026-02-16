@@ -27,6 +27,7 @@ sys.path.insert(0, str(SKILL_ROOT))
 
 from libraries.pdf_tools import extract_text_from_url
 from libraries.rubric_registry import get_rubric_path
+from libraries.notion_dedup import check_previous_applications
 
 # Load .env file if present
 load_dotenv(PROJECT_ROOT / ".env")
@@ -172,6 +173,13 @@ def get_candidate_info(page: dict) -> dict:
                 # Get first related Post page ID
                 post_relation_id = relations[0].get("id")
 
+    # Get Email
+    email = None
+    if "Email" in properties:
+        email_prop = properties["Email"]
+        if email_prop.get("type") == "email":
+            email = email_prop.get("email")
+
     # Get Target Rate (rich_text field)
     target_rate = ""
     if "Target Rate" in properties:
@@ -184,6 +192,7 @@ def get_candidate_info(page: dict) -> dict:
     return {
         "page_id": page.get("id"),
         "name": name,
+        "email": email,
         "resume_url": resume_url,
         "post_relation_id": post_relation_id,
         "target_rate": target_rate,
@@ -650,10 +659,11 @@ def update_notion_rating_skip(notion_key: str, page_id: str, reason: str) -> Non
     response.raise_for_status()
 
 
-def process_candidate(candidate: dict, notion_key: str, moonshot_key: str, force: bool = False) -> dict:
+def process_candidate(candidate: dict, notion_key: str, db_id: str, moonshot_key: str, force: bool = False) -> dict:
     """Process a single candidate: extract, score, save, update."""
     name = candidate["name"]
     page_id = candidate["page_id"]
+    email = candidate.get("email")
     resume_url = candidate["resume_url"]
     post_relation_id = candidate.get("post_relation_id")
     clean_name = clean_name_for_filename(name)
@@ -665,6 +675,21 @@ def process_candidate(candidate: dict, notion_key: str, moonshot_key: str, force
         result["error"] = "No resume URL found"
         print(f"  [SKIP] No resume URL")
         return result
+
+    # Check for previous applications (same name or email in the DB)
+    prior_note = None
+    try:
+        print(f"  [DEDUP] Checking for previous applications...")
+        prior_note = check_previous_applications(
+            notion_key, db_id, name, page_id, candidate_email=email,
+        )
+        if prior_note:
+            print(f"  [DEDUP] *** PREVIOUS APPLICATION DETECTED ***")
+            result["previous_application"] = True
+        else:
+            print(f"  [DEDUP] No prior records found")
+    except Exception as e:
+        print(f"  [DEDUP] Check failed (proceeding anyway): {e}")
 
     try:
         # Get job opening from Post relation
@@ -744,6 +769,10 @@ def process_candidate(candidate: dict, notion_key: str, moonshot_key: str, force
         # Note fallback rubric usage in rationale
         if job_title and "(Default)" in job_title and job_opening:
             rationale = f"NOTE: Opening {job_opening} has no specific rubric — scored using standard Executive Partner rubric.\n\n{rationale}"
+
+        # Prepend previous application warning if detected
+        if prior_note:
+            rationale = f"{prior_note}\n\n{rationale}"
 
         print(f"  [UPDATE] Notion: Score={final_score}, Rec={recommendation}")
         update_notion_rating(notion_key, page_id, final_score, recommendation, rationale)
@@ -851,7 +880,7 @@ def main():
 
         for i, candidate in enumerate(batch, start + 1):
             print(f"\n[{i}/{total}] {candidate['name']}")
-            result = process_candidate(candidate, notion_key, moonshot_key, force=args.force)
+            result = process_candidate(candidate, notion_key, notion_db_id, moonshot_key, force=args.force)
             results.append(result)
 
     # Summary

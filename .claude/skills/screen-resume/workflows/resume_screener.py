@@ -25,6 +25,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[4]  # .claude/skills/screen-resu
 sys.path.insert(0, str(SKILL_ROOT))
 
 from libraries.pdf_tools import extract_text_from_url
+from libraries.notion_dedup import check_previous_applications
 
 # Load .env file if present
 load_dotenv(PROJECT_ROOT / ".env")
@@ -130,9 +131,17 @@ def get_candidate_info(page: dict) -> dict:
             elif file_obj.get("type") == "file":
                 resume_url = file_obj.get("file", {}).get("url")
 
+    # Get Email
+    email = None
+    if "Email" in properties:
+        email_prop = properties["Email"]
+        if email_prop.get("type") == "email":
+            email = email_prop.get("email")
+
     return {
         "page_id": page.get("id"),
         "name": name,
+        "email": email,
         "resume_url": resume_url,
     }
 
@@ -336,10 +345,11 @@ def update_notion_rating(
     response.raise_for_status()
 
 
-def process_candidate(candidate: dict, rubric: str, notion_key: str) -> dict:
+def process_candidate(candidate: dict, rubric: str, notion_key: str, db_id: str) -> dict:
     """Process a single candidate: extract, score, save, update."""
     name = candidate["name"]
     page_id = candidate["page_id"]
+    email = candidate.get("email")
     resume_url = candidate["resume_url"]
     clean_name = clean_name_for_filename(name)
 
@@ -350,6 +360,21 @@ def process_candidate(candidate: dict, rubric: str, notion_key: str) -> dict:
         result["error"] = "No resume URL found"
         print(f"  [SKIP] No resume URL")
         return result
+
+    # Check for previous applications (same name or email in the DB)
+    prior_note = None
+    try:
+        print(f"  [DEDUP] Checking for previous applications...")
+        prior_note = check_previous_applications(
+            notion_key, db_id, name, page_id, candidate_email=email,
+        )
+        if prior_note:
+            print(f"  [DEDUP] *** PREVIOUS APPLICATION DETECTED ***")
+            result["previous_application"] = True
+        else:
+            print(f"  [DEDUP] No prior records found")
+    except Exception as e:
+        print(f"  [DEDUP] Check failed (proceeding anyway): {e}")
 
     try:
         # Extract text from PDF
@@ -385,6 +410,10 @@ def process_candidate(candidate: dict, rubric: str, notion_key: str) -> dict:
         final_score = score_result.get("final_score", 0)
         recommendation = score_result.get("recommendation", "UNABLE TO ASSESS")
         rationale = format_detailed_rationale(score_result)
+        # Prepend previous application warning if detected
+        if prior_note:
+            rationale = f"{prior_note}\n\n{rationale}"
+
         print(f"  [UPDATE] Notion: Score={final_score}, Rec={recommendation}")
         update_notion_rating(notion_key, page_id, final_score, recommendation, rationale)
 
@@ -470,7 +499,7 @@ def main():
     results = []
     for i, candidate in enumerate(candidates, 1):
         print(f"\n[{i}/{len(candidates)}] {candidate['name']}")
-        result = process_candidate(candidate, rubric, notion_key)
+        result = process_candidate(candidate, rubric, notion_key, notion_db_id)
         results.append(result)
 
     # Summary
