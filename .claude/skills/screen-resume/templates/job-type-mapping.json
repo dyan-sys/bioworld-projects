@@ -25,6 +25,14 @@
         "monthly": { "min": 1500, "max": 2900 },
         "hourly": { "min": 8.5, "max": 20 }
       }
+    },
+    "CBCS": {
+      "title": "C&B Customer Experience Specialist",
+      "rubric": "resume-scorer-cbcs.md",
+      "rate_bounds": {
+        "monthly": { "min": 650, "max": 1500 },
+        "hourly": { "min": 4, "max": 10 }
+      }
     }
   },
   "default": {

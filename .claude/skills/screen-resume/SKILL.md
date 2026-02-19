@@ -29,6 +29,7 @@ The Kimi screener automatically selects the appropriate rubric based on the Open
 | EP | Executive Partner | `resume-scorer-v4.md` (default) |
 | EPP | EPP Product Associate | `resume-scorer-epp.md` |
 | CPL | Client Partnership Lead | `resume-scorer-cpl.md` |
+| CBCS | C&B Customer Experience Specialist | `resume-scorer-cbcs.md` |
 
 **How it works:**
 1. Screener reads the "Post" relation from candidate
