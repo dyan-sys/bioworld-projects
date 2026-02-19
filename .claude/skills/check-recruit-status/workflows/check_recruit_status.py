@@ -2,9 +2,9 @@
 Check Recruit Status Workflow
 
 Queries the Notion Candidates DB and prints a Slack-friendly terminal
-report with 7 sections: pipeline overview, daily EP applications by channel,
-candidate breakdown, EP conversion funnel, EP channel quality,
-hiring efficiency, and screening backlog.
+report with 7 sections: pipeline overview (Internal + External split),
+daily EP applications by channel, candidate breakdown, EP conversion funnel,
+EP channel quality, hiring efficiency, and screening backlog.
 
 Usage:
     python3.11 check_recruit_status.py
@@ -227,6 +227,35 @@ def extract_candidate(page: dict) -> dict:
         offer_name = offer_prop["status"].get("name", "")
         hired = offer_name == "Offer Accepted"
 
+    # Role Type (rollup from Opening → Role Type)
+    role_type = None
+    role_type_prop = properties.get("Role Type", {})
+    rt_type = role_type_prop.get("type")
+    if rt_type == "rollup":
+        rollup_inner = role_type_prop.get("rollup", {})
+        rollup_type = rollup_inner.get("type")
+        if rollup_type == "array":
+            arr = rollup_inner.get("array", [])
+            if arr:
+                item = arr[0]
+                item_type = item.get("type")
+                if item_type == "select" and item.get("select"):
+                    role_type = item["select"].get("name")
+                elif item_type == "formula":
+                    formula = item.get("formula", {})
+                    if formula.get("type") == "string" and formula.get("string"):
+                        role_type = formula["string"].strip() or None
+                elif item_type == "rich_text":
+                    texts = item.get("rich_text", [])
+                    if texts:
+                        role_type = texts[0].get("plain_text", "").strip() or None
+        elif rollup_type == "string":
+            val = rollup_inner.get("string", "")
+            if val:
+                role_type = val.strip() or None
+    elif rt_type == "select" and role_type_prop.get("select"):
+        role_type = role_type_prop["select"].get("name")
+
     return {
         "name": name,
         "created_time": created_time,
@@ -243,6 +272,7 @@ def extract_candidate(page: dict) -> dict:
         "r2_conducted": r2_conducted,
         "alignment_conducted": alignment_conducted,
         "hired": hired,
+        "role_type": role_type,
     }
 
 
@@ -647,8 +677,8 @@ def compute_screening_backlog(candidates: list[dict]) -> dict:
     }
 
 
-def compute_hiring_efficiency(candidates: list[dict]) -> dict:
-    """Compute hiring efficiency metrics for 30d, 60d, and 90d windows.
+def compute_hiring_efficiency(candidates: list[dict], opening_names: dict[str, str]) -> dict:
+    """Compute EP hiring efficiency metrics for 30d, 60d, and 90d windows.
 
     Counts R1 interviews, R2 interviews, alignment (Decision R) interviews,
     and hires (Offer Accepted) per window, then derives per-hire ratios
@@ -662,6 +692,8 @@ def compute_hiring_efficiency(candidates: list[dict]) -> dict:
         "90d": today_start - timedelta(days=90),
     }
 
+    role_post_ids = _get_ep_post_ids(opening_names)
+
     COST_R1 = 5
     COST_R2 = 10
     COST_ALIGNMENT = 80
@@ -671,6 +703,7 @@ def compute_hiring_efficiency(candidates: list[dict]) -> dict:
         group = [
             c for c in candidates
             if c.get("created_sgt") and cutoff <= c["created_sgt"] < today_start
+            and c.get("post_relation_id") in role_post_ids
         ]
 
         r1_count = sum(1 for c in group if c["r1_conducted"])
@@ -727,39 +760,50 @@ def _pct(num: int, denom: int) -> str:
     return f"{val:.2g}%"
 
 
+def _render_pipeline_section(p, label: str, pipeline: dict, days: int) -> None:
+    """Render a single pipeline overview section."""
+    l24h_trend = _trend(pipeline['24h'], pipeline['prior_24h'])
+    day_trend = _trend(pipeline["yesterday"], pipeline["day_before"])
+    window_trend = _trend(pipeline["in_window"], pipeline["in_prior_window"])
+    month_trend = _trend(pipeline["in_30d"], pipeline["in_prior_30d"])
+
+    p(f"*{label}*")
+    p(f"```")
+    p(f"Last 24h     {pipeline['24h']:>5}  (prior 24h: {pipeline['prior_24h']})    {l24h_trend}")
+    p(f"Yesterday    {pipeline['yesterday']:>5}  (day before: {pipeline['day_before']})  {day_trend}")
+    p(f"Last {days}d      {pipeline['in_window']:>5}  (prior {days}d: {pipeline['in_prior_window']})    {window_trend}")
+    p(f"Last 30d     {pipeline['in_30d']:>5}  (prior 30d: {pipeline['in_prior_30d']})   {month_trend}")
+    p(f"```")
+
+
 def build_report(
     days: int,
-    pipeline: dict,
+    pipeline_int: dict,
     candidate_breakdown: list[tuple[str, int]],
     backlog: dict,
     conversion_funnel: dict | None = None,
     channel_quality: list[dict] | None = None,
     hiring_efficiency: dict | None = None,
     daily_channel_volume: dict | None = None,
+    pipeline_ext: dict | None = None,
 ) -> str:
     """Build the full Slack-friendly report."""
     now_sgt = datetime.now(SGT)
     timestamp_str = now_sgt.strftime("%Y-%m-%d %H:%M SGT")
-
-    day_trend = _trend(pipeline["yesterday"], pipeline["day_before"])
-    window_trend = _trend(pipeline["in_window"], pipeline["in_prior_window"])
-    month_trend = _trend(pipeline["in_30d"], pipeline["in_prior_30d"])
 
     out = StringIO()
     p = lambda line="": print(line, file=out)
 
     p(f"*Recruitment Pipeline* | {timestamp_str}")
 
-    # 1. Pipeline Overview (full completed days only)
+    # 1. Pipeline Overview — Internal
     p()
-    p(f"*1. Pipeline Overview*")
-    p(f"```")
-    l24h_trend = _trend(pipeline['24h'], pipeline['prior_24h'])
-    p(f"Last 24h     {pipeline['24h']:>5}  (prior 24h: {pipeline['prior_24h']})    {l24h_trend}")
-    p(f"Yesterday    {pipeline['yesterday']:>5}  (day before: {pipeline['day_before']})  {day_trend}")
-    p(f"Last {days}d      {pipeline['in_window']:>5}  (prior {days}d: {pipeline['in_prior_window']})    {window_trend}")
-    p(f"Last 30d     {pipeline['in_30d']:>5}  (prior 30d: {pipeline['in_prior_30d']})   {month_trend}")
-    p(f"```")
+    _render_pipeline_section(p, "1. Pipeline Overview (Internal)", pipeline_int, days)
+
+    # 1b. Pipeline Overview — External
+    if pipeline_ext:
+        p()
+        _render_pipeline_section(p, "1b. Pipeline Overview (External)", pipeline_ext, days)
 
     # 2. Daily EP Applications by Channel (last 7d)
     if daily_channel_volume and daily_channel_volume["channels"]:
@@ -1018,17 +1062,47 @@ def build_report(
 
 
 def post_to_slack(report: str) -> None:
-    """Post report to Slack via Incoming Webhook. Skips if SLACK_WEBHOOK_URL not set."""
+    """Post report to Slack via Incoming Webhook. Splits into chunks if too long.
+
+    Slack truncates messages around 4000 chars. We split on section boundaries
+    (lines starting with *N.) to keep each chunk under the limit.
+    """
     webhook_url = os.environ.get("SLACK_WEBHOOK_URL")
     if not webhook_url:
         return
 
-    try:
-        resp = requests.post(webhook_url, json={"text": report}, timeout=15)
-        resp.raise_for_status()
-        print("Slack: posted successfully.")
-    except requests.RequestException as e:
-        print(f"Slack: failed to post — {e}")
+    MAX_LEN = 3800  # leave headroom below Slack's ~4000 char limit
+
+    chunks = _split_report_for_slack(report, MAX_LEN)
+    for i, chunk in enumerate(chunks, 1):
+        try:
+            resp = requests.post(webhook_url, json={"text": chunk}, timeout=15)
+            resp.raise_for_status()
+        except requests.RequestException as e:
+            print(f"Slack: failed to post chunk {i}/{len(chunks)} — {e}")
+            return
+    print(f"Slack: posted successfully ({len(chunks)} message{'s' if len(chunks) > 1 else ''}).")
+
+
+def _split_report_for_slack(report: str, max_len: int) -> list[str]:
+    """Split report into chunks on section boundaries (*N. or *Nb.)."""
+    import re
+
+    # Split on lines that start a new section heading (e.g. *1. or *1b.)
+    parts = re.split(r'(?=^\*\d+[a-z]?\. )', report, flags=re.MULTILINE)
+
+    chunks: list[str] = []
+    current = ""
+    for part in parts:
+        if len(current) + len(part) > max_len and current:
+            chunks.append(current.rstrip())
+            current = ""
+        current += part
+
+    if current.strip():
+        chunks.append(current.rstrip())
+
+    return chunks if chunks else [report]
 
 
 INSIGHTS_PROMPT = """\
@@ -1153,20 +1227,26 @@ def main():
     # Resolve opening names and channels from Post relations
     opening_names, post_channels = resolve_post_details(headers, candidates)
 
+    # Split candidates by role type for pipeline overview
+    internal_candidates = [c for c in candidates if c.get("role_type") == "Internal"]
+    external_candidates = [c for c in candidates if c.get("role_type") == "External"]
+
     # Compute metrics
-    pipeline = compute_pipeline_overview(candidates, args.days)
+    pipeline_int = compute_pipeline_overview(internal_candidates, args.days)
+    pipeline_ext = compute_pipeline_overview(external_candidates, args.days)
     candidate_breakdown = compute_candidate_breakdown(candidates, opening_names)
     daily_channel_volume = compute_daily_channel_volume(candidates, opening_names, post_channels, days=args.days)
     conversion_funnel = compute_conversion_funnel(candidates, opening_names)
     channel_quality = compute_channel_quality(candidates, opening_names, post_channels)
-    hiring_efficiency = compute_hiring_efficiency(candidates)
+    hiring_efficiency = compute_hiring_efficiency(candidates, opening_names)
     backlog = compute_screening_backlog(candidates)
 
     # Build and print report
     report = build_report(
-        args.days, pipeline, candidate_breakdown, backlog,
+        args.days, pipeline_int, candidate_breakdown, backlog,
         conversion_funnel, channel_quality,
         hiring_efficiency, daily_channel_volume,
+        pipeline_ext,
     )
     print(report, end="")
 
