@@ -19,6 +19,10 @@ TEMPLATE_REGISTRY = {
     ("epp", "jobstreet"): {"file": "EPP-Jobstreet.md"},
     ("epp", "facebook"):  {"file": "EPP-Facebook.md"},
     ("epp", "internal"):  {"file": "EPP-Internal.md"},
+    ("cbcs", "olj"):       {"file": "CBCS-OLJ.md"},
+    ("cbcs", "jobstreet"): {"file": "CBCS-Jobstreet.md"},
+    ("260001", "olj"):       {"file": "CBCS-OLJ.md"},
+    ("260001", "jobstreet"): {"file": "CBCS-Jobstreet.md"},
 }
 
 DEFAULT_TEMPLATE = "_default.md"
