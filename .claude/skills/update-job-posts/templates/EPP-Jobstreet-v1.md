@@ -5,13 +5,13 @@
 - Workplace option: Fully remote
 - Work type: {{employment_type}}
 - Pay type: Monthly
-- Pay range (Currency): MYR
+- Pay range (Currency): PHP
 - Pay range: {{advertised_range_local}}
 - Pay shown on ad: Show range on the ad
 
 # Job Summary
 
-Remote eCommerce Ops role | Coordinate production & China vendors for a scaling 8-figure brand | high growth opportunity with direct founder interactions
+Active Opening | Hire by {{hiring_target_date_short}} | Real Impact from Day 1, working with stable, fast growing Ecomm client (Physical Product)
 
 ---
 
@@ -19,8 +19,9 @@ Remote eCommerce Ops role | Coordinate production & China vendors for a scaling 
 
 ## {{job_title}}
 
-{{employment_type}} | Remote | Starting rate {{advertised_range_local}}
-Malaysian applicants preferred | Conversational Mandarin skills required
+💼 {{employment_type}} | Remote | Starting rate {{advertised_range}}
+📍 Malaysian applicants preferred | Conversational Mandarin skills required
+🗓 Shortlisted candidates may be hired by {{hiring_target_date}}
 
 ---
 
@@ -30,25 +31,29 @@ This role is ideal for candidates who thrive in **high-trust, hands-on operation
 
 ---
 
-## About the Client
+## ✨ About Ally
 
-You'll join a women-led intimate wellness and personal care brand based in Hong Kong, redefining how women experience pleasure, confidence, and comfort. The brand has grown from zero to 8 figures in annual revenue and is scaling rapidly across the US, UK, EU, and beyond — sourcing products from China. You'll work directly with the CEO/COO as their operations coordinator, managing production workflows, vendor follow-ups, and reporting.
+Ally helps founders and leaders scale themselves before they scale their companies.
 
-This role is placed through Ally, which partners Executive Partners and Operations Coordinators with high-growth eCommerce businesses.
+Founded by leaders who have scaled and operated 8-figure+ businesses, we partner with top operators and support clients including a NASDAQ-listed company.
+
+We match Executive Partners and Operation Executives with fast-growing e-commerce and creative businesses to bring structure, clarity, and execution leverage — blending human judgment with modern AI systems.
+
+We're not a traditional VA agency. We're a modern operating partner helping global teams run smarter and faster.
 
 ---
 
-## The Role
+## 🧭 The Role
 
 As an **{{job_title}}**, you will support the CEO or COO in a scaling, eight-digit eCommerce brand, managing product operations, reporting, and follow-ups across teams, including working with vendors in China.
 
-You'll operate as the production and operations coordinator for the brand — owning workflows end-to-end and reporting directly to the CEO/COO.
+This is **not a standard VA role**. You will ensure products, reports, and processes move efficiently and accurately so clients and teams always have the information and support they need.
 
 You will be the right-hand operator for the production workflow, tracking updates, metrics, and maintaining operational clarity.
 
 ---
 
-## What You'll Do
+## 📋 What You'll Do
 
 1. **Coordinate Product & Production**
    - Follow up with internal and external teams to ensure timely product updates
@@ -65,7 +70,7 @@ You will be the right-hand operator for the production workflow, tracking update
 
 ---
 
-## What Success Looks Like
+## 📈 What Success Looks Like
 
 **30 Days:** Independently tracking product updates and reporting numbers accurately.
 
@@ -75,9 +80,9 @@ You will be the right-hand operator for the production workflow, tracking update
 
 ---
 
-## What We're Looking For
+## 🎯 What We're Looking For
 
-- **Language Skills:** English fluent; conversational Mandarin required — you'll communicate directly with product vendors and suppliers in China via WeChat and email.
+- **Language Skills:** English fluent; conversational Mandarin required (can read, write, and speak)
 - **Experience:** Previous experience supporting eCommerce operations preferred, especially coordinating with suppliers or vendors in China
 - **Operational Mindset:** Strong follow-up, reporting, and execution skills; ability to chase and organize multiple threads
 - **Soft Skills:** Proactive, reliable, and detail-oriented
@@ -86,16 +91,14 @@ You will be the right-hand operator for the production workflow, tracking update
 
 ## Why You'll Love Working With Ally
 
-- {{advertised_range_local}} (paid monthly)
-- Fully remote — work from anywhere in Malaysia, Monday–Friday, Asia hours
-- Work directly with the CEO/COO of a scaling international eCommerce brand
-- Career growth into Operations Lead / Operations Manager as the brand scales
-- Exposure to international supply chain, China sourcing, and production management
-- Continuous career and skills training provided by Ally
+- Competitive pay: {{advertised_range}}
+- {{employment_type}} remote role with clear schedule: {{target_collab_window}}, Monday–Friday
+- Work directly with founders and leadership in a high-impact operations role
+- Career growth opportunity: learn operational and production management in fast-growing eCommerce brands
 
 ---
 
-### JOB DETAILS
+### 💼 JOB DETAILS
 
 **Employment Type:** {{employment_type}} (40 hours per week)
 
@@ -103,7 +106,7 @@ You will be the right-hand operator for the production workflow, tracking update
 
 **Working Hours:** {{target_collab_window}}
 
-**Pay:** Starting at {{advertised_range_local}}
+**Pay:** Starting at {{advertised_range}}
 
 ---
 
