@@ -30,7 +30,7 @@
       "title": "C&B Customer Experience Specialist",
       "rubric": "resume-scorer-cbcs.md",
       "rate_bounds": {
-        "monthly": { "min": 650, "max": 1500 },
+        "monthly": { "min": 590, "max": 1500 },
         "hourly": { "min": 4, "max": 10 }
       }
     }

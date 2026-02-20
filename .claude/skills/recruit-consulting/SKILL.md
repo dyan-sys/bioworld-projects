@@ -131,6 +131,33 @@ After delivery, update the client's **status file** so you always have a clear p
 - The `follow_ups` array is a log of nudges sent, so you don't double-send
 - The `blocked` array tracks downstream work waiting on upstream confirms
 
+## Pipeline Update (Client-Facing)
+
+Generate a draft pipeline status update for a client role. Queries Notion for candidates tagged to the role, groups by screening tier, and outputs a markdown draft.
+
+```bash
+# Generate CBCS pipeline update for Care & Bloom
+python3.11 .claude/skills/recruit-consulting/workflows/client_pipeline_update.py \
+    --client care-n-bloom --role CBCS
+
+# Custom lookback window (default 30 days)
+python3.11 .claude/skills/recruit-consulting/workflows/client_pipeline_update.py \
+    --client care-n-bloom --role CBCS --days 14
+```
+
+**Output:** `local-data/client-consulting/{client}/pipeline-updates/{date}_{role}.md`
+
+**How it works:**
+1. Queries Notion for candidates with Kimi ratings in the lookback window
+2. Resolves each candidate's Post → Opening to identify the role
+3. Filters by role code (e.g., `CBCS` matches Opening names containing "CBCS")
+4. Groups into tiers (Strong Proceed / Proceed / Proceed with Questions / Proceed with Caution / Do Not Proceed)
+5. Renders a draft from `templates/pipeline-update.md`
+
+**Important:** The draft is a starting point. Review and edit before sending — add context, adjust tone, attach candidate profile links.
+
+**Adding new clients:** Add the client to `templates/client-config.json` with `display_name` and other fields.
+
 ## Candidate Intake Form Blurb
 
 When setting up application forms for a client role, adapt the standard Ally intake blurb for the client's brand. The template and adaptation guide are in `templates/candidate-intake-form-blurb.md`.
@@ -230,11 +257,13 @@ local-data/client-consulting/
     ├── jd/
     │   ├── original.md              # Client's original JD
     │   └── improved.md              # Improved version (synced from Notion)
-    └── interviews/
-        ├── r1-original.md           # Original R1 template
-        ├── r1-improved.md           # Improved R1 (synced from Notion)
-        ├── r2-original.md           # Original R2 template
-        └── r2-improved.md           # Improved R2 (synced from Notion)
+    ├── interviews/
+    │   ├── r1-original.md           # Original R1 template
+    │   ├── r1-improved.md           # Improved R1 (synced from Notion)
+    │   ├── r2-original.md           # Original R2 template
+    │   └── r2-improved.md           # Improved R2 (synced from Notion)
+    └── pipeline-updates/
+        └── {date}_{role}.md         # Pipeline update drafts
 ```
 
 ## Integration with Existing Skills
@@ -256,6 +285,10 @@ local-data/client-consulting/
 **Analysis Frameworks (optional, for formal reviews):**
 - `templates/jd-analysis-framework.md` - Job description evaluation criteria
 - `templates/interview-analysis-framework.md` - Interview template evaluation criteria
+
+**Pipeline Updates:**
+- `workflows/client_pipeline_update.py` - Pipeline update draft generator
+- `templates/pipeline-update.md` - Client-facing update note template
 
 **Reference Data:**
 - `templates/cs-competency-framework.json` - CS role competencies by tier
