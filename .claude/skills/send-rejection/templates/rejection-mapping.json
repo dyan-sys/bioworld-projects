@@ -1,0 +1,25 @@
+{
+  "description": "Maps candidate status values to rejection email templates and receipt prefixes",
+  "status_field": "Screener",
+  "interactions_status_field": "Rec Proceed to Next R?",
+  "interactions_status_values": ["No"],
+  "guard_field": "",
+  "guard_value": "",
+  "candidate_relation_field": "👥 Candidates DB",
+  "candidates_mappings": {
+    "Rejected (R1)": {
+      "label": "R1 Rejection",
+      "template": "R1-Rejection.md",
+      "receipt_prefix": "R1-Rejection"
+    },
+    "Rejected (R2)": {
+      "label": "R2 Rejection",
+      "template": "R2-Rejection.md",
+      "receipt_prefix": "R2-Rejection"
+    }
+  },
+  "interactions_template": {
+    "template": "R1-Rejection.md",
+    "receipt_prefix": "R1-Rejection"
+  }
+}

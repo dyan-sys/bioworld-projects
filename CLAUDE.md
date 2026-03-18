@@ -37,6 +37,7 @@ pip install -r requirements.txt
 | Recruit Consulting | `.claude/skills/recruit-consulting/` | AI-assisted review of client JDs and interview templates for CS roles. Interactive process, no Python workflows. |
 | Adapt Client JD | `.claude/skills/adapt-client-jd/` | Adapts client JDs for specific job platforms (OLJ, Jobstreet) with format rules. |
 | Background Check | `.claude/skills/background-check/` | Screens candidates' online presence via Serper.dev (Google Search) + Gemini analysis. On-demand only. |
+| Process EP Invoices | `.claude/skills/process-ep-invoices/` | Reconciles EP invoice submissions (Google Form) against time tracker sheet, flags mismatches to Slack, submits matched payments via Airwallex API. Runs days 1–3 of each month. Trigger: "Run EP invoices" (Step 1) or "Process invoices on Airwallex" (Step 2). |
 | Track AI Spend | `.claude/skills/track-ai-spend/` | Parses billing emails from Gmail, extracts AUD amounts, upserts monthly rows to Notion "AI Spend" DB. Runs monthly. |
 | Markdown to Slides | `.claude/skills/md-to-slides/` | Converts `.md` slide files into styled Google Slides presentations via template deck cloning. On-demand. |
 | CS Digest | `.claude/skills/cs-digest/` | Generates structured digest reports from mixed CS text files via Kimi AI. On-demand only. |

@@ -1,0 +1,45 @@
+{
+  "description": "Configuration for EP invoice reconciliation and payment processing",
+  "time_tracker": {
+    "sheet_id": "1JSNZAluuoOJ_dEps2NpAv_nzmEAzXkfbbWbJQSI1m30",
+    "tab_name": "REVIEW_MonthlyBilling",
+    "header_row": 12,
+    "columns": {
+      "contractor_code": "Contractor Code",
+      "first_name": "First Name",
+      "last_name": "Last Name"
+    }
+  },
+  "invoice_submissions": {
+    "sheet_id": "1Ek5WS98hIqh5UiLcN7kEqpJPLfrbxiVr85hW5iMqkSI",
+    "tab_name": "Invoice Submissions",
+    "header_row": 1,
+    "columns": {
+      "contractor_code": "Contractor Code",
+      "full_name": "Full Name",
+      "email": "Email Address",
+      "amount": "Invoice Amount (USD)",
+      "period": "Invoice Month (YYYY-MM)"
+    }
+  },
+  "matching": {
+    "amount_tolerance": 0.01,
+    "excluded_contractors": ["CollaoN", "PisoP"]
+  },
+  "slack": {
+    "webhook_url_env": "SLACK_WEBHOOK_URL_JARVIS",
+    "tag": "@Dyan"
+  },
+  "airwallex": {
+    "environment": "production",
+    "currency": "USD",
+    "beneficiary_match_field": "nickname",
+    "purpose_of_transfer": "professional_business_services",
+    "reference_template": "CLI-{contractor_code}-{period_compact}-EP",
+    "ep_overrides": {
+      "LaxamanaS": {
+        "reference_template": "CORE-LAXAMANAS-{period_compact}-CPL"
+      }
+    }
+  }
+}
