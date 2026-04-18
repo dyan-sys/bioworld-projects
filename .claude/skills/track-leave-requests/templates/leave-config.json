@@ -1,0 +1,29 @@
+{
+  "description": "Configuration for EP leave request tracking",
+  "hris_sheet": {
+    "sheet_id": "1JSNZAluuoOJ_dEps2NpAv_nzmEAzXkfbbWbJQSI1m30",
+    "tab_name": "Leave_Tracker",
+    "header_row": 1,
+    "columns": {
+      "timestamp": "Timestamp",
+      "email": "Email Address",
+      "leave_type": "Type of Leave",
+      "leave_dates_hours": "Leave Dates and Hours Off",
+      "notes": "Notes (optional)",
+      "informed_cpl": "Have you informed CPL then your client about this leave?",
+      "status": "Status"
+    },
+    "status_accepted_value": "Accepted"
+  },
+  "leave_types": {
+    "deducted": ["Planned Leave", "Emergency Leave"],
+    "paid": ["Paid Holiday Leave"]
+  },
+  "calendar": {
+    "calendar_id": "c_e1cfcc96b3c8384c1f11b5dca69a6d19b6e33334ec16f198ad0e5097d3d83d73@group.calendar.google.com"
+  },
+  "slack": {
+    "webhook_url_env": "SLACK_WEBHOOK_URL_PEOPLE_OPS",
+    "tag": "@Dyan"
+  }
+}

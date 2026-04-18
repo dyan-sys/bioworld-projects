@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Overview — Bioworld Content Hub{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="mb-8">
+  <h1 class="text-2xl font-bold text-bw-dark">Overview</h1>
+  <p class="text-bw-muted text-sm mt-1">Your LinkedIn content pipeline at a glance</p>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
+  {% set stat_items = [
+    ("Discovered", notion_stats.get("Discovered", 0), "status-discovered"),
+    ("Shortlisted", notion_stats.get("Shortlisted", 0), "status-shortlisted"),
+    ("Draft Ready", notion_stats.get("Draft Ready", 0), "status-draft-ready"),
+    ("Pending", notion_stats.get("Pending Approval", 0), "status-pending-approval"),
+    ("Approved", notion_stats.get("Approved", 0), "status-approved"),
+    ("Published", notion_stats.get("Published", 0), "status-published"),
+  ] %}
+  {% for label, count, cls in stat_items %}
+  <div class="bg-white border border-bw-border rounded-xl p-4 shadow-sm">
+    <div class="text-2xl font-bold text-bw-dark mb-1">{{ count }}</div>
+    <div class="text-[11px]"><span class="{{ cls }} px-2 py-0.5 rounded-full font-medium">{{ label }}</span></div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Main grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+
+  <!-- Posts table (2/3) -->
+  <div class="lg:col-span-2 bg-white border border-bw-border rounded-xl shadow-sm">
+    <div class="px-5 py-4 border-b border-bw-border flex items-center justify-between">
+      <div>
+        <h2 class="text-sm font-semibold text-bw-dark">Posts Pipeline</h2>
+        <p class="text-[11px] text-bw-muted mt-0.5">Articles in Notion — scheduled, approved, and in review</p>
+      </div>
+      <a href="/drafts" class="text-[12px] text-bw-teal hover:text-bw-teal-dark font-medium transition">View all &rarr;</a>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-[13px]">
+        <thead>
+          <tr class="border-b border-bw-border text-left text-[11px] uppercase tracking-wider text-bw-muted">
+            <th class="px-5 py-3 font-medium">Title</th>
+            <th class="px-5 py-3 font-medium">Company</th>
+            <th class="px-5 py-3 font-medium">Status</th>
+            <th class="px-5 py-3 font-medium">Score</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-bw-border/50">
+          {% for article in notion_articles[:12] %}
+          <tr class="hover:bg-bw-teal-50 transition">
+            <td class="px-5 py-3">
+              <div class="font-medium text-bw-dark truncate max-w-[280px]" title="{{ article.title }}">{{ article.title }}</div>
+              <div class="text-[11px] text-bw-muted">{{ article.date }}</div>
+            </td>
+            <td class="px-5 py-3 text-[12px] text-bw-text-light">{{ article.company }}</td>
+            <td class="px-5 py-3">
+              <span class="status-{{ article.status|lower|replace(' ', '-') }} px-2 py-0.5 rounded-full text-[11px] font-medium">{{ article.status }}</span>
+            </td>
+            <td class="px-5 py-3 text-bw-muted">{{ article.score }}/10</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="4" class="px-5 py-10 text-center text-bw-muted text-sm">
+              No articles in the pipeline yet.<br>
+              <a href="/feed" class="text-bw-teal hover:underline mt-1 inline-block">Browse the Feed to discover content &rarr;</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Right column -->
+  <div class="space-y-4">
+
+    <!-- Scan workspace -->
+    <div class="bg-white border border-bw-border rounded-xl p-5 shadow-sm">
+      <h3 class="text-sm font-semibold text-bw-dark mb-3">Workspace</h3>
+      <div class="space-y-2 text-[13px]">
+        <div class="flex justify-between"><span class="text-bw-muted">Feed articles</span><span class="font-medium text-bw-dark">{{ ws_count }}</span></div>
+        <div class="flex justify-between"><span class="text-bw-muted">Drafts ready</span><span class="font-medium text-bw-dark">{{ ws_drafts }}</span></div>
+        {% if scan_engine %}
+        <div class="flex justify-between"><span class="text-bw-muted">Last scan</span><span class="font-medium text-[12px] text-bw-text-light">{{ scan_engine }}</span></div>
+        {% endif %}
+      </div>
+      <div class="mt-4 flex gap-2">
+        <button onclick="triggerScan('serper')" class="scan-btn flex-1 px-3 py-2.5 bg-bw-teal text-white text-[12px] font-semibold rounded-lg hover:bg-bw-teal-dark transition">Scan with Serper</button>
+        <button onclick="triggerScan('tavily')" class="scan-btn flex-1 px-3 py-2.5 bg-bw-dark text-white text-[12px] font-semibold rounded-lg hover:opacity-90 transition">Scan with Tavily</button>
+      </div>
+    </div>
+
+    <!-- Schedule -->
+    <div class="bg-white border border-bw-border rounded-xl p-5 shadow-sm">
+      <h3 class="text-sm font-semibold text-bw-dark mb-3">Schedule</h3>
+      <div class="space-y-3 text-[13px]">
+        <div class="flex items-start gap-3">
+          <div class="w-2 h-2 rounded-full bg-bw-teal mt-1.5 flex-shrink-0"></div>
+          <div>
+            <div class="font-medium text-bw-dark">Next publish</div>
+            <div class="text-bw-muted text-[12px]">{{ next_publish }} &middot; 10 AM HKT</div>
+          </div>
+        </div>
+        <div class="flex items-start gap-3">
+          <div class="w-2 h-2 rounded-full bg-bw-border mt-1.5 flex-shrink-0"></div>
+          <div>
+            <div class="font-medium text-bw-dark">Weekly cadence</div>
+            <div class="text-bw-muted text-[12px]">Mon scan &rarr; Tue publish</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="bg-white border border-bw-border rounded-xl p-5 shadow-sm">
+      <h3 class="text-sm font-semibold text-bw-dark mb-3">Quick Actions</h3>
+      <div class="space-y-1.5">
+        <a href="/feed" class="block px-3 py-2 text-[12px] font-medium text-bw-text-light hover:text-bw-teal hover:bg-bw-teal-50 rounded-lg transition">Browse feed &rarr;</a>
+        <a href="/articles" class="block px-3 py-2 text-[12px] font-medium text-bw-text-light hover:text-bw-teal hover:bg-bw-teal-50 rounded-lg transition">Create content &rarr;</a>
+        <button onclick="sendForApproval()" class="w-full text-left px-3 py-2 text-[12px] font-medium text-bw-text-light hover:text-bw-teal hover:bg-bw-teal-50 rounded-lg transition">Send for approval &rarr;</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function triggerScan(engine) {
+  const btns = document.querySelectorAll('.scan-btn');
+  btns.forEach(b => { b.disabled = true; b.style.opacity = '0.5'; b.textContent = 'Scanning...'; });
+  try {
+    const res = await fetch(`/api/scan/${engine}`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed');
+    const poll = setInterval(async () => {
+      const sr = await fetch('/api/workflow-status');
+      const data = await sr.json();
+      if (!data.scan?.running) { clearInterval(poll); location.reload(); }
+    }, 3000);
+  } catch (e) {
+    btns.forEach((b, i) => { b.disabled = false; b.style.opacity = '1'; });
+    btns[0].textContent = 'Scan with Serper'; btns[1].textContent = 'Scan with Tavily';
+    alert('Scan failed. Check your API keys.');
+  }
+}
+async function sendForApproval() {
+  if (!confirm('Send all Draft Ready posts to Slack for Ivan\\'s review?')) return;
+  const res = await fetch('/api/send-for-approval', { method: 'POST' });
+  const data = await res.json();
+  if (data.success) { alert(`Sent ${data.sent} draft(s) for approval.`); location.reload(); }
+  else { alert(data.error || 'Failed.'); }
+}
+</script>
+{% endblock %}

@@ -38,7 +38,11 @@ pip install -r requirements.txt
 | Adapt Client JD | `.claude/skills/adapt-client-jd/` | Adapts client JDs for specific job platforms (OLJ, Jobstreet) with format rules. |
 | Background Check | `.claude/skills/background-check/` | Screens candidates' online presence via Serper.dev (Google Search) + Gemini analysis. On-demand only. |
 | Process EP Invoices | `.claude/skills/process-ep-invoices/` | Reconciles EP invoice submissions (Google Form) against time tracker sheet, flags mismatches to Slack, submits matched payments via Airwallex API. Runs days 1–3 of each month. Trigger: "Run EP invoices" (Step 1) or "Process invoices on Airwallex" (Step 2). |
+| Review Airwallex Spend | `.claude/skills/review-airwallex-spend/` | Pulls all Airwallex transactions (cards, wallet, transfers) over a configurable window, groups by vendor, flags recurring subscriptions, writes review CSVs. On-demand. Trigger: "Review Airwallex spend". |
+| Track Leave Requests | `.claude/skills/track-leave-requests/` | Reads new EP leave submissions from Ally HRIS Google Sheet, posts to #people-ops-private Slack, adds to Team Calendar, marks as Accepted. On-demand. Trigger: "Process leave requests". |
 | Track AI Spend | `.claude/skills/track-ai-spend/` | Parses billing emails from Gmail, extracts AUD amounts, upserts monthly rows to Notion "AI Spend" DB. Runs monthly. |
+| Code Jam | `.claude/skills/code-jam/` | Generates Google Slides decks for Claude Code Jam sessions + sets up Notion project tracker. Parameterized by jam number and EA names. |
+| Create Playbook | `.claude/skills/create-playbook/` | Generates a branded internal HTML playbook dashboard — dark galactic theme, Ally brand, Lucide icons, Netlify Identity login, internal/external SOP access control. Trigger: "Create a playbook for [team]". |
 | Markdown to Slides | `.claude/skills/md-to-slides/` | Converts `.md` slide files into styled Google Slides presentations via template deck cloning. On-demand. |
 | CS Digest | `.claude/skills/cs-digest/` | Generates structured digest reports from mixed CS text files via Kimi AI. On-demand only. |
 | Daily Pepper | `.claude/skills/daily-pepper/` | Morning calendar summary bot. Fetches Google Calendar events, sends Slack DM overview with free blocks. Runs daily 7 AM SGT. |
@@ -49,6 +53,7 @@ pip install -r requirements.txt
 | Mac Status | `.claude/skills/mac-status/` | Mac health diagnostic — memory, swap, disk, top processes, Ally job status. |
 | Pepper | `.claude/skills/pepper/` | Personal EA — general assistance drawing on accumulated learnings. |
 | YouTube Summarizer | `.claude/skills/youtube-summarizer/` | Summarizes YouTube videos and extracts insights from playlists. |
+| Bioworld LinkedIn | `.claude/skills/bioworld-linkedin/` | Weekly LinkedIn automation for Bioworld Ventures — news scanning, draft generation, Ivan approval, auto-publishing. Trigger: "Scan Bioworld news", "Generate Bioworld drafts", "Publish Bioworld LinkedIn". |
 
 For data architecture, scheduling, and env var details, see `REFERENCE.md`.
 

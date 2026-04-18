@@ -1,0 +1,66 @@
+{
+  "airwallex": {
+    "environment": "production",
+    "page_size": 100
+  },
+  "recurrence": {
+    "min_charges": 3,
+    "min_months": 3,
+    "active_window_days": 45
+  },
+  "output": {
+    "top_vendors_in_summary": 20,
+    "skip_zero_amount": true,
+    "default_sheet_id": "1LNSbsoId_cApfyAE1NvxU3-PpqRnDPhqnV1CjX5x-5c"
+  },
+  "vendor_normalisation": {
+  },
+  "cards": [
+    {
+      "name": "Ali Subscriptions",
+      "last_four": "0415",
+      "holder": "Sha Laxamana",
+      "monthly_limit": 500,
+      "limit_currency": "HKD",
+      "expires_in_months": 34,
+      "status": "ACTIVE"
+    },
+    {
+      "name": "Team Initiated Subscriptions",
+      "last_four": "",
+      "holder": "Dan Montefrio",
+      "monthly_limit": 500,
+      "limit_currency": "USD",
+      "expires_in_months": 29,
+      "status": "ACTIVE"
+    },
+    {
+      "name": "Compound Works",
+      "last_four": "",
+      "holder": "Ivan Lee",
+      "is_main": true,
+      "monthly_limit": 10000,
+      "limit_currency": "USD",
+      "expires_in_months": 28,
+      "status": "ACTIVE"
+    },
+    {
+      "name": "Client Impact and Training",
+      "last_four": "",
+      "holder": "Nina Kolao",
+      "monthly_limit": 500,
+      "limit_currency": "USD",
+      "expires_in_months": 31,
+      "status": "FROZEN"
+    },
+    {
+      "name": "Subscriptions",
+      "last_four": "7964",
+      "holder": "Compound Works",
+      "monthly_limit": 25000,
+      "limit_currency": "HKD",
+      "expires_in_months": 27,
+      "status": "CANCELLED"
+    }
+  ]
+}

@@ -25,7 +25,7 @@ load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
 # Add libraries to path
 sys.path.insert(0, os.path.join(PROJECT_ROOT, ".claude", "skills", "slack-bot"))
 
-from libraries import invite_handler  # noqa: E402
+from libraries import invite_handler, leave_handler, bioworld_handler  # noqa: E402
 
 # --- Logging ---
 LOG_DIR = os.path.join(PROJECT_ROOT, "local-data", "logs")
@@ -65,6 +65,12 @@ app = App(token=bot_token)
 # --- Register handlers ---
 invite_handler.register(app, config, PROJECT_ROOT)
 logger.info("Registered handler: /ally-invite")
+
+leave_handler.register(app, config, PROJECT_ROOT)
+logger.info("Registered handler: /leave")
+
+bioworld_handler.register(app, config, PROJECT_ROOT)
+logger.info("Registered handler: Bioworld approval actions")
 
 # --- Start ---
 if __name__ == "__main__":

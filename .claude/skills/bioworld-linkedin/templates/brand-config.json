@@ -1,0 +1,101 @@
+{
+  "companies": [
+    {
+      "name": "CorVista Health",
+      "website": "https://corvista.com",
+      "focus_area": "Diagnostics",
+      "search_keywords": "CorVista Health cardiovascular diagnostics FDA cardiac disease detection non-invasive",
+      "linkedin_url": ""
+    },
+    {
+      "name": "Senti Biosciences",
+      "website": "https://sentibio.com",
+      "focus_area": "Biopharma",
+      "search_keywords": "Senti Biosciences gene circuit CAR-NK cell therapy SENTI-202 RMAT",
+      "linkedin_url": ""
+    },
+    {
+      "name": "Cardea Bio",
+      "website": "https://cardeabio.com",
+      "focus_area": "Life Science Tools",
+      "search_keywords": "Cardea Bio CRISPR graphene biosensor Paragraf digital biology FEB",
+      "linkedin_url": ""
+    },
+    {
+      "name": "Foundation Medicine",
+      "website": "https://foundationmedicine.com",
+      "focus_area": "Diagnostics",
+      "search_keywords": "Foundation Medicine liquid biopsy Lexent Bio cancer genomics precision oncology",
+      "linkedin_url": ""
+    },
+    {
+      "name": "Arima Genomics",
+      "website": "https://arimagenomics.com",
+      "focus_area": "Life Science Tools",
+      "search_keywords": "Arima Genomics chromatin conformation lymphoma Aventa diagnostics PLA code",
+      "linkedin_url": ""
+    },
+    {
+      "name": "Vena Vitals",
+      "website": "https://venavitals.com",
+      "focus_area": "MedTech",
+      "search_keywords": "Vena Vitals non-invasive blood pressure sensor wearable arterial monitoring",
+      "linkedin_url": ""
+    },
+    {
+      "name": "Hello Vigor",
+      "website": "https://hellovigor.com",
+      "focus_area": "Digital Health",
+      "search_keywords": "Hello Vigor health wellness digital health",
+      "linkedin_url": ""
+    },
+    {
+      "name": "YOR Labs",
+      "website": "https://yorlabs.com",
+      "focus_area": "MedTech",
+      "search_keywords": "YOR Labs intracardiac imaging echocardiography FDA 510k ultrasound catheter",
+      "linkedin_url": ""
+    },
+    {
+      "name": "Mii Care",
+      "website": "https://miicare.co.uk",
+      "focus_area": "Digital Health",
+      "search_keywords": "Mii Care elderly care AI health monitoring digital caregiving",
+      "linkedin_url": ""
+    },
+    {
+      "name": "Great Bay Bio",
+      "website": "https://greatbaybio.com",
+      "focus_area": "Biopharma",
+      "search_keywords": "Great Bay Bio AI bioprocessing antibody cell line development biomanufacturing",
+      "linkedin_url": ""
+    },
+    {
+      "name": "Endia Therapeutics",
+      "website": "https://endiatx.com",
+      "focus_area": "MedTech",
+      "search_keywords": "Endiatx Pillbot ingestible robot endoscopy micro-robot GI diagnostics",
+      "linkedin_url": ""
+    },
+    {
+      "name": "Rare Air Health",
+      "website": "https://rareairhealth.com",
+      "focus_area": "Digital Health",
+      "search_keywords": "Rare Air Health rare disease patient support digital health platform",
+      "linkedin_url": ""
+    }
+  ],
+  "industry_searches": [
+    "biotech medtech breakthrough funding 2026",
+    "FDA approval medical device 2026",
+    "life science venture capital investment news",
+    "digital health innovation Asia Pacific"
+  ],
+  "focus_areas": [
+    "Biopharma",
+    "MedTech",
+    "Digital Health",
+    "Life Science Tools",
+    "Diagnostics"
+  ]
+}

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bioworld LinkedIn Hub — Sign In</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }</style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body class="min-h-screen bg-[#fafafa] flex items-center justify-center">
+
+<div class="bg-white border border-[#e5e5e5] rounded-2xl p-12 w-full max-w-sm text-center shadow-sm">
+  <div class="mb-2">
+    <div class="text-xl font-bold text-[#1a1a1a] tracking-tight">Bioworld Ventures</div>
+  </div>
+  <div class="text-[11px] text-[#737373] uppercase tracking-widest mb-8">Content Hub</div>
+
+  {% if error %}
+  <div class="mb-6 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
+    {{ error }}
+  </div>
+  {% endif %}
+
+  <p class="text-[#737373] text-sm mb-8">Sign in with your @withally.com account</p>
+
+  <div id="g_id_onload"
+       data-client_id="{{ client_id }}"
+       data-login_uri="{{ url_for('auth_callback', _external=True) }}"
+       data-auto_prompt="false">
+  </div>
+  <div class="g_id_signin"
+       data-type="standard"
+       data-size="large"
+       data-theme="outline"
+       data-text="sign_in_with"
+       data-shape="rectangular"
+       data-logo_alignment="left"
+       data-width="280">
+  </div>
+
+  <p class="text-[#d4d4d4] text-xs mt-10">Bioworld Ventures &middot; LinkedIn Content Management</p>
+</div>
+
+</body>
+</html>

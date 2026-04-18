@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.ally.airwallex-spend</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/dyancueto/ally-os/scheduling/run-job.sh</string>
+        <string>airwallex-spend</string>
+        <string>.claude/skills/review-airwallex-spend/workflows/review_spend.py</string>
+        <string>--months</string>
+        <string>12</string>
+        <string>--sheet</string>
+        <string>--no-open</string>
+    </array>
+
+    <!-- Daily at 07:00 HKT.
+         HKT = UTC+8. Mac is currently in EDT (UTC-4), so 7am HKT = 19:00 EDT prev day.
+         launchd uses local time, so set to 19:00. If the Mac timezone changes, update this. -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>19</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/dyancueto/ally-os/local-data/logs/launchd-stdout.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/dyancueto/ally-os/local-data/logs/launchd-stderr.log</string>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/dyancueto/ally-os</string>
+</dict>
+</plist>

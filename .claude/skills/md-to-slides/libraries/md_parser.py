@@ -37,10 +37,13 @@ class SlideData:
     title: str = ""
     body: str = ""
     body_items: list[str] = field(default_factory=list)
+    body_item_types: list[str] = field(default_factory=list)  # "bullet" or "text"
     notes: str = ""
     layout: str = ""  # explicit layout hint; empty = auto-infer
     left_body: list[str] = field(default_factory=list)
+    left_body_types: list[str] = field(default_factory=list)
     right_body: list[str] = field(default_factory=list)
+    right_body_types: list[str] = field(default_factory=list)
     table: list[list[str]] | None = None
     title_runs: list[TextRun] = field(default_factory=list)
     body_runs: list[TextRun] = field(default_factory=list)
@@ -259,22 +262,28 @@ def _parse_single_slide(lines: list[str], index: int) -> SlideData:
             if not stripped or stripped.startswith("## "):
                 if stripped.startswith("## "):
                     slide.left_body.append(stripped[3:].strip())
+                    slide.left_body_types.append("text")
                 continue
             if stripped.startswith(("- ", "* ")) or re.match(r"^\d+\.\s", stripped):
                 slide.left_body.append(_strip_bullet(line))
+                slide.left_body_types.append("bullet")
             elif stripped:
                 slide.left_body.append(stripped)
+                slide.left_body_types.append("text")
 
         for line in right_lines:
             stripped = line.strip()
             if not stripped or stripped.startswith("## "):
                 if stripped.startswith("## "):
                     slide.right_body.append(stripped[3:].strip())
+                    slide.right_body_types.append("text")
                 continue
             if stripped.startswith(("- ", "* ")) or re.match(r"^\d+\.\s", stripped):
                 slide.right_body.append(_strip_bullet(line))
+                slide.right_body_types.append("bullet")
             elif stripped:
                 slide.right_body.append(stripped)
+                slide.right_body_types.append("text")
 
         if not slide.layout:
             slide.layout = "two_column"
@@ -310,10 +319,13 @@ def _parse_single_slide(lines: list[str], index: int) -> SlideData:
         if stripped.startswith("## "):
             # Sub-heading — treat as a body item
             slide.body_items.append(stripped[3:].strip())
+            slide.body_item_types.append("text")
         elif stripped.startswith(("- ", "* ")) or re.match(r"^\d+\.\s", stripped):
             slide.body_items.append(_strip_bullet(line))
+            slide.body_item_types.append("bullet")
         else:
             slide.body_items.append(stripped)
+            slide.body_item_types.append("text")
 
     # Build body text (joined items, with inline markers stripped)
     raw_body = "\n".join(slide.body_items)

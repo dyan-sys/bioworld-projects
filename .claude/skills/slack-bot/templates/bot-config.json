@@ -4,6 +4,10 @@
     "U097X5H3472": "Dyan"
   },
   "commands": {
+    "leave": {
+      "handler": "leave_handler",
+      "authorized_users": "all"
+    },
     "ally-invite": {
       "handler": "invite_handler",
       "authorized_users": ["U0975UFHDB8", "U097X5H3472"],

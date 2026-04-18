@@ -14,7 +14,24 @@ shift 2
 SCRIPT_ARGS=("$@")
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PYTHON="/opt/homebrew/bin/python3.11"
+# Pick the first Python that exists. Prefers project venv → Homebrew 3.11 → system python3.
+# This lets the wrapper work across teammates' Macs without hardcoding a single path.
+for candidate in \
+  "$PROJECT_ROOT/.venv/bin/python3" \
+  "/opt/homebrew/bin/python3.11" \
+  "/usr/local/bin/python3.11" \
+  "/usr/local/bin/python3" \
+  "/opt/homebrew/bin/python3" \
+  "/usr/bin/python3"; do
+  if [ -x "$candidate" ]; then
+    PYTHON="$candidate"
+    break
+  fi
+done
+if [ -z "${PYTHON:-}" ]; then
+  echo "[ERROR] No usable python interpreter found"
+  exit 1
+fi
 LOG_DIR="$PROJECT_ROOT/local-data/logs"
 STATUS_DIR="$PROJECT_ROOT/local-data/service-status"
 

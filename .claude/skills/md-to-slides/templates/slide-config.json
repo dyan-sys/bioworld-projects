@@ -10,7 +10,9 @@
     "content": "Title and body",
     "two_column": "Title and two columns",
     "blank": "Blank",
-    "agenda": "Blank"
+    "agenda": "Blank",
+    "quote": "Blank",
+    "callout": "Blank"
   },
   "default_layout": "content",
   "drive_folder": "MD to Slides",

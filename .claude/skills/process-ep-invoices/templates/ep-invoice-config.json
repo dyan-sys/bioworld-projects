@@ -19,12 +19,25 @@
       "full_name": "Full Name",
       "email": "Email Address",
       "amount": "Invoice Amount (USD)",
-      "period": "Invoice Month (YYYY-MM)"
+      "period": "Invoice Month (YYYY-MM)",
+      "reimbursement_amount": "Reimbursement Amount (USD)",
+      "reimbursement_description": "Reimbursement Description",
+      "bank_changed": "Bank Changed This Month?",
+      "invoice_pdf": "Upload Invoice PDF",
+      "status": "Status"
     }
+  },
+  "hris": {
+    "sheet_id": "1JSNZAluuoOJ_dEps2NpAv_nzmEAzXkfbbWbJQSI1m30",
+    "reimbursements_tab": "Reimbursements"
   },
   "matching": {
     "amount_tolerance": 0.01,
     "excluded_contractors": ["CollaoN", "PisoP"]
+  },
+  "bank_verification": {
+    "enabled": true,
+    "compare_fields": ["account_number", "account_name"]
   },
   "slack": {
     "webhook_url_env": "SLACK_WEBHOOK_URL_JARVIS",

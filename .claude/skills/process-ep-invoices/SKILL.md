@@ -20,24 +20,33 @@ Automates the monthly EP (Executive Partner) invoice reconciliation and payment 
 
 | What you say | What it does |
 |---|---|
-| "Run EP invoices" | Step 1 — reconcile, post Slack approval summary, save pending file |
-| "Process invoices on Airwallex" | Step 2 — submit pending payments to Airwallex for Ivan's approval |
-| "Dry run EP invoices" | Preview only — no Slack post, no payments |
-| "Check Airwallex status" / "Status Check" | Show this month's transfer statuses (pending, rejected, cancelled, etc.) — posts to Slack |
+| "Run EP invoices" | Step 1 — parse submissions, log reimbursements to HRIS |
+| "Post EP invoices" | Step 2 — reconcile, bank check, post Slack approval summary |
+| "Process invoices on Airwallex" | Step 3 — submit pending payments to Airwallex for Ivan's approval |
+| "Dry run EP invoices" | Preview only — no writes, no Slack, no payments |
+| "Check Airwallex status" / "Status Check" | Show this month's transfer statuses — posts to Slack |
 
 When triggered, always run from the project root: `cd /Users/dyancueto/ally-os`
 
 ## How to run
 
-### Step 1 — Reconcile and post for approval (say: "Run EP invoices")
+### Step 1 — Parse submissions, log reimbursements (say: "Run EP invoices")
 
 ```bash
 cd /Users/dyancueto/ally-os && python3 .claude/skills/process-ep-invoices/workflows/process_ep_invoices.py
 ```
 
-Posts to `#ep-billing` with the full payment list. Review Slack, then run Step 2.
+Reads all submitted invoices for the period, logs reimbursements to HRIS Reimbursements tab. Confirm the tab looks correct, then run Step 2.
 
-### Step 2 — Submit to Airwallex (say: "Process invoices on Airwallex")
+### Step 2 — Reconcile and post for approval (say: "Post EP invoices")
+
+```bash
+cd /Users/dyancueto/ally-os && python3 .claude/skills/process-ep-invoices/workflows/process_ep_invoices.py --post
+```
+
+Reconciles submissions against the time tracker, runs bank verification, posts approval summary to Slack. Review Slack, then run Step 3.
+
+### Step 3 — Submit to Airwallex (say: "Process invoices on Airwallex")
 
 ```bash
 cd /Users/dyancueto/ally-os && python3 .claude/skills/process-ep-invoices/workflows/process_ep_invoices.py --confirm

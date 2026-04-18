@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: bioworld-linkedin-hub
+    runtime: python
+    rootDir: .claude/skills/bioworld-linkedin/dashboard
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    plan: free
+    envVars:
+      - key: NOTION_KEY
+        sync: false
+      - key: BIOWORLD_CONTENT_DB_ID
+        sync: false
+      - key: BIOWORLD_BRANDS_DB_ID
+        sync: false
+      - key: MOONSHOT_API_KEY
+        sync: false
+      - key: SLACK_BOT_TOKEN
+        sync: false
+      - key: BIOWORLD_SLACK_CHANNEL
+        sync: false
+      - key: LINKEDIN_ACCESS_TOKEN
+        sync: false
+      - key: BIOWORLD_LINKEDIN_ORG_ID
+        sync: false
+      - key: GOOGLE_CREDENTIALS_JSON
+        sync: false
+      - key: FLASK_SECRET_KEY
+        sync: false
