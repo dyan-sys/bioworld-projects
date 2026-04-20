@@ -64,6 +64,22 @@ STATUS_COLORS = {
     "Published": "emerald", "Rejected": "red",
 }
 
+# ── Team / Partners (sourced from bioworld-ventures website) ─────────────────
+TEAM = [
+    {"name": "Aaron Berez, MD", "title": "Chair — Tech & Business Council", "linkedin": "#", "expertise": ["Physician-Entrepreneur", "Stanford Faculty"]},
+    {"name": "Adrian Cheong, MD", "title": "Chair — Medical Council", "linkedin": "#", "expertise": ["Interventional Cardiologist", "KOL"]},
+    {"name": "Adrian Lam, CFA", "title": "Managing Partner", "linkedin": "#", "expertise": ["R&D", "Business Development", "Capital Markets"]},
+    {"name": "Raymond Law, MBA", "title": "Partner", "linkedin": "#", "expertise": ["Strategy", "Business Development", "Commercialisation"]},
+    {"name": "Jihong Qu, PhD MBA", "title": "Partner", "linkedin": "#", "expertise": ["Medical Affairs", "Regulatory Affairs", "Clinical Affairs"]},
+    {"name": "Irwan Moideen, PhD", "title": "Partner", "linkedin": "#", "expertise": ["R&D", "Quality Management", "Medical Affairs"]},
+    {"name": "Ivan Li", "title": "Partner", "linkedin": "#", "expertise": ["Strategy", "Start-ups 0-to-1", "COO function", "Diagnostics"]},
+    {"name": "Kelvin Lam", "title": "Executive-in-Residence", "linkedin": "#", "expertise": ["Commercialization", "Pharma", "Marketing"]},
+    {"name": "Gary Wong", "title": "Executive-in-Residence", "linkedin": "#", "expertise": ["Public & Private Equity Investing", "Investor Relations"]},
+    {"name": "Evan Zhang, MD MBA EMBA", "title": "Executive-in-Residence", "linkedin": "#", "expertise": ["CEO Function", "Commercialization", "Neurovascular"]},
+    {"name": "Jennifer Xu", "title": "Executive-in-Residence", "linkedin": "#", "expertise": ["Digital Health", "Strategy"]},
+    {"name": "Frank Zhen", "title": "Executive-in-Residence", "linkedin": "#", "expertise": ["Commercialization", "Medical Aesthetics", "Business Development"]},
+]
+
 # In-memory workspace (scan results + drafts before pushing to Notion)
 workspace = {
     "articles": [],       # list of article dicts from latest scan
@@ -262,6 +278,19 @@ def dashboard():
     for status in STATUS_COLORS:
         notion_stats[status] = len([a for a in notion_articles if a["status"] == status])
 
+    # Overview shows posts that are going out (Approved, Published)
+    overview_posts = [a for a in notion_articles
+                      if a["status"] in ("Approved", "Published")]
+    overview_posts.sort(key=lambda a: (
+        {"Approved": 0, "Published": 1}.get(a["status"], 2),
+        a.get("date", ""),
+    ))
+
+    # Pending review — for Ivan's approval queue
+    pending_review = [a for a in notion_articles
+                      if a["status"] in ("Pending Approval", "Draft Ready")]
+    pending_review.sort(key=lambda a: a.get("score", 0), reverse=True)
+
     # Workspace articles (local scan results)
     ws_count = len(workspace.get("articles", []))
     ws_drafts = len(workspace.get("drafts", {}))
@@ -275,7 +304,8 @@ def dashboard():
     return render_template(
         "dashboard.html",
         notion_stats=notion_stats, status_colors=STATUS_COLORS,
-        notion_articles=notion_articles,
+        overview_posts=overview_posts,
+        pending_review=pending_review,
         ws_count=ws_count, ws_drafts=ws_drafts,
         scan_engine=workspace.get("scan_engine", ""),
         scan_time=workspace.get("scan_time", ""),
@@ -286,17 +316,32 @@ def dashboard():
 
 @app.route("/feed")
 def feed_page():
-    """Feed — discover LinkedIn posts and news from portfolio companies."""
+    """Feed — two sections: portfolio reposts + industry insights."""
     articles = workspace.get("articles", [])
 
-    # Separate LinkedIn posts from news articles
-    linkedin_posts = [a for a in articles if a.get("url", "").find("linkedin.com") >= 0]
-    news_articles = [a for a in articles if a.get("url", "").find("linkedin.com") < 0]
+    # Split into portfolio vs industry
+    portfolio_articles = [a for a in articles if a.get("company", "") != "Industry News"]
+    industry_articles = [a for a in articles if a.get("company", "") == "Industry News"]
+
+    # Group portfolio by brand
+    brands_map = {}
+    for a in portfolio_articles:
+        company = a.get("company", "Other")
+        brands_map.setdefault(company, []).append(a)
+    for company in brands_map:
+        brands_map[company].sort(key=lambda x: x.get("relevance_score", 0), reverse=True)
+    sorted_brands = sorted(brands_map.keys())
+
+    # Sort industry by relevance
+    industry_articles.sort(key=lambda x: x.get("relevance_score", 0), reverse=True)
 
     return render_template(
         "feed.html",
-        linkedin_posts=linkedin_posts,
-        news_articles=news_articles,
+        brands_map=brands_map,
+        sorted_brands=sorted_brands,
+        industry_articles=industry_articles,
+        portfolio_count=len(portfolio_articles),
+        industry_count=len(industry_articles),
         total=len(articles),
         scan_engine=workspace.get("scan_engine", ""),
         scan_time=workspace.get("scan_time", ""),
@@ -323,17 +368,29 @@ def articles_page():
 
 @app.route("/drafts")
 def drafts_page():
-    """Articles from Notion pipeline (Shortlisted and beyond)."""
+    """Pipeline — all articles from Notion with full status detail."""
     notion_articles = []
     if CONTENT_DB_ID:
         pages = notion_query(CONTENT_DB_ID)
         notion_articles = [extract_article(a) for a in pages]
 
+    # Show all statuses except Discovered (those stay in Feed)
     pipeline = [a for a in notion_articles
-                if a["status"] in ("Shortlisted", "Draft Ready", "Pending Approval", "Approved")]
-    pipeline.sort(key=lambda a: a["score"], reverse=True)
+                if a["status"] in ("Shortlisted", "Draft Ready", "Pending Approval", "Approved", "Published", "Rejected")]
 
-    return render_template("drafts.html", drafts=pipeline, status_colors=STATUS_COLORS)
+    # Group by status for the template
+    status_order = ["Pending Approval", "Approved", "Draft Ready", "Shortlisted", "Published", "Rejected"]
+    pipeline.sort(key=lambda a: (
+        status_order.index(a["status"]) if a["status"] in status_order else 99,
+        -a.get("score", 0),
+    ))
+
+    # Stats for pipeline header
+    pipeline_stats = {}
+    for s in status_order:
+        pipeline_stats[s] = len([a for a in pipeline if a["status"] == s])
+
+    return render_template("drafts.html", drafts=pipeline, pipeline_stats=pipeline_stats, status_colors=STATUS_COLORS)
 
 
 @app.route("/brands")
@@ -343,12 +400,7 @@ def brands_page():
         pages = notion_query(BRANDS_DB_ID)
         brands = [extract_brand(b) for b in pages]
         brands.sort(key=lambda b: b["name"])
-    return render_template("brands.html", brands=brands)
-
-
-@app.route("/actions")
-def actions_page():
-    return render_template("actions.html", workflow_status=workflow_status)
+    return render_template("brands.html", brands=brands, team=TEAM)
 
 
 # ── API: Workspace operations ─────────────────────────────────────────────────
@@ -376,7 +428,7 @@ def api_scan(engine):
 
 @app.route("/api/generate-draft/<article_id>", methods=["POST"])
 def api_generate_draft(article_id):
-    """Generate a LinkedIn draft for a single workspace article."""
+    """Generate a LinkedIn draft for a single workspace article. Accepts optional feedback for regeneration."""
     article = next((a for a in workspace["articles"] if a["id"] == article_id), None)
     if not article:
         return jsonify({"error": "Article not found"}), 404
@@ -384,9 +436,18 @@ def api_generate_draft(article_id):
     if workflow_status.get("draft_" + article_id, {}).get("running"):
         return jsonify({"error": "Already generating"}), 409
 
+    # Get optional feedback and previous draft for regeneration
+    data = request.get_json(silent=True) or {}
+    feedback = data.get("feedback", "")
+    previous_draft = workspace.get("drafts", {}).get(article_id, "")
+
     workflow_status["draft_" + article_id] = {"running": True, "status": "Generating..."}
 
-    thread = threading.Thread(target=_run_single_draft, args=(article_id, article), daemon=True)
+    thread = threading.Thread(
+        target=_run_single_draft,
+        args=(article_id, article, feedback, previous_draft),
+        daemon=True,
+    )
     thread.start()
     return jsonify({"success": True})
 
@@ -620,7 +681,7 @@ def _run_scan(engine):
         workflow_status["scan"]["finished"] = datetime.now(HKT).strftime("%H:%M HKT")
 
 
-def _run_single_draft(article_id, article):
+def _run_single_draft(article_id, article, feedback="", previous_draft=""):
     """Generate a draft for a single article and store in workspace."""
     import sys
     sys.path.insert(0, str(SKILL_ROOT / "libraries"))
@@ -636,6 +697,14 @@ def _run_single_draft(article_id, article):
             "company": article.get("company", ""),
             "source_type": article.get("source_type", "News"),
         }
+
+        # If feedback provided, add regeneration context
+        if feedback and previous_draft:
+            article_data["regeneration_context"] = (
+                f"PREVIOUS DRAFT (needs improvement):\n{previous_draft}\n\n"
+                f"FEEDBACK FROM REVIEWER:\n{feedback}\n\n"
+                f"Please generate an improved version addressing the feedback above."
+            )
 
         draft_text = generate_draft(article_data)
 

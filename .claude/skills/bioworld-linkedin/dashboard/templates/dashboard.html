@@ -29,14 +29,14 @@
 <!-- Main grid -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
 
-  <!-- Posts table (2/3) -->
+  <!-- Posts going out (2/3) -->
   <div class="lg:col-span-2 bg-white border border-bw-border rounded-xl shadow-sm">
     <div class="px-5 py-4 border-b border-bw-border flex items-center justify-between">
       <div>
-        <h2 class="text-sm font-semibold text-bw-dark">Posts Pipeline</h2>
-        <p class="text-[11px] text-bw-muted mt-0.5">Articles in Notion — scheduled, approved, and in review</p>
+        <h2 class="text-sm font-semibold text-bw-dark">Scheduled & Published</h2>
+        <p class="text-[11px] text-bw-muted mt-0.5">Posts that are approved, pending approval, or already published</p>
       </div>
-      <a href="/drafts" class="text-[12px] text-bw-teal hover:text-bw-teal-dark font-medium transition">View all &rarr;</a>
+      <a href="/drafts" class="text-[12px] text-bw-teal hover:text-bw-teal-dark font-medium transition">Review & Schedule &rarr;</a>
     </div>
     <div class="overflow-x-auto">
       <table class="w-full text-[13px]">
@@ -49,7 +49,7 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-bw-border/50">
-          {% for article in notion_articles[:12] %}
+          {% for article in overview_posts[:12] %}
           <tr class="hover:bg-bw-teal-50 transition">
             <td class="px-5 py-3">
               <div class="font-medium text-bw-dark truncate max-w-[280px]" title="{{ article.title }}">{{ article.title }}</div>
@@ -64,8 +64,8 @@
           {% else %}
           <tr>
             <td colspan="4" class="px-5 py-10 text-center text-bw-muted text-sm">
-              No articles in the pipeline yet.<br>
-              <a href="/feed" class="text-bw-teal hover:underline mt-1 inline-block">Browse the Feed to discover content &rarr;</a>
+              No approved or published posts yet.<br>
+              <a href="/feed" class="text-bw-teal hover:underline mt-1 inline-block">Scan the Feed to discover content &rarr;</a>
             </td>
           </tr>
           {% endfor %}
@@ -86,10 +86,6 @@
         {% if scan_engine %}
         <div class="flex justify-between"><span class="text-bw-muted">Last scan</span><span class="font-medium text-[12px] text-bw-text-light">{{ scan_engine }}</span></div>
         {% endif %}
-      </div>
-      <div class="mt-4 flex gap-2">
-        <button onclick="triggerScan('serper')" class="scan-btn flex-1 px-3 py-2.5 bg-bw-teal text-white text-[12px] font-semibold rounded-lg hover:bg-bw-teal-dark transition">Scan with Serper</button>
-        <button onclick="triggerScan('tavily')" class="scan-btn flex-1 px-3 py-2.5 bg-bw-dark text-white text-[12px] font-semibold rounded-lg hover:opacity-90 transition">Scan with Tavily</button>
       </div>
     </div>
 
@@ -120,39 +116,101 @@
       <div class="space-y-1.5">
         <a href="/feed" class="block px-3 py-2 text-[12px] font-medium text-bw-text-light hover:text-bw-teal hover:bg-bw-teal-50 rounded-lg transition">Browse feed &rarr;</a>
         <a href="/articles" class="block px-3 py-2 text-[12px] font-medium text-bw-text-light hover:text-bw-teal hover:bg-bw-teal-50 rounded-lg transition">Create content &rarr;</a>
-        <button onclick="sendForApproval()" class="w-full text-left px-3 py-2 text-[12px] font-medium text-bw-text-light hover:text-bw-teal hover:bg-bw-teal-50 rounded-lg transition">Send for approval &rarr;</button>
+        <a href="/drafts" class="block px-3 py-2 text-[12px] font-medium text-bw-text-light hover:text-bw-teal hover:bg-bw-teal-50 rounded-lg transition">Review & Schedule &rarr;</a>
       </div>
     </div>
 
   </div>
 </div>
+
+<!-- Pending Review for Ivan -->
+<div class="bg-white border border-bw-border rounded-xl shadow-sm mb-8">
+  <div class="px-5 py-4 border-b border-bw-border flex items-center justify-between">
+    <div>
+      <h2 class="text-sm font-semibold text-bw-dark">Pending Review</h2>
+      <p class="text-[11px] text-bw-muted mt-0.5">{{ pending_review|length }} post{{ 's' if pending_review|length != 1 }} waiting for approval</p>
+    </div>
+    <a href="/drafts" class="text-[12px] text-bw-teal hover:text-bw-teal-dark font-medium transition">Review all &rarr;</a>
+  </div>
+
+  {% if pending_review %}
+  <div class="divide-y divide-bw-border/50">
+    {% for article in pending_review[:6] %}
+    <div class="px-5 py-4 hover:bg-bw-teal-50 transition" id="review-card-{{ article.id }}">
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-600">{{ article.company }}</span>
+            <span class="status-{{ article.status|lower|replace(' ', '-') }} px-2 py-0.5 rounded-full text-[10px] font-medium">{{ article.status }}</span>
+            {% if article.score %}<span class="text-[11px] text-bw-muted">{{ article.score }}/10</span>{% endif %}
+          </div>
+          <h3 class="text-[13px] font-semibold text-bw-dark mb-1">{{ article.title }}</h3>
+          {% if article.draft %}
+          <p class="text-[12px] text-bw-text-light leading-relaxed" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ article.draft[:200] }}{% if article.draft|length > 200 %}...{% endif %}</p>
+          {% endif %}
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <button onclick="quickApprove('{{ article.id }}')" id="approve-{{ article.id }}"
+            class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-[11px] font-semibold rounded-lg transition">
+            Approve
+          </button>
+          <button onclick="quickReject('{{ article.id }}')" id="reject-{{ article.id }}"
+            class="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[11px] font-semibold rounded-lg transition">
+            Reject
+          </button>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="px-5 py-10 text-center text-bw-muted text-sm">
+    No posts waiting for review right now.
+  </div>
+  {% endif %}
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-async function triggerScan(engine) {
-  const btns = document.querySelectorAll('.scan-btn');
-  btns.forEach(b => { b.disabled = true; b.style.opacity = '0.5'; b.textContent = 'Scanning...'; });
+async function quickApprove(id) {
+  const btn = document.getElementById(`approve-${id}`);
+  btn.textContent = 'Approving...';
+  btn.disabled = true;
   try {
-    const res = await fetch(`/api/scan/${engine}`, { method: 'POST' });
-    if (!res.ok) throw new Error('Failed');
-    const poll = setInterval(async () => {
-      const sr = await fetch('/api/workflow-status');
-      const data = await sr.json();
-      if (!data.scan?.running) { clearInterval(poll); location.reload(); }
-    }, 3000);
+    const res = await fetch(`/api/article/${id}/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'Approved' })
+    });
+    if (!res.ok) throw new Error();
+    const card = document.getElementById(`review-card-${id}`);
+    card.innerHTML = '<div class="px-5 py-3 text-center text-green-600 text-[13px] font-medium">Approved</div>';
+    setTimeout(() => card.remove(), 1500);
   } catch (e) {
-    btns.forEach((b, i) => { b.disabled = false; b.style.opacity = '1'; });
-    btns[0].textContent = 'Scan with Serper'; btns[1].textContent = 'Scan with Tavily';
-    alert('Scan failed. Check your API keys.');
+    btn.textContent = 'Approve';
+    btn.disabled = false;
   }
 }
-async function sendForApproval() {
-  if (!confirm('Send all Draft Ready posts to Slack for Ivan\\'s review?')) return;
-  const res = await fetch('/api/send-for-approval', { method: 'POST' });
-  const data = await res.json();
-  if (data.success) { alert(`Sent ${data.sent} draft(s) for approval.`); location.reload(); }
-  else { alert(data.error || 'Failed.'); }
+
+async function quickReject(id) {
+  const btn = document.getElementById(`reject-${id}`);
+  btn.textContent = 'Rejecting...';
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/api/article/${id}/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'Rejected' })
+    });
+    if (!res.ok) throw new Error();
+    const card = document.getElementById(`review-card-${id}`);
+    card.innerHTML = '<div class="px-5 py-3 text-center text-red-500 text-[13px] font-medium">Rejected</div>';
+    setTimeout(() => card.remove(), 1500);
+  } catch (e) {
+    btn.textContent = 'Reject';
+    btn.disabled = false;
+  }
 }
 </script>
 {% endblock %}

@@ -11,18 +11,18 @@ tailwind.config = {
     extend: {
       colors: {
         bw: {
-          teal: '#2bbbc4',
-          'teal-dark': '#1fa8b0',
-          'teal-deep': '#178a91',
-          'teal-light': '#e8f8f9',
-          'teal-50': '#f0fbfc',
-          dark: '#0e2a2c',
+          teal: '#274060',
+          'teal-dark': '#1B2845',
+          'teal-deep': '#1B2845',
+          'teal-light': '#e0edf9',
+          'teal-50': '#eef5fc',
+          dark: '#1B2845',
           card: '#ffffff',
-          border: '#c8e8ea',
-          muted: '#5b8a8e',
-          text: '#0e2a2c',
-          'text-light': '#3d7275',
-          hover: '#d6f0f1',
+          border: '#c4d8ed',
+          muted: '#5a7a9b',
+          text: '#1B2845',
+          'text-light': '#3d5a80',
+          hover: '#e0edf9',
         }
       }
     }
@@ -34,27 +34,27 @@ tailwind.config = {
 <style>
   body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
 
-  .status-discovered { background: #e8f8f9; color: #178a91; }
-  .status-shortlisted { background: #dbeafe; color: #2563eb; }
-  .status-draft-ready { background: #f3e8ff; color: #7c3aed; }
-  .status-pending-approval { background: #fef3c7; color: #d97706; }
-  .status-approved { background: #dcfce7; color: #16a34a; }
-  .status-published { background: #d1fae5; color: #059669; }
-  .status-rejected { background: #fee2e2; color: #dc2626; }
+  .status-discovered { background: #e0edf9; color: #274060; }
+  .status-shortlisted { background: #d0e4f7; color: #274060; }
+  .status-draft-ready { background: #e8e0f5; color: #5b3e8a; }
+  .status-pending-approval { background: #fef3c7; color: #92600a; }
+  .status-approved { background: #dcfce7; color: #166534; }
+  .status-published { background: #d1fae5; color: #065f46; }
+  .status-rejected { background: #fee2e2; color: #991b1b; }
 
-  .nav-link { transition: all 0.15s; color: rgba(255,255,255,0.55); }
-  .nav-link:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); }
-  .nav-link.active { background: rgba(255,255,255,0.15); color: #ffffff; }
+  .nav-link { transition: all 0.15s; color: rgba(255,255,255,0.6); }
+  .nav-link:hover { background: rgba(255,255,255,0.1); color: #ffffff; }
+  .nav-link.active { background: rgba(101,175,255,0.2); color: #ffffff; }
 </style>
 </head>
-<body class="h-full bg-bw-teal-50 text-bw-text">
+<body class="h-full bg-[#eef4fb] text-bw-text">
 <div class="flex h-full">
 
   <!-- Sidebar -->
-  <nav class="w-56 bg-bw-dark flex flex-col min-h-screen fixed">
+  <nav class="w-56 bg-[#335C81] flex flex-col min-h-screen fixed">
     <div class="px-5 py-5 border-b border-white/10">
       <img src="{{ url_for('static', filename='logo-dark.png') }}" alt="Bioworld Ventures" class="h-6">
-      <div class="text-[10px] text-bw-teal font-medium uppercase tracking-[0.15em] mt-2">Content Hub</div>
+      <div class="text-[10px] text-[#65AFFF] font-medium uppercase tracking-[0.15em] mt-2">Content Hub</div>
     </div>
 
     <div class="flex-1 py-4 px-3 space-y-0.5">
@@ -72,15 +72,11 @@ tailwind.config = {
       </a>
       <a href="/drafts" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium {% if request.endpoint == 'drafts_page' %}active{% endif %}">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-        Pipeline
+        Review & Schedule
       </a>
       <a href="/brands" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium {% if request.endpoint == 'brands_page' %}active{% endif %}">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
         Portfolio
-      </a>
-      <a href="/actions" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium {% if request.endpoint == 'actions_page' %}active{% endif %}">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-        Settings
       </a>
     </div>
 
@@ -89,8 +85,8 @@ tailwind.config = {
         {% if session.get('user_picture') %}
         <img src="{{ session.user_picture }}" class="w-7 h-7 rounded-full" alt="">
         {% else %}
-        <div class="w-7 h-7 rounded-full bg-bw-teal/20 flex items-center justify-center">
-          <span class="text-[11px] font-semibold text-bw-teal">{{ session.get('user_name', 'D')[0] }}</span>
+        <div class="w-7 h-7 rounded-full bg-[#65AFFF]/20 flex items-center justify-center">
+          <span class="text-[11px] font-semibold text-[#65AFFF]">{{ session.get('user_name', 'D')[0] }}</span>
         </div>
         {% endif %}
         <div class="flex-1 min-w-0">
