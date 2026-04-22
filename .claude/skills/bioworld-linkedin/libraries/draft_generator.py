@@ -1,11 +1,11 @@
 """
 Draft Generator Library for Bioworld LinkedIn Automation.
 
-Uses Claude CLI to generate LinkedIn post drafts from article
+Uses Claude API to generate LinkedIn post drafts from article
 summaries, matching Bioworld Ventures' posting style.
 """
 
-import subprocess
+import os
 from pathlib import Path
 
 TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "templates"
@@ -24,13 +24,18 @@ def load_templates() -> dict:
 
 def generate_draft(article: dict, _unused_key: str = "") -> str:
     """
-    Generate a LinkedIn post draft for a given article using Claude CLI.
+    Generate a LinkedIn post draft for a given article using Claude API.
 
     article dict keys:
         title, summary, source_url, company, source_type
 
     Returns the post text as a string.
     """
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if not anthropic_key:
+        print("  [ERROR: ANTHROPIC_API_KEY not set]")
+        return ""
+
     templates = load_templates()
 
     company = article.get("company", "")
@@ -48,7 +53,6 @@ def generate_draft(article: dict, _unused_key: str = "") -> str:
         )
 
     prompt = (
-        f"{templates['system_prompt']}\n\n"
         f"## Article to Post About\n"
         f"**Title:** {article.get('title', '')}\n"
         f"**Company:** {company}\n"
@@ -62,24 +66,25 @@ def generate_draft(article: dict, _unused_key: str = "") -> str:
         f"No preamble, no explanation, just the ready-to-publish post."
     )
 
+    # Add regeneration context if provided
+    regen = article.get("regeneration_context", "")
+    if regen:
+        prompt += f"\n\n## Regeneration Context\n{regen}"
+
     print(f"  [Drafting: {article.get('title', '')[:50]}", end="", flush=True)
 
     try:
-        result = subprocess.run(
-            ["claude", "-p", prompt, "--print"],
-            capture_output=True, text=True, timeout=120,
+        import anthropic
+        client = anthropic.Anthropic(api_key=anthropic_key)
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1024,
+            system=templates["system_prompt"],
+            messages=[{"role": "user", "content": prompt}],
         )
-
-        if result.returncode != 0:
-            print(f" ERROR]")
-            return ""
-
         print("]")
-        return result.stdout.strip()
+        return message.content[0].text.strip()
 
-    except subprocess.TimeoutExpired:
-        print(" TIMEOUT]")
-        return ""
-    except FileNotFoundError:
-        print(" CLI NOT FOUND]")
+    except Exception as e:
+        print(f" ERROR: {e}]")
         return ""

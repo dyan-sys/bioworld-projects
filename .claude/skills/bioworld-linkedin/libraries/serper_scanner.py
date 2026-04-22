@@ -1,8 +1,8 @@
 """
-Serper + Claude News Scanner — Alternative to Kimi/Moonshot.
+Serper + Claude API News Scanner.
 
-Uses Serper.dev (Google Search API) to find articles, then Claude CLI
-to analyze and score them. No Moonshot API key needed.
+Uses Serper.dev (Google Search API) to find articles, then Claude API
+to analyze and score them.
 
 Free tier: 2,500 searches/month at serper.dev.
 """
@@ -10,7 +10,6 @@ Free tier: 2,500 searches/month at serper.dev.
 import json
 import os
 import re
-import subprocess
 from pathlib import Path
 
 import requests
@@ -78,12 +77,16 @@ def generate_search_queries_serper(company_name: str, keywords: str) -> list[str
 
 def analyze_with_claude(company_name: str, search_results: list[dict]) -> dict:
     """
-    Use Claude CLI to analyze search results and extract structured article data.
+    Use Claude API to analyze search results and extract structured article data.
 
     Returns dict with 'sources' list and 'synthesis' string.
     """
     if not search_results:
         return {"sources": [], "synthesis": f"No search results found for {company_name}."}
+
+    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if not anthropic_key:
+        return {"sources": [], "synthesis": "ANTHROPIC_API_KEY not set."}
 
     research_prompt_path = TEMPLATE_DIR / "research-prompt.md"
     research_prompt = research_prompt_path.read_text(encoding="utf-8")
@@ -108,21 +111,18 @@ def analyze_with_claude(company_name: str, search_results: list[dict]) -> dict:
     )
 
     try:
-        result = subprocess.run(
-            ["claude", "-p", prompt, "--print"],
-            capture_output=True, text=True, timeout=120,
+        import anthropic
+        client = anthropic.Anthropic(api_key=anthropic_key)
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=2048,
+            messages=[{"role": "user", "content": prompt}],
         )
-
-        if result.returncode != 0:
-            return {"sources": [], "synthesis": f"Claude analysis failed: {result.stderr[:200]}"}
-
-        output = result.stdout.strip()
+        output = message.content[0].text.strip()
         return _parse_json_response(output)
 
-    except subprocess.TimeoutExpired:
-        return {"sources": [], "synthesis": "Claude analysis timed out."}
-    except FileNotFoundError:
-        return {"sources": [], "synthesis": "Claude CLI not found. Install claude-code."}
+    except Exception as e:
+        return {"sources": [], "synthesis": f"Claude API error: {e}"}
 
 
 def search_company_news_serper(company_name: str, keywords: str,
@@ -164,7 +164,6 @@ def search_industry_news_serper(serper_api_key: str) -> dict:
 
 def _parse_json_response(response: str) -> dict:
     """Parse JSON from Claude's response."""
-    # Strip markdown code blocks
     text = response.strip()
     if text.startswith("```"):
         lines = text.splitlines()
