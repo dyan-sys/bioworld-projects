@@ -1,7 +1,7 @@
 """
 Draft Generator Library for Bioworld LinkedIn Automation.
 
-Uses Claude API to generate LinkedIn post drafts from article
+Uses Gemini API to generate LinkedIn post drafts from article
 summaries, matching Bioworld Ventures' posting style.
 """
 
@@ -24,16 +24,16 @@ def load_templates() -> dict:
 
 def generate_draft(article: dict, _unused_key: str = "") -> str:
     """
-    Generate a LinkedIn post draft for a given article using Claude API.
+    Generate a LinkedIn post draft for a given article using Gemini API.
 
     article dict keys:
         title, summary, source_url, company, source_type
 
     Returns the post text as a string.
     """
-    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
-    if not anthropic_key:
-        print("  [ERROR: ANTHROPIC_API_KEY not set]")
+    gemini_key = os.getenv("GEMINI_API_KEY", "")
+    if not gemini_key:
+        print("  [ERROR: GEMINI_API_KEY not set]")
         return ""
 
     templates = load_templates()
@@ -53,6 +53,7 @@ def generate_draft(article: dict, _unused_key: str = "") -> str:
         )
 
     prompt = (
+        f"{templates['system_prompt']}\n\n"
         f"## Article to Post About\n"
         f"**Title:** {article.get('title', '')}\n"
         f"**Company:** {company}\n"
@@ -74,16 +75,14 @@ def generate_draft(article: dict, _unused_key: str = "") -> str:
     print(f"  [Drafting: {article.get('title', '')[:50]}", end="", flush=True)
 
     try:
-        import anthropic
-        client = anthropic.Anthropic(api_key=anthropic_key)
-        message = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=1024,
-            system=templates["system_prompt"],
-            messages=[{"role": "user", "content": prompt}],
+        from google import genai
+        client = genai.Client(api_key=gemini_key)
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt,
         )
         print("]")
-        return message.content[0].text.strip()
+        return response.text.strip()
 
     except Exception as e:
         print(f" ERROR: {e}]")

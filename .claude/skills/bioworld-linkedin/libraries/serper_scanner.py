@@ -1,10 +1,11 @@
 """
-Serper + Claude API News Scanner.
+Serper + Gemini News Scanner.
 
-Uses Serper.dev (Google Search API) to find articles, then Claude API
+Uses Serper.dev (Google Search API) to find articles, then Gemini
 to analyze and score them.
 
 Free tier: 2,500 searches/month at serper.dev.
+Gemini free tier: 15 RPM, 1,500 requests/day.
 """
 
 import json
@@ -75,18 +76,18 @@ def generate_search_queries_serper(company_name: str, keywords: str) -> list[str
     ]
 
 
-def analyze_with_claude(company_name: str, search_results: list[dict]) -> dict:
+def analyze_with_gemini(company_name: str, search_results: list[dict]) -> dict:
     """
-    Use Claude API to analyze search results and extract structured article data.
+    Use Gemini API to analyze search results and extract structured article data.
 
     Returns dict with 'sources' list and 'synthesis' string.
     """
     if not search_results:
         return {"sources": [], "synthesis": f"No search results found for {company_name}."}
 
-    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
-    if not anthropic_key:
-        return {"sources": [], "synthesis": "ANTHROPIC_API_KEY not set."}
+    gemini_key = os.getenv("GEMINI_API_KEY", "")
+    if not gemini_key:
+        return {"sources": [], "synthesis": "GEMINI_API_KEY not set."}
 
     research_prompt_path = TEMPLATE_DIR / "research-prompt.md"
     research_prompt = research_prompt_path.read_text(encoding="utf-8")
@@ -111,24 +112,23 @@ def analyze_with_claude(company_name: str, search_results: list[dict]) -> dict:
     )
 
     try:
-        import anthropic
-        client = anthropic.Anthropic(api_key=anthropic_key)
-        message = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=2048,
-            messages=[{"role": "user", "content": prompt}],
+        from google import genai
+        client = genai.Client(api_key=gemini_key)
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt,
         )
-        output = message.content[0].text.strip()
+        output = response.text.strip()
         return _parse_json_response(output)
 
     except Exception as e:
-        return {"sources": [], "synthesis": f"Claude API error: {e}"}
+        return {"sources": [], "synthesis": f"Gemini API error: {e}"}
 
 
 def search_company_news_serper(company_name: str, keywords: str,
                                serper_api_key: str) -> dict:
     """
-    Full pipeline: generate queries → Serper search → Claude analysis.
+    Full pipeline: generate queries → Serper search → Gemini analysis.
 
     Returns dict with 'sources' and 'synthesis'.
     """
@@ -140,7 +140,7 @@ def search_company_news_serper(company_name: str, keywords: str,
     results = serper_search(queries, serper_api_key)
     print(f".{len(results)} results", end="", flush=True)
 
-    analysis = analyze_with_claude(company_name, results)
+    analysis = analyze_with_gemini(company_name, results)
     print("]")
 
     return analysis
@@ -156,14 +156,14 @@ def search_industry_news_serper(serper_api_key: str) -> dict:
     results = serper_search(queries, serper_api_key)
     print(f".{len(results)} results", end="", flush=True)
 
-    analysis = analyze_with_claude("Biotech/MedTech Industry", results)
+    analysis = analyze_with_gemini("Biotech/MedTech Industry", results)
     print("]")
 
     return analysis
 
 
 def _parse_json_response(response: str) -> dict:
-    """Parse JSON from Claude's response."""
+    """Parse JSON from model response."""
     text = response.strip()
     if text.startswith("```"):
         lines = text.splitlines()
