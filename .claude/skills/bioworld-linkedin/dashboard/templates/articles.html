@@ -54,15 +54,15 @@
           {% if article.relevance_score is defined and article.relevance_score is not none %}
             {% set score = article.relevance_score | int %}
             <span class="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full
-              {% if score >= 8 %}bg-green-500/20 text-green-300
-              {% elif score >= 5 %}bg-yellow-500/20 text-yellow-300
-              {% else %}bg-red-500/20 text-red-300
+              {% if score >= 8 %}bg-green-100 text-green-700
+              {% elif score >= 5 %}bg-yellow-100 text-yellow-700
+              {% else %}bg-red-100 text-red-700
               {% endif %}">
               {{ score }}/10
             </span>
           {% endif %}
           {% if drafts and drafts.get(article.id) %}
-          <span class="inline-flex items-center gap-1 bg-green-500/20 text-green-300 text-xs px-2 py-0.5 rounded-full font-medium">
+          <span class="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium">
             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
             Draft Ready
           </span>
@@ -255,9 +255,9 @@ function pollForDraft(articleId, area, btn, isRegeneration) {
         // Add Draft Ready badge to the card
         const card = area.closest('.article-card');
         const pillContainer = card.querySelector('.flex.flex-wrap.items-center.gap-2.mb-3');
-        if (pillContainer && !pillContainer.querySelector('.text-green-300')) {
+        if (pillContainer && !pillContainer.querySelector('.text-green-700')) {
           const badge = document.createElement('span');
-          badge.className = 'inline-flex items-center gap-1 bg-green-500/20 text-green-300 text-xs px-2 py-0.5 rounded-full font-medium';
+          badge.className = 'inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium';
           badge.innerHTML = '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Draft Ready';
           pillContainer.appendChild(badge);
         }

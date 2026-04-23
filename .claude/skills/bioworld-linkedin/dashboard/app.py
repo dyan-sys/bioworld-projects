@@ -350,9 +350,31 @@ def feed_page():
 
 @app.route("/articles")
 def articles_page():
-    """Workspace articles — local scan results, not Notion."""
+    """Articles — workspace scan results, falling back to Notion Discovered articles."""
     articles = workspace.get("articles", [])
     drafts = workspace.get("drafts", {})
+
+    # If workspace is empty, load Discovered articles from Notion
+    if not articles and CONTENT_DB_ID:
+        pages = notion_query(CONTENT_DB_ID, {
+            "filter": {"property": "Status", "status": {"equals": "Discovered"}}
+        })
+        for page in pages:
+            a = extract_article(page)
+            articles.append({
+                "id": a["id"],
+                "title": a["title"],
+                "company": a["company"],
+                "url": a["source_url"],
+                "source_url": a["source_url"],
+                "source_type": a["source_type"],
+                "key_insight": a["summary"],
+                "relevance_score": a["score"],
+                "date": a["date"],
+                "notion_id": a["id"],
+            })
+            if a["draft"]:
+                drafts[a["id"]] = a["draft"]
 
     # Attach draft text to articles
     for a in articles:
@@ -428,8 +450,33 @@ def api_scan(engine):
 
 @app.route("/api/generate-draft/<article_id>", methods=["POST"])
 def api_generate_draft(article_id):
-    """Generate a LinkedIn draft for a single workspace article. Accepts optional feedback for regeneration."""
+    """Generate a LinkedIn draft for a workspace or Notion article. Accepts optional feedback for regeneration."""
     article = next((a for a in workspace["articles"] if a["id"] == article_id), None)
+
+    # If not in workspace, try loading from Notion
+    if not article and CONTENT_DB_ID:
+        try:
+            page = requests.get(
+                f"{NOTION_API_BASE}/pages/{article_id}",
+                headers=notion_headers(), timeout=REQUEST_TIMEOUT
+            ).json()
+            if page.get("id"):
+                a = extract_article(page)
+                article = {
+                    "id": a["id"],
+                    "title": a["title"],
+                    "company": a["company"],
+                    "url": a["source_url"],
+                    "source_url": a["source_url"],
+                    "source_type": a["source_type"],
+                    "key_insight": a["summary"],
+                    "relevance_score": a["score"],
+                }
+                # Add to workspace so subsequent calls find it
+                workspace["articles"].append(article)
+        except Exception:
+            pass
+
     if not article:
         return jsonify({"error": "Article not found"}), 404
 
@@ -730,6 +777,13 @@ def _run_single_draft(article_id, article, feedback="", previous_draft=""):
         if draft_text:
             workspace["drafts"][article_id] = draft_text
             save_workspace()
+
+            # If this is a Notion article (UUID format), save draft back to Notion
+            if len(article_id) > 10 and "-" in article_id and CONTENT_DB_ID:
+                notion_update_page(article_id, {
+                    "Draft Post": {"rich_text": [{"type": "text", "text": {"content": draft_text[:2000]}}]},
+                    "Status": {"status": {"name": "Draft Ready"}},
+                })
 
         workflow_status["draft_" + article_id] = {"running": False, "status": "Complete"}
 
