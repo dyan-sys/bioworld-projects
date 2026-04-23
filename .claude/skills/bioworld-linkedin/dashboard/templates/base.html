@@ -60,19 +60,15 @@ tailwind.config = {
     <div class="flex-1 py-4 px-3 space-y-0.5">
       <a href="/" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium {% if request.endpoint == 'dashboard' %}active{% endif %}">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-        Overview
+        Dashboard
       </a>
-      <a href="/feed" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium {% if request.endpoint == 'feed_page' %}active{% endif %}">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7m-6 0a1 1 0 110-2 1 1 0 010 2z"/></svg>
-        Feed
-      </a>
-      <a href="/articles" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium {% if request.endpoint == 'articles_page' %}active{% endif %}">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-        Articles
-      </a>
-      <a href="/drafts" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium {% if request.endpoint == 'drafts_page' %}active{% endif %}">
+      <a href="/review" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium {% if request.endpoint == 'review_page' %}active{% endif %}">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-        Review & Schedule
+        Review
+      </a>
+      <a href="/published" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium {% if request.endpoint == 'published_page' %}active{% endif %}">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        Published
       </a>
       <a href="/brands" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium {% if request.endpoint == 'brands_page' %}active{% endif %}">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>

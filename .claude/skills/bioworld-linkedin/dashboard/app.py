@@ -225,18 +225,13 @@ def dashboard():
     for status in STATUS_COLORS:
         notion_stats[status] = len([a for a in notion_articles if a["status"] == status])
 
-    # Overview shows posts that are going out (Approved, Published)
-    overview_posts = [a for a in notion_articles
-                      if a["status"] in ("Approved", "Published")]
-    overview_posts.sort(key=lambda a: (
-        {"Approved": 0, "Published": 1}.get(a["status"], 2),
-        a.get("date", ""),
-    ))
+    # Items needing review
+    needs_review = notion_stats.get("Pending Approval", 0) + notion_stats.get("Draft Ready", 0)
 
-    # Pending review — for Ivan's approval queue
-    pending_review = [a for a in notion_articles
-                      if a["status"] in ("Pending Approval", "Draft Ready")]
-    pending_review.sort(key=lambda a: a.get("score", 0), reverse=True)
+    # Recently published (last 5)
+    recently_published = [a for a in notion_articles if a["status"] == "Published"]
+    recently_published.sort(key=lambda a: a.get("date", ""), reverse=True)
+    recently_published = recently_published[:5]
 
     now = datetime.now(HKT)
     days_until_tuesday = (1 - now.weekday()) % 7
@@ -247,98 +242,58 @@ def dashboard():
     return render_template(
         "dashboard.html",
         notion_stats=notion_stats, status_colors=STATUS_COLORS,
-        overview_posts=overview_posts,
-        pending_review=pending_review,
+        needs_review=needs_review,
+        recently_published=recently_published,
         next_publish=next_publish,
     )
 
 
-@app.route("/feed")
-def feed_page():
-    """Feed — Discovered articles from Notion."""
-    articles = []
-    if CONTENT_DB_ID:
-        pages = notion_query(CONTENT_DB_ID, {
-            "filter": {"property": "Status", "status": {"equals": "Discovered"}}
-        })
-        articles = [extract_article(a) for a in pages]
-
-    # Split into portfolio vs industry
-    portfolio_articles = [a for a in articles if a.get("company", "") != "Industry News"]
-    industry_articles = [a for a in articles if a.get("company", "") == "Industry News"]
-
-    # Group portfolio by brand
-    brands_map = {}
-    for a in portfolio_articles:
-        company = a.get("company", "Other")
-        brands_map.setdefault(company, []).append(a)
-    for company in brands_map:
-        brands_map[company].sort(key=lambda x: x.get("score", 0), reverse=True)
-    sorted_brands = sorted(brands_map.keys())
-
-    # Sort industry by relevance
-    industry_articles.sort(key=lambda x: x.get("score", 0), reverse=True)
-
-    return render_template(
-        "feed.html",
-        brands_map=brands_map,
-        sorted_brands=sorted_brands,
-        industry_articles=industry_articles,
-        portfolio_count=len(portfolio_articles),
-        industry_count=len(industry_articles),
-        total=len(articles),
-    )
-
-
-@app.route("/articles")
-def articles_page():
-    """Articles — pipeline articles from Notion (Shortlisted through Published)."""
-    articles = []
-    if CONTENT_DB_ID:
-        pages = notion_query(CONTENT_DB_ID)
-        articles = [extract_article(a) for a in pages]
-
-    # Show pipeline articles (everything except Discovered)
-    pipeline = [a for a in articles
-                if a["status"] in ("Shortlisted", "Draft Ready", "Pending Approval", "Approved", "Published", "Rejected")]
-
-    status_order = ["Pending Approval", "Approved", "Draft Ready", "Shortlisted", "Published", "Rejected"]
-    pipeline.sort(key=lambda a: (
-        status_order.index(a["status"]) if a["status"] in status_order else 99,
-        -a.get("score", 0),
-    ))
-
-    return render_template(
-        "articles.html", articles=pipeline,
-        status_colors=STATUS_COLORS,
-    )
-
-
-@app.route("/drafts")
-def drafts_page():
-    """Pipeline — all articles from Notion with full status detail."""
+@app.route("/review")
+def review_page():
+    """Review — articles waiting for Ivan's approval."""
     notion_articles = []
     if CONTENT_DB_ID:
         pages = notion_query(CONTENT_DB_ID)
         notion_articles = [extract_article(a) for a in pages]
 
-    # Show all statuses except Discovered (those stay in Feed)
+    # Show articles needing review: Pending Approval, Draft Ready, Shortlisted
     pipeline = [a for a in notion_articles
-                if a["status"] in ("Shortlisted", "Draft Ready", "Pending Approval", "Approved", "Published", "Rejected")]
+                if a["status"] in ("Pending Approval", "Draft Ready", "Shortlisted")]
 
-    # Group by status for the template
-    status_order = ["Pending Approval", "Approved", "Draft Ready", "Shortlisted", "Published", "Rejected"]
+    status_order = ["Pending Approval", "Draft Ready", "Shortlisted"]
     pipeline.sort(key=lambda a: (
         status_order.index(a["status"]) if a["status"] in status_order else 99,
         -a.get("score", 0),
     ))
 
-    # Stats for pipeline header
+    # Stats for filter pills
     pipeline_stats = {}
     for s in status_order:
         pipeline_stats[s] = len([a for a in pipeline if a["status"] == s])
 
-    return render_template("drafts.html", drafts=pipeline, pipeline_stats=pipeline_stats, status_colors=STATUS_COLORS)
+    return render_template("review.html", drafts=pipeline, pipeline_stats=pipeline_stats, status_colors=STATUS_COLORS)
+
+
+@app.route("/published")
+def published_page():
+    """Published — archive of approved and published articles."""
+    notion_articles = []
+    if CONTENT_DB_ID:
+        pages = notion_query(CONTENT_DB_ID)
+        notion_articles = [extract_article(a) for a in pages]
+
+    # Show Published + Approved articles
+    archive = [a for a in notion_articles
+               if a["status"] in ("Approved", "Published")]
+
+    # Published first, then Approved; within each group sort by date descending
+    archive.sort(key=lambda a: (
+        0 if a["status"] == "Published" else 1,
+        a.get("date", "") or "",
+    ), reverse=False)
+    archive.sort(key=lambda a: a.get("date", "") or "", reverse=True)
+
+    return render_template("published.html", articles=archive, status_colors=STATUS_COLORS)
 
 
 @app.route("/brands")

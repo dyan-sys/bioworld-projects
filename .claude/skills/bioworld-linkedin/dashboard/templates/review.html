@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Review & Schedule — Bioworld Content Hub{% endblock %}
+{% block title %}Review — Bioworld Content Hub{% endblock %}
 
 {% block content %}
 <div class="flex items-center justify-between mb-6">
   <div>
-    <h1 class="text-2xl font-bold text-bw-dark">Review & Schedule</h1>
-    <p class="text-bw-muted text-sm mt-1">{{ drafts|length }} post{{ 's' if drafts|length != 1 }} — approve, schedule, and track published content</p>
+    <h1 class="text-2xl font-bold text-bw-dark">Review</h1>
+    <p class="text-bw-muted text-sm mt-1">{{ drafts|length }} article{{ 's' if drafts|length != 1 }} waiting for your review</p>
   </div>
   <button onclick="sendForApproval()" class="px-4 py-2 bg-bw-teal text-white text-[12px] font-semibold rounded-lg hover:bg-bw-teal-dark transition">
     Send Draft Ready to Slack
@@ -28,8 +28,8 @@
 
 {% if not drafts %}
 <div class="bg-white border border-bw-border rounded-xl p-12 text-center shadow-sm">
-  <p class="text-bw-muted">No posts in the pipeline yet.</p>
-  <a href="/feed" class="text-bw-teal hover:underline mt-2 inline-block text-sm">Scan the feed to get started &rarr;</a>
+  <p class="text-bw-muted">No articles waiting for review.</p>
+  <p class="text-bw-muted text-sm mt-1">Articles will appear here when drafts are generated.</p>
 </div>
 {% endif %}
 
@@ -71,6 +71,10 @@
         </div>
         <div class="text-gray-800 text-[13px] leading-relaxed whitespace-pre-line max-h-48 overflow-y-auto">{{ draft.draft }}</div>
       </div>
+    </div>
+    {% elif draft.status == 'Shortlisted' %}
+    <div class="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <p class="text-[12px] text-blue-700">This article is shortlisted — a LinkedIn draft will be generated soon.</p>
     </div>
     {% endif %}
 

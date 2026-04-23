@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}Overview — Bioworld Content Hub{% endblock %}
+{% block title %}Dashboard — Bioworld Content Hub{% endblock %}
 
 {% block content %}
 <!-- Header -->
 <div class="mb-8">
-  <h1 class="text-2xl font-bold text-bw-dark">Overview</h1>
+  <h1 class="text-2xl font-bold text-bw-dark">Dashboard</h1>
   <p class="text-bw-muted text-sm mt-1">Your LinkedIn content pipeline at a glance</p>
 </div>
 
-<!-- Stats -->
+<!-- Pipeline Stats -->
 <div class="grid grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
   {% set stat_items = [
     ("Discovered", notion_stats.get("Discovered", 0), "status-discovered"),
@@ -29,48 +29,32 @@
 <!-- Main grid -->
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
 
-  <!-- Posts going out (2/3) -->
+  <!-- Needs Your Review (2/3) -->
   <div class="lg:col-span-2 bg-white border border-bw-border rounded-xl shadow-sm">
     <div class="px-5 py-4 border-b border-bw-border flex items-center justify-between">
       <div>
-        <h2 class="text-sm font-semibold text-bw-dark">Scheduled & Published</h2>
-        <p class="text-[11px] text-bw-muted mt-0.5">Posts that are approved, pending approval, or already published</p>
+        <h2 class="text-sm font-semibold text-bw-dark">Needs Your Review</h2>
+        <p class="text-[11px] text-bw-muted mt-0.5">{{ needs_review }} article{{ 's' if needs_review != 1 }} waiting for approval</p>
       </div>
-      <a href="/drafts" class="text-[12px] text-bw-teal hover:text-bw-teal-dark font-medium transition">Review & Schedule &rarr;</a>
+      <a href="/review" class="text-[12px] text-bw-teal hover:text-bw-teal-dark font-medium transition">Review all &rarr;</a>
     </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-[13px]">
-        <thead>
-          <tr class="border-b border-bw-border text-left text-[11px] uppercase tracking-wider text-bw-muted">
-            <th class="px-5 py-3 font-medium">Title</th>
-            <th class="px-5 py-3 font-medium">Company</th>
-            <th class="px-5 py-3 font-medium">Status</th>
-            <th class="px-5 py-3 font-medium">Score</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-bw-border/50">
-          {% for article in overview_posts[:12] %}
-          <tr class="hover:bg-bw-teal-50 transition">
-            <td class="px-5 py-3">
-              <div class="font-medium text-bw-dark truncate max-w-[280px]" title="{{ article.title }}">{{ article.title }}</div>
-              <div class="text-[11px] text-bw-muted">{{ article.date }}</div>
-            </td>
-            <td class="px-5 py-3 text-[12px] text-bw-text-light">{{ article.company }}</td>
-            <td class="px-5 py-3">
-              <span class="status-{{ article.status|lower|replace(' ', '-') }} px-2 py-0.5 rounded-full text-[11px] font-medium">{{ article.status }}</span>
-            </td>
-            <td class="px-5 py-3 text-bw-muted">{{ article.score }}/10</td>
-          </tr>
-          {% else %}
-          <tr>
-            <td colspan="4" class="px-5 py-10 text-center text-bw-muted text-sm">
-              No approved or published posts yet.<br>
-              <a href="/feed" class="text-bw-teal hover:underline mt-1 inline-block">Check the Feed for discovered content &rarr;</a>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <div class="px-5 py-6">
+      {% if needs_review > 0 %}
+      <div class="flex items-center gap-4">
+        <div class="w-16 h-16 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center">
+          <span class="text-2xl font-bold text-amber-600">{{ needs_review }}</span>
+        </div>
+        <div>
+          <p class="text-[14px] font-medium text-bw-dark">{{ needs_review }} post{{ 's' if needs_review != 1 }} ready for your review</p>
+          <p class="text-[12px] text-bw-muted mt-0.5">Pending Approval and Draft Ready articles need your attention</p>
+          <a href="/review" class="inline-block mt-2 px-4 py-2 bg-bw-teal text-white text-[12px] font-semibold rounded-lg hover:bg-bw-teal-dark transition">Go to Review</a>
+        </div>
+      </div>
+      {% else %}
+      <div class="text-center py-4">
+        <p class="text-bw-muted text-sm">All caught up — nothing to review right now.</p>
+      </div>
+      {% endif %}
     </div>
   </div>
 
@@ -102,103 +86,54 @@
     <div class="bg-white border border-bw-border rounded-xl p-5 shadow-sm">
       <h3 class="text-sm font-semibold text-bw-dark mb-3">Quick Actions</h3>
       <div class="space-y-1.5">
-        <a href="/feed" class="block px-3 py-2 text-[12px] font-medium text-bw-text-light hover:text-bw-teal hover:bg-bw-teal-50 rounded-lg transition">Browse feed &rarr;</a>
-        <a href="/articles" class="block px-3 py-2 text-[12px] font-medium text-bw-text-light hover:text-bw-teal hover:bg-bw-teal-50 rounded-lg transition">View articles &rarr;</a>
-        <a href="/drafts" class="block px-3 py-2 text-[12px] font-medium text-bw-text-light hover:text-bw-teal hover:bg-bw-teal-50 rounded-lg transition">Review & Schedule &rarr;</a>
+        <a href="/review" class="block px-3 py-2 text-[12px] font-medium text-bw-text-light hover:text-bw-teal hover:bg-bw-teal-50 rounded-lg transition">Review articles &rarr;</a>
+        <a href="/published" class="block px-3 py-2 text-[12px] font-medium text-bw-text-light hover:text-bw-teal hover:bg-bw-teal-50 rounded-lg transition">View published &rarr;</a>
+        <a href="/brands" class="block px-3 py-2 text-[12px] font-medium text-bw-text-light hover:text-bw-teal hover:bg-bw-teal-50 rounded-lg transition">Manage portfolio &rarr;</a>
       </div>
     </div>
 
   </div>
 </div>
 
-<!-- Pending Review for Ivan -->
+<!-- Recently Published -->
 <div class="bg-white border border-bw-border rounded-xl shadow-sm mb-8">
   <div class="px-5 py-4 border-b border-bw-border flex items-center justify-between">
     <div>
-      <h2 class="text-sm font-semibold text-bw-dark">Pending Review</h2>
-      <p class="text-[11px] text-bw-muted mt-0.5">{{ pending_review|length }} post{{ 's' if pending_review|length != 1 }} waiting for approval</p>
+      <h2 class="text-sm font-semibold text-bw-dark">Recently Published</h2>
+      <p class="text-[11px] text-bw-muted mt-0.5">Last {{ recently_published|length }} published post{{ 's' if recently_published|length != 1 }}</p>
     </div>
-    <a href="/drafts" class="text-[12px] text-bw-teal hover:text-bw-teal-dark font-medium transition">Review all &rarr;</a>
+    <a href="/published" class="text-[12px] text-bw-teal hover:text-bw-teal-dark font-medium transition">View all &rarr;</a>
   </div>
 
-  {% if pending_review %}
-  <div class="divide-y divide-bw-border/50">
-    {% for article in pending_review[:6] %}
-    <div class="px-5 py-4 hover:bg-bw-teal-50 transition" id="review-card-{{ article.id }}">
-      <div class="flex items-start justify-between gap-4">
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-2 mb-1">
-            <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-600">{{ article.company }}</span>
-            <span class="status-{{ article.status|lower|replace(' ', '-') }} px-2 py-0.5 rounded-full text-[10px] font-medium">{{ article.status }}</span>
-            {% if article.score %}<span class="text-[11px] text-bw-muted">{{ article.score }}/10</span>{% endif %}
-          </div>
-          <h3 class="text-[13px] font-semibold text-bw-dark mb-1">{{ article.title }}</h3>
-          {% if article.draft %}
-          <p class="text-[12px] text-bw-text-light leading-relaxed" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ article.draft[:200] }}{% if article.draft|length > 200 %}...{% endif %}</p>
-          {% endif %}
-        </div>
-        <div class="flex items-center gap-2 flex-shrink-0">
-          <button onclick="quickApprove('{{ article.id }}')" id="approve-{{ article.id }}"
-            class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-[11px] font-semibold rounded-lg transition">
-            Approve
-          </button>
-          <button onclick="quickReject('{{ article.id }}')" id="reject-{{ article.id }}"
-            class="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[11px] font-semibold rounded-lg transition">
-            Reject
-          </button>
-        </div>
-      </div>
-    </div>
-    {% endfor %}
+  {% if recently_published %}
+  <div class="overflow-x-auto">
+    <table class="w-full text-[13px]">
+      <thead>
+        <tr class="border-b border-bw-border text-left text-[11px] uppercase tracking-wider text-bw-muted">
+          <th class="px-5 py-3 font-medium">Title</th>
+          <th class="px-5 py-3 font-medium">Company</th>
+          <th class="px-5 py-3 font-medium">Date</th>
+          <th class="px-5 py-3 font-medium">Score</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-bw-border/50">
+        {% for article in recently_published %}
+        <tr class="hover:bg-bw-teal-50 transition">
+          <td class="px-5 py-3">
+            <div class="font-medium text-bw-dark truncate max-w-[280px]" title="{{ article.title }}">{{ article.title }}</div>
+          </td>
+          <td class="px-5 py-3 text-[12px] text-bw-text-light">{{ article.company }}</td>
+          <td class="px-5 py-3 text-[12px] text-bw-muted">{{ article.date }}</td>
+          <td class="px-5 py-3 text-bw-muted">{{ article.score }}/10</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
   {% else %}
   <div class="px-5 py-10 text-center text-bw-muted text-sm">
-    No posts waiting for review right now.
+    No published posts yet.
   </div>
   {% endif %}
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-async function quickApprove(id) {
-  const btn = document.getElementById(`approve-${id}`);
-  btn.textContent = 'Approving...';
-  btn.disabled = true;
-  try {
-    const res = await fetch(`/api/article/${id}/status`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'Approved' })
-    });
-    if (!res.ok) throw new Error();
-    const card = document.getElementById(`review-card-${id}`);
-    card.innerHTML = '<div class="px-5 py-3 text-center text-green-600 text-[13px] font-medium">Approved</div>';
-    setTimeout(() => card.remove(), 1500);
-  } catch (e) {
-    btn.textContent = 'Approve';
-    btn.disabled = false;
-  }
-}
-
-async function quickReject(id) {
-  const btn = document.getElementById(`reject-${id}`);
-  btn.textContent = 'Rejecting...';
-  btn.disabled = true;
-  try {
-    const res = await fetch(`/api/article/${id}/status`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'Rejected' })
-    });
-    if (!res.ok) throw new Error();
-    const card = document.getElementById(`review-card-${id}`);
-    card.innerHTML = '<div class="px-5 py-3 text-center text-red-500 text-[13px] font-medium">Rejected</div>';
-    setTimeout(() => card.remove(), 1500);
-  } catch (e) {
-    btn.textContent = 'Reject';
-    btn.disabled = false;
-  }
-}
-</script>
 {% endblock %}
