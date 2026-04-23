@@ -671,8 +671,27 @@ def _run_scan(engine):
         workspace["scan_time"] = datetime.now(HKT).strftime("%Y-%m-%d %H:%M HKT")
         save_workspace()
 
+        # Auto-save discovered articles to Notion so they persist
+        saved = 0
+        if CONTENT_DB_ID:
+            date_str = datetime.now(HKT).strftime("%Y-%m-%d")
+            for article in all_articles:
+                properties = {
+                    "Title": {"title": [{"type": "text", "text": {"content": (article.get("title") or "")[:2000]}}]},
+                    "Status": {"status": {"name": "Discovered"}},
+                    "Source URL": {"url": article.get("url") or None},
+                    "Portfolio Company": {"select": {"name": article.get("company", "Other")}},
+                    "Source Type": {"select": {"name": article.get("source_type", "News")}},
+                    "Relevance Score": {"number": article.get("relevance_score", 0)},
+                    "AI Summary": {"rich_text": [{"type": "text", "text": {"content": (article.get("key_insight") or "")[:2000]}}]},
+                    "Discovered Date": {"date": {"start": date_str}},
+                    "Week": {"rich_text": [{"type": "text", "text": {"content": current_week()}}]},
+                }
+                if notion_create_page(CONTENT_DB_ID, properties):
+                    saved += 1
+
         workflow_status["scan"]["status"] = "Complete"
-        workflow_status["scan"]["log"] = f"Found {len(all_articles)} articles from {len(brands)} brands"
+        workflow_status["scan"]["log"] = f"Found {len(all_articles)} articles from {len(brands)} brands, saved {saved} to Notion"
 
     except Exception as e:
         workflow_status["scan"]["status"] = f"Error: {str(e)}"
