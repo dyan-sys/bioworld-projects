@@ -1,13 +1,16 @@
 """
 Draft Generator Library for Bioworld LinkedIn Automation.
 
-Uses Gemini API to generate LinkedIn post drafts from article
+Uses Groq API (Llama 3.3 70B) to generate LinkedIn post drafts from article
 summaries, matching Bioworld Ventures' posting style.
 """
 
 import os
 from pathlib import Path
 
+import requests
+
+GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions"
 TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "templates"
 
 
@@ -24,16 +27,16 @@ def load_templates() -> dict:
 
 def generate_draft(article: dict, _unused_key: str = "") -> str:
     """
-    Generate a LinkedIn post draft for a given article using Gemini API.
+    Generate a LinkedIn post draft for a given article using Groq API.
 
     article dict keys:
         title, summary, source_url, company, source_type
 
     Returns the post text as a string.
     """
-    gemini_key = os.getenv("GEMINI_API_KEY", "")
-    if not gemini_key:
-        print("  [ERROR: GEMINI_API_KEY not set]")
+    groq_key = os.getenv("GROQ_API_KEY", "")
+    if not groq_key:
+        print("  [ERROR: GROQ_API_KEY not set]")
         return ""
 
     templates = load_templates()
@@ -53,7 +56,6 @@ def generate_draft(article: dict, _unused_key: str = "") -> str:
         )
 
     prompt = (
-        f"{templates['system_prompt']}\n\n"
         f"## Article to Post About\n"
         f"**Title:** {article.get('title', '')}\n"
         f"**Company:** {company}\n"
@@ -75,14 +77,26 @@ def generate_draft(article: dict, _unused_key: str = "") -> str:
     print(f"  [Drafting: {article.get('title', '')[:50]}", end="", flush=True)
 
     try:
-        from google import genai
-        client = genai.Client(api_key=gemini_key)
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=prompt,
+        resp = requests.post(
+            GROQ_ENDPOINT,
+            headers={
+                "Authorization": f"Bearer {groq_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": "llama-3.3-70b-versatile",
+                "messages": [
+                    {"role": "system", "content": templates["system_prompt"]},
+                    {"role": "user", "content": prompt},
+                ],
+                "max_tokens": 1024,
+                "temperature": 0.7,
+            },
+            timeout=60,
         )
+        resp.raise_for_status()
         print("]")
-        return response.text.strip()
+        return resp.json()["choices"][0]["message"]["content"].strip()
 
     except Exception as e:
         print(f" ERROR: {e}]")
