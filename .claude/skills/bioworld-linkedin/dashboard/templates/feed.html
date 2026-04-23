@@ -5,26 +5,16 @@
 <div class="flex items-center justify-between mb-6">
   <div>
     <h1 class="text-2xl font-bold text-bw-dark">Feed</h1>
-    <p class="text-bw-muted text-sm mt-1">Portfolio reposts and industry insights for original content</p>
+    <p class="text-bw-muted text-sm mt-1">Discovered articles from portfolio companies and industry news</p>
   </div>
-  <div class="flex items-center gap-3">
-    {% if scan_engine %}
-    <span class="text-[11px] text-bw-muted">Last scan: {{ scan_engine }} &middot; {{ scan_time }}</span>
-    {% endif %}
-    <button onclick="triggerScan('serper')" class="scan-btn px-4 py-2 bg-bw-teal text-white text-[12px] font-semibold rounded-lg hover:bg-bw-teal-dark transition">Scan with Serper</button>
-    <button onclick="triggerScan('tavily')" class="scan-btn px-4 py-2 bg-bw-dark text-white text-[12px] font-semibold rounded-lg hover:opacity-90 transition">Scan with Tavily</button>
-  </div>
+  <span class="text-[12px] text-bw-muted">{{ total }} article{{ 's' if total != 1 }} discovered</span>
 </div>
 
 {% if total == 0 %}
 <div class="bg-white border border-bw-border rounded-xl p-16 text-center shadow-sm">
   <svg class="w-12 h-12 mx-auto text-bw-border mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7m-6 0a1 1 0 110-2 1 1 0 010 2z"/></svg>
   <h3 class="text-lg font-semibold text-bw-dark mb-2">No articles yet</h3>
-  <p class="text-bw-muted text-sm mb-4">Scan your portfolio companies to discover LinkedIn posts and news articles.</p>
-  <div class="flex gap-3 justify-center">
-    <button onclick="triggerScan('serper')" class="scan-btn px-5 py-2.5 bg-bw-teal text-white text-sm font-semibold rounded-lg hover:bg-bw-teal-dark transition">Scan with Serper</button>
-    <button onclick="triggerScan('tavily')" class="scan-btn px-5 py-2.5 bg-bw-dark text-white text-sm font-semibold rounded-lg hover:opacity-90 transition">Scan with Tavily</button>
-  </div>
+  <p class="text-bw-muted text-sm">Run a scan via Claude Code to discover portfolio and industry articles.</p>
 </div>
 {% else %}
 
@@ -44,7 +34,7 @@
 <div id="section-portfolio">
   {% if portfolio_count == 0 %}
   <div class="bg-white border border-bw-border rounded-xl p-10 text-center shadow-sm text-bw-muted text-sm">
-    No portfolio articles found. Try scanning again.
+    No portfolio articles found.
   </div>
   {% endif %}
 
@@ -73,8 +63,8 @@
     </h2>
     <div class="space-y-3">
       {% for article in brands_map[brand] %}
-      {% set is_li = article.url is defined and 'linkedin.com' in (article.url or '') %}
-      <div class="bg-white border border-bw-border rounded-xl p-5 shadow-sm hover:border-bw-teal/40 transition group">
+      {% set is_li = article.source_url is defined and 'linkedin.com' in (article.source_url or '') %}
+      <div class="bg-white border border-bw-border rounded-xl p-5 shadow-sm hover:border-bw-teal/40 transition">
         <div class="flex items-start gap-4">
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 mb-1.5">
@@ -83,26 +73,18 @@
               {% else %}
               <span class="px-2 py-0.5 bg-bw-teal-light text-bw-teal-deep text-[10px] font-semibold rounded-full uppercase">{{ article.source_type or 'News' }}</span>
               {% endif %}
-              {% if article.date or article.get('published_date') %}
-              <span class="text-[11px] text-bw-muted">{{ article.date or article.get('published_date', '') }}</span>
+              {% if article.date %}
+              <span class="text-[11px] text-bw-muted">{{ article.date }}</span>
               {% endif %}
-              {% if article.relevance_score %}
-              <span class="ml-auto text-[11px] font-semibold {% if article.relevance_score >= 8 %}text-green-600{% elif article.relevance_score >= 5 %}text-amber-600{% else %}text-bw-muted{% endif %}">{{ article.relevance_score }}/10</span>
+              {% if article.score %}
+              <span class="ml-auto text-[11px] font-semibold {% if article.score >= 8 %}text-green-600{% elif article.score >= 5 %}text-amber-600{% else %}text-bw-muted{% endif %}">{{ article.score }}/10</span>
               {% endif %}
             </div>
             <h3 class="font-semibold text-bw-dark text-[14px] leading-snug mb-1.5">{{ article.title }}</h3>
-            <p class="text-[12px] text-bw-text-light leading-relaxed" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ article.key_insight or article.snippet or '' }}</p>
-            {% if article.url %}
-            <a href="{{ article.url }}" target="_blank" class="text-[11px] text-bw-teal hover:underline mt-2 inline-block">{{ article.url[:60] }}{% if article.url|length > 60 %}...{% endif %}</a>
+            <p class="text-[12px] text-bw-text-light leading-relaxed" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ article.summary or '' }}</p>
+            {% if article.source_url %}
+            <a href="{{ article.source_url }}" target="_blank" class="text-[11px] text-bw-teal hover:underline mt-2 inline-block">{{ article.source_url[:60] }}{% if article.source_url|length > 60 %}...{% endif %}</a>
             {% endif %}
-          </div>
-          <div class="flex flex-col gap-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition">
-            <button onclick="moveToCreate('{{ article.id }}')" class="px-3 py-1.5 bg-bw-teal text-white text-[11px] font-semibold rounded-lg hover:bg-bw-teal-dark transition whitespace-nowrap">
-              Move to Create
-            </button>
-            <button onclick="saveToNotion('{{ article.id }}')" class="px-3 py-1.5 border border-bw-border text-bw-text-light text-[11px] font-medium rounded-lg hover:bg-bw-hover transition whitespace-nowrap">
-              Save to Notion
-            </button>
           </div>
         </div>
       </div>
@@ -113,45 +95,37 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- SECTION 2: Industry Insights — for original post generation           -->
+<!-- SECTION 2: Industry Insights                                          -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <div id="section-industry" class="hidden">
   <div class="bg-bw-teal-light border border-bw-teal/20 rounded-xl p-4 mb-6">
-    <p class="text-[13px] text-bw-teal-deep">These are industry-wide articles and trends — use them to generate <strong>original posts</strong> that position Bioworld as a thought leader in life sciences.</p>
+    <p class="text-[13px] text-bw-teal-deep">Industry-wide articles and trends — used for <strong>original posts</strong> that position Bioworld as a thought leader in life sciences.</p>
   </div>
 
   {% if industry_count == 0 %}
   <div class="bg-white border border-bw-border rounded-xl p-10 text-center shadow-sm text-bw-muted text-sm">
-    No industry articles found. Try scanning again.
+    No industry articles found.
   </div>
   {% else %}
   <div class="space-y-3">
     {% for article in industry_articles %}
-    <div class="bg-white border border-bw-border rounded-xl p-5 shadow-sm hover:border-bw-teal/40 transition group">
+    <div class="bg-white border border-bw-border rounded-xl p-5 shadow-sm hover:border-bw-teal/40 transition">
       <div class="flex items-start gap-4">
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 mb-1.5">
             <span class="px-2 py-0.5 bg-purple-50 text-purple-600 text-[10px] font-semibold rounded-full uppercase">{{ article.source_type or 'Industry' }}</span>
-            {% if article.date or article.get('published_date') %}
-            <span class="text-[11px] text-bw-muted">{{ article.date or article.get('published_date', '') }}</span>
+            {% if article.date %}
+            <span class="text-[11px] text-bw-muted">{{ article.date }}</span>
             {% endif %}
-            {% if article.relevance_score %}
-            <span class="ml-auto text-[11px] font-semibold {% if article.relevance_score >= 8 %}text-green-600{% elif article.relevance_score >= 5 %}text-amber-600{% else %}text-bw-muted{% endif %}">{{ article.relevance_score }}/10</span>
+            {% if article.score %}
+            <span class="ml-auto text-[11px] font-semibold {% if article.score >= 8 %}text-green-600{% elif article.score >= 5 %}text-amber-600{% else %}text-bw-muted{% endif %}">{{ article.score }}/10</span>
             {% endif %}
           </div>
           <h3 class="font-semibold text-bw-dark text-[14px] leading-snug mb-1.5">{{ article.title }}</h3>
-          <p class="text-[12px] text-bw-text-light leading-relaxed" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ article.key_insight or article.snippet or '' }}</p>
-          {% if article.url %}
-          <a href="{{ article.url }}" target="_blank" class="text-[11px] text-bw-teal hover:underline mt-2 inline-block">{{ article.url[:60] }}{% if article.url|length > 60 %}...{% endif %}</a>
+          <p class="text-[12px] text-bw-text-light leading-relaxed" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ article.summary or '' }}</p>
+          {% if article.source_url %}
+          <a href="{{ article.source_url }}" target="_blank" class="text-[11px] text-bw-teal hover:underline mt-2 inline-block">{{ article.source_url[:60] }}{% if article.source_url|length > 60 %}...{% endif %}</a>
           {% endif %}
-        </div>
-        <div class="flex flex-col gap-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition">
-          <button onclick="moveToCreate('{{ article.id }}')" class="px-3 py-1.5 bg-purple-600 text-white text-[11px] font-semibold rounded-lg hover:bg-purple-700 transition whitespace-nowrap">
-            Draft Original Post
-          </button>
-          <button onclick="saveToNotion('{{ article.id }}')" class="px-3 py-1.5 border border-bw-border text-bw-text-light text-[11px] font-medium rounded-lg hover:bg-bw-hover transition whitespace-nowrap">
-            Save to Notion
-          </button>
         </div>
       </div>
     </div>
@@ -199,61 +173,6 @@ function showBrand(brand) {
       if (s.dataset.brand === brand) { s.classList.remove('hidden'); }
       else { s.classList.add('hidden'); }
     });
-  }
-}
-
-async function triggerScan(engine) {
-  const btns = document.querySelectorAll('.scan-btn');
-  btns.forEach(b => { b.disabled = true; b.textContent = 'Scanning...'; b.style.opacity = '0.5'; });
-  try {
-    const res = await fetch(`/api/scan/${engine}`, { method: 'POST' });
-    if (!res.ok) throw new Error('Failed');
-    const poll = setInterval(async () => {
-      const sr = await fetch('/api/workflow-status');
-      const data = await sr.json();
-      if (!data.scan?.running) { clearInterval(poll); location.reload(); }
-    }, 3000);
-  } catch (e) {
-    btns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
-    btns[0].textContent = 'Scan with Serper'; btns[1].textContent = 'Scan with Tavily';
-    alert('Scan failed. Check API keys.');
-  }
-}
-
-async function moveToCreate(articleId) {
-  const btn = event.target;
-  btn.textContent = 'Moving...';
-  btn.disabled = true;
-  try {
-    const res = await fetch(`/api/generate-draft/${articleId}`, { method: 'POST' });
-    if (!res.ok) throw new Error('Failed');
-    btn.textContent = 'Moved!';
-    btn.classList.add('bg-green-600');
-    setTimeout(() => { window.location.href = '/articles'; }, 800);
-  } catch (e) {
-    btn.textContent = 'Failed';
-    btn.disabled = false;
-  }
-}
-
-async function saveToNotion(articleId) {
-  const btn = event.target;
-  btn.textContent = 'Saving...';
-  btn.disabled = true;
-  try {
-    const res = await fetch('/api/send-to-notion', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ article_ids: [articleId] }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      btn.textContent = 'Saved!';
-      btn.classList.add('bg-green-50', 'text-green-600', 'border-green-200');
-    } else { throw new Error(); }
-  } catch (e) {
-    btn.textContent = 'Failed';
-    btn.disabled = false;
   }
 }
 </script>

@@ -65,7 +65,7 @@
           <tr>
             <td colspan="4" class="px-5 py-10 text-center text-bw-muted text-sm">
               No approved or published posts yet.<br>
-              <a href="/feed" class="text-bw-teal hover:underline mt-1 inline-block">Scan the Feed to discover content &rarr;</a>
+              <a href="/feed" class="text-bw-teal hover:underline mt-1 inline-block">Check the Feed for discovered content &rarr;</a>
             </td>
           </tr>
           {% endfor %}
@@ -76,18 +76,6 @@
 
   <!-- Right column -->
   <div class="space-y-4">
-
-    <!-- Scan workspace -->
-    <div class="bg-white border border-bw-border rounded-xl p-5 shadow-sm">
-      <h3 class="text-sm font-semibold text-bw-dark mb-3">Workspace</h3>
-      <div class="space-y-2 text-[13px]">
-        <div class="flex justify-between"><span class="text-bw-muted">Feed articles</span><span class="font-medium text-bw-dark">{{ ws_count }}</span></div>
-        <div class="flex justify-between"><span class="text-bw-muted">Drafts ready</span><span class="font-medium text-bw-dark">{{ ws_drafts }}</span></div>
-        {% if scan_engine %}
-        <div class="flex justify-between"><span class="text-bw-muted">Last scan</span><span class="font-medium text-[12px] text-bw-text-light">{{ scan_engine }}</span></div>
-        {% endif %}
-      </div>
-    </div>
 
     <!-- Schedule -->
     <div class="bg-white border border-bw-border rounded-xl p-5 shadow-sm">
@@ -115,7 +103,7 @@
       <h3 class="text-sm font-semibold text-bw-dark mb-3">Quick Actions</h3>
       <div class="space-y-1.5">
         <a href="/feed" class="block px-3 py-2 text-[12px] font-medium text-bw-text-light hover:text-bw-teal hover:bg-bw-teal-50 rounded-lg transition">Browse feed &rarr;</a>
-        <a href="/articles" class="block px-3 py-2 text-[12px] font-medium text-bw-text-light hover:text-bw-teal hover:bg-bw-teal-50 rounded-lg transition">Create content &rarr;</a>
+        <a href="/articles" class="block px-3 py-2 text-[12px] font-medium text-bw-text-light hover:text-bw-teal hover:bg-bw-teal-50 rounded-lg transition">View articles &rarr;</a>
         <a href="/drafts" class="block px-3 py-2 text-[12px] font-medium text-bw-text-light hover:text-bw-teal hover:bg-bw-teal-50 rounded-lg transition">Review & Schedule &rarr;</a>
       </div>
     </div>
