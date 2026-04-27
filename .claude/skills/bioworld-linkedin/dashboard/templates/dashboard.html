@@ -11,7 +11,7 @@
 <!-- Pipeline Stats (only pipeline statuses) -->
 <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-10">
   {% set stat_items = [
-    ("Ivan's Review", pipeline_stats.get("Ivan's Review", 0), "status-ivans-review"),
+    ("Ivans Review", pipeline_stats.get("Ivans Review", 0), "status-ivans-review"),
     ("Needs Edits", pipeline_stats.get("Needs Edits", 0), "status-needs-edits"),
     ("Approved", pipeline_stats.get("Approved", 0), "status-approved"),
     ("Scheduled", pipeline_stats.get("Scheduled", 0), "status-scheduled"),
@@ -45,7 +45,7 @@
         </div>
         <div>
           <p class="text-[14px] font-medium text-bw-dark">{{ needs_review }} post{{ 's' if needs_review != 1 }} ready for Ivan's review</p>
-          <p class="text-[12px] text-bw-muted mt-0.5">Ivan's Review and Needs Edits articles need attention</p>
+          <p class="text-[12px] text-bw-muted mt-0.5">Ivans Review and Needs Edits articles need attention</p>
           <a href="/review" class="inline-block mt-3 px-5 py-2.5 bg-bw-teal text-white text-[12px] font-semibold rounded-lg hover:bg-bw-teal-dark transition">Go to Review</a>
         </div>
       </div>
@@ -151,7 +151,7 @@
             <span class="text-blue-600 font-medium">{{ next_tuesday }}</span>
             {% elif article.status == 'Approved' %}
             <span class="text-green-600 font-medium">{{ next_tuesday }}</span>
-            {% elif article.status == "Ivan's Review" %}
+            {% elif article.status == "Ivans Review" %}
             <span class="text-amber-600">Awaiting Ivan</span>
             {% elif article.status == 'Needs Edits' %}
             <span class="text-rose-600">Needs your update</span>
@@ -216,7 +216,7 @@ async function changeStatus(id, newStatus) {
       scheduleCell.innerHTML = '<span class="text-blue-600 font-medium">{{ next_tuesday }}</span>';
     } else if (newStatus === 'Approved') {
       scheduleCell.innerHTML = '<span class="text-green-600 font-medium">{{ next_tuesday }}</span>';
-    } else if (newStatus === "Ivan's Review") {
+    } else if (newStatus === "Ivans Review") {
       scheduleCell.innerHTML = '<span class="text-amber-600">Awaiting Ivan</span>';
     } else if (newStatus === 'Needs Edits') {
       scheduleCell.innerHTML = '<span class="text-rose-600">Needs your update</span>';

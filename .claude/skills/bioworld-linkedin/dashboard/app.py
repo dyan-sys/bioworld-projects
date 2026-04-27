@@ -53,20 +53,20 @@ STATUS_COLORS = {
     # Internal (not shown in pipeline)
     "Discovered": "gray", "Shortlisted": "blue", "Drafting": "purple",
     # Pipeline (visible to Ivan)
-    "Ivan's Review": "amber", "Needs Edits": "rose", "Approved": "green",
+    "Ivans Review": "amber", "Needs Edits": "rose", "Approved": "green",
     "Scheduled": "sky", "Posted": "emerald", "Rejected": "red",
     # Legacy (backward compat)
     "Draft Ready": "purple", "Pending Approval": "yellow", "Published": "emerald",
 }
 
-PIPELINE_STATUSES = {"Ivan's Review", "Needs Edits", "Approved", "Scheduled", "Posted"}
-PIPELINE_SORT_ORDER = {"Scheduled": 0, "Approved": 1, "Ivan's Review": 2, "Needs Edits": 3, "Posted": 4}
+PIPELINE_STATUSES = {"Ivans Review", "Needs Edits", "Approved", "Scheduled", "Posted"}
+PIPELINE_SORT_ORDER = {"Scheduled": 0, "Approved": 1, "Ivans Review": 2, "Needs Edits": 3, "Posted": 4}
 
 # Allowed transitions per status (for the clickable dropdown)
 STATUS_TRANSITIONS = {
-    "Ivan's Review": ["Approved", "Needs Edits", "Rejected"],
-    "Needs Edits": ["Ivan's Review"],
-    "Approved": ["Scheduled", "Ivan's Review"],
+    "Ivans Review": ["Approved", "Needs Edits", "Rejected"],
+    "Needs Edits": ["Ivans Review"],
+    "Approved": ["Scheduled", "Ivans Review"],
     "Scheduled": ["Posted"],
 }
 
@@ -242,7 +242,7 @@ def dashboard():
         pipeline_stats[status] = len([a for a in notion_articles if a["status"] == status])
 
     # Items needing review
-    needs_review = pipeline_stats.get("Ivan's Review", 0) + pipeline_stats.get("Needs Edits", 0)
+    needs_review = pipeline_stats.get("Ivans Review", 0) + pipeline_stats.get("Needs Edits", 0)
 
     # Pipeline table: only pipeline statuses
     # Posted: only last 5
@@ -283,19 +283,19 @@ def review_page():
         pages = notion_query(CONTENT_DB_ID)
         notion_articles = [extract_article(a) for a in pages]
 
-    # Show articles Ivan acts on: Ivan's Review and Needs Edits
+    # Show articles Ivan acts on: Ivans Review and Needs Edits
     pipeline = [a for a in notion_articles
-                if a["status"] in ("Ivan's Review", "Needs Edits")]
+                if a["status"] in ("Ivans Review", "Needs Edits")]
 
-    # Sort: Ivan's Review first, then Needs Edits; within each, newest date first
+    # Sort: Ivans Review first, then Needs Edits; within each, newest date first
     pipeline.sort(key=lambda a: (
-        0 if a["status"] == "Ivan's Review" else 1,
+        0 if a["status"] == "Ivans Review" else 1,
         -(a.get("score", 0)),
     ))
 
     # Stats for filter pills
     pipeline_stats = {}
-    for s in ("Ivan's Review", "Needs Edits"):
+    for s in ("Ivans Review", "Needs Edits"):
         pipeline_stats[s] = len([a for a in pipeline if a["status"] == s])
 
     return render_template("review.html", drafts=pipeline, pipeline_stats=pipeline_stats, status_colors=STATUS_COLORS)
