@@ -121,7 +121,7 @@
         <tr class="hover:bg-bw-hover transition" id="pipeline-row-{{ article.id }}">
           <td class="px-6 py-3.5">
             <div class="status-dropdown">
-              <button onclick="toggleStatusDropdown('{{ article.id }}')" class="status-{{ article.status|lower|replace(' ', '-')|replace(\"'\", '') }} px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap cursor-pointer hover:opacity-80 transition" id="pipeline-status-{{ article.id }}">
+              <button onclick="toggleStatusDropdown('{{ article.id }}')" class="status-{{ article.status|lower|replace(' ', '-') }} px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap cursor-pointer hover:opacity-80 transition" id="pipeline-status-{{ article.id }}">
                 {{ article.status }}
               </button>
               <div class="status-dropdown-menu" id="pipeline-dropdown-{{ article.id }}">
@@ -129,7 +129,7 @@
                 {% if transitions %}
                 {% for target in transitions %}
                 <button onclick="changeStatus('{{ article.id }}', '{{ target }}')" class="status-dropdown-item">
-                  <span class="status-{{ target|lower|replace(' ', '-')|replace(\"'\", '') }} px-1.5 py-0.5 rounded-full text-[10px] mr-1">{{ target }}</span>
+                  <span class="status-{{ target|lower|replace(' ', '-') }} px-1.5 py-0.5 rounded-full text-[10px] mr-1">{{ target }}</span>
                 </button>
                 {% endfor %}
                 {% else %}

@@ -16,7 +16,7 @@
   </button>
   {% for status, count in pipeline_stats.items() %}
   {% if count > 0 %}
-  <button onclick="filterStatus('{{ status|lower|replace(' ', '-')|replace(\"'\", '') }}')" id="filter-{{ status|lower|replace(' ', '-')|replace(\"'\", '') }}" class="filter-btn px-3.5 py-1.5 text-[12px] font-medium rounded-full bg-white border border-bw-border text-bw-text-light hover:border-bw-teal transition">
+  <button onclick="filterStatus('{{ status|lower|replace(' ', '-') }}')" id="filter-{{ status|lower|replace(' ', '-') }}" class="filter-btn px-3.5 py-1.5 text-[12px] font-medium rounded-full bg-white border border-bw-border text-bw-text-light hover:border-bw-teal transition">
     {{ status }} ({{ count }})
   </button>
   {% endif %}
@@ -32,12 +32,12 @@
 
 <div class="space-y-5">
   {% for draft in drafts %}
-  <div class="pipeline-card bg-white border border-bw-border rounded-xl p-6" data-status="{{ draft.status|lower|replace(' ', '-')|replace(\"'\", '') }}" id="draft-card-{{ draft.id }}">
+  <div class="pipeline-card bg-white border border-bw-border rounded-xl p-6" data-status="{{ draft.status|lower|replace(' ', '-') }}" id="draft-card-{{ draft.id }}">
 
     <!-- Top row: company, status, score -->
     <div class="flex items-center gap-3 mb-3">
       <span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-bw-indigo/10 text-bw-indigo">{{ draft.company }}</span>
-      <span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium status-{{ draft.status|lower|replace(' ', '-')|replace(\"'\", '') }}" id="status-badge-{{ draft.id }}">{{ draft.status }}</span>
+      <span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium status-{{ draft.status|lower|replace(' ', '-') }}" id="status-badge-{{ draft.id }}">{{ draft.status }}</span>
       {% if draft.score is not none %}
       <span class="ml-auto font-mono text-[12px] text-bw-muted">Score: <span class="text-bw-dark font-semibold">{{ draft.score }}/10</span></span>
       {% endif %}
