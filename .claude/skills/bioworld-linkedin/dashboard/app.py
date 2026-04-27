@@ -164,8 +164,8 @@ def check_inactivity():
         return
     # Allow unauthenticated access in local dev (no GOOGLE_CREDENTIALS_JSON)
     if not GOOGLE_CLIENT_ID:
-        session.setdefault("user_email", "dev@withally.com")
-        session.setdefault("user_name", "Dev")
+        session.setdefault("user_email", "team@bioworldventures.com")
+        session.setdefault("user_name", "Bioworld")
         session["last_active"] = datetime.now().timestamp()
         return
     if "user_email" not in session:
@@ -268,7 +268,7 @@ def review_page():
 
     # Stats for filter pills
     pipeline_stats = {}
-    for s in status_order:
+    for s in ("Pending Approval", "Draft Ready", "Shortlisted"):
         pipeline_stats[s] = len([a for a in pipeline if a["status"] == s])
 
     return render_template("review.html", drafts=pipeline, pipeline_stats=pipeline_stats, status_colors=STATUS_COLORS)
