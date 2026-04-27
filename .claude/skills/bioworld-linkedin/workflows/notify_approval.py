@@ -90,7 +90,7 @@ def post_approval_request(client: WebClient, channel: str, article: dict) -> boo
 
 
 def main():
-    notion_key = os.environ.get("NOTION_KEY")
+    notion_key = os.environ.get("BIOWORLD_NOTION_KEY") or os.environ.get("NOTION_KEY")
     slack_token = os.environ.get("SLACK_BOT_TOKEN")
     content_db_id = os.environ.get("BIOWORLD_CONTENT_DB_ID")
     channel = os.environ.get("BIOWORLD_SLACK_CHANNEL", "")

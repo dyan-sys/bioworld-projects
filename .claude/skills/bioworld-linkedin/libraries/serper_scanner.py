@@ -1,22 +1,21 @@
 """
-Serper + Groq News Scanner.
+Serper + Claude CLI News Scanner.
 
-Uses Serper.dev (Google Search API) to find articles, then Groq (Llama 3.3)
-to analyze and score them. Both free tier.
+Uses Serper.dev (Google Search API) to find articles, then Claude CLI
+to analyze and score them. Designed for local execution.
 
 Free tier: 2,500 searches/month at serper.dev.
-Groq free tier: 30 RPM, 14,400 requests/day.
 """
 
 import json
 import os
 import re
+import subprocess
 from pathlib import Path
 
 import requests
 
 SERPER_ENDPOINT = "https://google.serper.dev/search"
-GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions"
 TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "templates"
 
 
@@ -65,30 +64,30 @@ def serper_search(queries: list[str], serper_api_key: str,
 
 
 def generate_search_queries_serper(company_name: str, keywords: str) -> list[str]:
-    """Generate search queries for a company — includes LinkedIn post search."""
+    """Generate search queries for a company — last 3 months only."""
+    from datetime import datetime, timedelta
+    three_months_ago = (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d")
+    date_filter = f"after:{three_months_ago}"
+
     base_terms = keywords.split()[:3]
     keyword_str = " ".join(base_terms) if base_terms else company_name
 
     return [
-        f'site:linkedin.com "{company_name}" post 2026',
-        f'"{company_name}" news 2026',
-        f'"{company_name}" FDA OR funding OR partnership OR launch 2026',
-        f'{keyword_str} latest development',
+        f'site:linkedin.com "{company_name}" post {date_filter}',
+        f'"{company_name}" news {date_filter}',
+        f'"{company_name}" FDA OR funding OR partnership OR launch {date_filter}',
+        f'{keyword_str} latest development {date_filter}',
     ]
 
 
-def analyze_with_groq(company_name: str, search_results: list[dict]) -> dict:
+def analyze_with_claude(company_name: str, search_results: list[dict]) -> dict:
     """
-    Use Groq API (Llama 3.3 70B) to analyze search results and extract structured article data.
+    Use Claude CLI to analyze search results and extract structured article data.
 
     Returns dict with 'sources' list and 'synthesis' string.
     """
     if not search_results:
         return {"sources": [], "synthesis": f"No search results found for {company_name}."}
-
-    groq_key = os.getenv("GROQ_API_KEY", "")
-    if not groq_key:
-        return {"sources": [], "synthesis": "GROQ_API_KEY not set."}
 
     research_prompt_path = TEMPLATE_DIR / "research-prompt.md"
     research_prompt = research_prompt_path.read_text(encoding="utf-8")
@@ -113,32 +112,27 @@ def analyze_with_groq(company_name: str, search_results: list[dict]) -> dict:
     )
 
     try:
-        resp = requests.post(
-            GROQ_ENDPOINT,
-            headers={
-                "Authorization": f"Bearer {groq_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": "llama-3.3-70b-versatile",
-                "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 2048,
-                "temperature": 0.3,
-            },
-            timeout=60,
+        result = subprocess.run(
+            ["claude", "-p", prompt, "--print"],
+            capture_output=True, text=True, timeout=120,
         )
-        resp.raise_for_status()
-        output = resp.json()["choices"][0]["message"]["content"].strip()
+
+        if result.returncode != 0:
+            return {"sources": [], "synthesis": f"Claude analysis failed: {result.stderr[:200]}"}
+
+        output = result.stdout.strip()
         return _parse_json_response(output)
 
-    except Exception as e:
-        return {"sources": [], "synthesis": f"Groq API error: {e}"}
+    except subprocess.TimeoutExpired:
+        return {"sources": [], "synthesis": "Claude analysis timed out."}
+    except FileNotFoundError:
+        return {"sources": [], "synthesis": "Claude CLI not found. Install claude-code."}
 
 
 def search_company_news_serper(company_name: str, keywords: str,
                                serper_api_key: str) -> dict:
     """
-    Full pipeline: generate queries → Serper search → Groq analysis.
+    Full pipeline: generate queries → Serper search → Claude analysis.
 
     Returns dict with 'sources' and 'synthesis'.
     """
@@ -150,7 +144,7 @@ def search_company_news_serper(company_name: str, keywords: str,
     results = serper_search(queries, serper_api_key)
     print(f".{len(results)} results", end="", flush=True)
 
-    analysis = analyze_with_groq(company_name, results)
+    analysis = analyze_with_claude(company_name, results)
     print("]")
 
     return analysis
@@ -166,14 +160,14 @@ def search_industry_news_serper(serper_api_key: str) -> dict:
     results = serper_search(queries, serper_api_key)
     print(f".{len(results)} results", end="", flush=True)
 
-    analysis = analyze_with_groq("Biotech/MedTech Industry", results)
+    analysis = analyze_with_claude("Biotech/MedTech Industry", results)
     print("]")
 
     return analysis
 
 
 def _parse_json_response(response: str) -> dict:
-    """Parse JSON from model response."""
+    """Parse JSON from Claude's response."""
     text = response.strip()
     if text.startswith("```"):
         lines = text.splitlines()

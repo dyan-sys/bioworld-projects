@@ -69,7 +69,7 @@ def main():
     args = parser.parse_args()
 
     # Check env
-    notion_key = os.environ.get("NOTION_KEY")
+    notion_key = os.environ.get("BIOWORLD_NOTION_KEY") or os.environ.get("NOTION_KEY")
     content_db_id = os.environ.get("BIOWORLD_CONTENT_DB_ID")
     brands_db_id = os.environ.get("BIOWORLD_BRANDS_DB_ID")
 

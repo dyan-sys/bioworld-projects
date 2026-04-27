@@ -43,7 +43,7 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Preview what would be posted without publishing")
     args = parser.parse_args()
 
-    notion_key = os.environ.get("NOTION_KEY")
+    notion_key = os.environ.get("BIOWORLD_NOTION_KEY") or os.environ.get("NOTION_KEY")
     content_db_id = os.environ.get("BIOWORLD_CONTENT_DB_ID")
     slack_token = os.environ.get("SLACK_BOT_TOKEN")
     channel = os.environ.get("BIOWORLD_SLACK_CHANNEL", "")

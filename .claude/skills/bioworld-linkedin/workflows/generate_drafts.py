@@ -37,7 +37,7 @@ def current_week() -> str:
 
 def main():
     moonshot_key = os.environ.get("MOONSHOT_API_KEY")
-    notion_key = os.environ.get("NOTION_KEY")
+    notion_key = os.environ.get("BIOWORLD_NOTION_KEY") or os.environ.get("NOTION_KEY")
     content_db_id = os.environ.get("BIOWORLD_CONTENT_DB_ID")
 
     missing = []

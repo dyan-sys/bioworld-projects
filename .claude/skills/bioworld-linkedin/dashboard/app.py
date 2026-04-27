@@ -260,11 +260,11 @@ def review_page():
     pipeline = [a for a in notion_articles
                 if a["status"] in ("Pending Approval", "Draft Ready", "Shortlisted")]
 
-    status_order = ["Pending Approval", "Draft Ready", "Shortlisted"]
+    # Sort: newest date first, then highest score as tiebreaker
     pipeline.sort(key=lambda a: (
-        status_order.index(a["status"]) if a["status"] in status_order else 99,
-        -a.get("score", 0),
-    ))
+        a.get("date", "") or "0000-00-00",
+        a.get("score", 0),
+    ), reverse=True)
 
     # Stats for filter pills
     pipeline_stats = {}

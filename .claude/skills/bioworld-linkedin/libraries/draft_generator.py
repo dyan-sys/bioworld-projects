@@ -1,16 +1,14 @@
 """
 Draft Generator Library for Bioworld LinkedIn Automation.
 
-Uses Groq API (Llama 3.3 70B) to generate LinkedIn post drafts from article
+Uses Claude CLI to generate LinkedIn post drafts from article
 summaries, matching Bioworld Ventures' posting style.
+Designed for local execution via Claude Code.
 """
 
-import os
+import subprocess
 from pathlib import Path
 
-import requests
-
-GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions"
 TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "templates"
 
 
@@ -27,18 +25,13 @@ def load_templates() -> dict:
 
 def generate_draft(article: dict, _unused_key: str = "") -> str:
     """
-    Generate a LinkedIn post draft for a given article using Groq API.
+    Generate a LinkedIn post draft for a given article using Claude CLI.
 
     article dict keys:
         title, summary, source_url, company, source_type
 
     Returns the post text as a string.
     """
-    groq_key = os.getenv("GROQ_API_KEY", "")
-    if not groq_key:
-        print("  [ERROR: GROQ_API_KEY not set]")
-        return ""
-
     templates = load_templates()
 
     company = article.get("company", "")
@@ -56,6 +49,7 @@ def generate_draft(article: dict, _unused_key: str = "") -> str:
         )
 
     prompt = (
+        f"{templates['system_prompt']}\n\n"
         f"## Article to Post About\n"
         f"**Title:** {article.get('title', '')}\n"
         f"**Company:** {company}\n"
@@ -77,27 +71,21 @@ def generate_draft(article: dict, _unused_key: str = "") -> str:
     print(f"  [Drafting: {article.get('title', '')[:50]}", end="", flush=True)
 
     try:
-        resp = requests.post(
-            GROQ_ENDPOINT,
-            headers={
-                "Authorization": f"Bearer {groq_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": "llama-3.3-70b-versatile",
-                "messages": [
-                    {"role": "system", "content": templates["system_prompt"]},
-                    {"role": "user", "content": prompt},
-                ],
-                "max_tokens": 1024,
-                "temperature": 0.7,
-            },
-            timeout=60,
+        result = subprocess.run(
+            ["claude", "-p", prompt, "--print"],
+            capture_output=True, text=True, timeout=120,
         )
-        resp.raise_for_status()
-        print("]")
-        return resp.json()["choices"][0]["message"]["content"].strip()
 
-    except Exception as e:
-        print(f" ERROR: {e}]")
+        if result.returncode != 0:
+            print(f" ERROR]")
+            return ""
+
+        print("]")
+        return result.stdout.strip()
+
+    except subprocess.TimeoutExpired:
+        print(" TIMEOUT]")
+        return ""
+    except FileNotFoundError:
+        print(" CLI NOT FOUND]")
         return ""

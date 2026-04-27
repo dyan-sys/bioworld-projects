@@ -53,7 +53,7 @@ def main():
     )
     args = parser.parse_args()
 
-    api_key = os.environ.get("NOTION_KEY")
+    api_key = os.environ.get("BIOWORLD_NOTION_KEY") or os.environ.get("NOTION_KEY")
     if not api_key:
         print("Error: NOTION_KEY not set in .env")
         sys.exit(1)
