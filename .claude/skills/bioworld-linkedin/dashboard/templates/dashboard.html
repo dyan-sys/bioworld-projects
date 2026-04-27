@@ -118,7 +118,7 @@
       </thead>
       <tbody class="divide-y divide-bw-border/50">
         {% for article in active_pipeline %}
-        <tr class="hover:bg-bw-hover transition" id="pipeline-row-{{ article.id }}">
+        <tr class="hover:bg-bw-hover transition cursor-pointer" id="pipeline-row-{{ article.id }}" onclick="if(!event.target.closest('.status-dropdown')) window.location='/review'">
           <td class="px-6 py-3.5">
             <div class="status-dropdown">
               <button onclick="toggleStatusDropdown('{{ article.id }}')" class="status-{{ article.status|lower|replace(' ', '-') }} px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap cursor-pointer hover:opacity-80 transition" id="pipeline-status-{{ article.id }}">
