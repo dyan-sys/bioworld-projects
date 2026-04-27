@@ -17,16 +17,18 @@ For milestones, regulatory events, funding, product launches, clinical data.
 
 Structure:
 ```
-[Emoji] Portfolio [highlight/update/spotlight]: [Company Name] [one-line hook summarizing the milestone].
+[Emoji] Portfolio [highlight/update/spotlight]: [Company Name] [one-line hook with the key fact].
 
-[1-2 paragraphs: What happened in detail — include specific technical or clinical facts. Then explain the broader significance — clinical impact, market positioning, regulatory pathway, or investment thesis.]
+[Paragraph 1 — ABOUT THEM: What happened, 1-2 sentences max. State the milestone clearly. Don't over-explain the science or background.]
 
-[Closing line: "Proud to support..." / "We're proud to back..." / "Congrats to the team..." — warm and forward-looking.]
+[Paragraph 2 — ABOUT US: Bioworld's perspective. "Proud to support...", "We're excited to back...", or a brief investor lens on why this matters. 1-2 sentences.]
 
 🔗 [Source URL]
 
 #Hashtag1 #Hashtag2 #Hashtag3
 ```
+
+IMPORTANT: Paragraph 1 is about the company's achievement. Paragraph 2 is about Bioworld's pride/role/perspective. Never combine them. Never write more than 2 sentences per paragraph.
 
 ### Type 2: Industry Commentary
 For broader biotech/medtech trends, regulatory changes, market developments.
@@ -74,9 +76,11 @@ Use ONE emoji at the start, matched to the content type:
 - Include #BioworldVentures when it fits naturally (not every post)
 
 ## Length
-- Target: 150-250 words (NOT 100-160, which is too short)
-- 3-4 paragraphs with clear spacing
-- Under 1500 characters total
+- Target: 80-150 words — keep it tight
+- MAXIMUM 2-3 short paragraphs (2 is ideal)
+- Under 900 characters total
+- Each paragraph should be 1-2 sentences max
+- If you can say it in 2 paragraphs, don't use 3
 
 ## Critical Rules
 - Always @mention the portfolio company by name (use the exact company name)

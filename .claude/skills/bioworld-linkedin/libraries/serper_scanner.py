@@ -56,6 +56,7 @@ def serper_search(queries: list[str], serper_api_key: str,
                     "title": item.get("title", ""),
                     "url": link,
                     "snippet": item.get("snippet", ""),
+                    "date": item.get("date", ""),
                     "query": query,
                     "is_linkedin": is_linkedin,
                 })
@@ -63,8 +64,9 @@ def serper_search(queries: list[str], serper_api_key: str,
     return all_results
 
 
-def generate_search_queries_serper(company_name: str, keywords: str) -> list[str]:
-    """Generate search queries for a company — last 3 months only."""
+def generate_search_queries_serper(company_name: str, keywords: str,
+                                   linkedin_url: str = "") -> list[str]:
+    """Generate search queries for a company — LinkedIn first, last 3 months only."""
     from datetime import datetime, timedelta
     three_months_ago = (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d")
     date_filter = f"after:{three_months_ago}"
@@ -72,12 +74,25 @@ def generate_search_queries_serper(company_name: str, keywords: str) -> list[str
     base_terms = keywords.split()[:3]
     keyword_str = " ".join(base_terms) if base_terms else company_name
 
-    return [
-        f'site:linkedin.com "{company_name}" post {date_filter}',
+    queries = []
+
+    # LinkedIn is top priority — search the exact company page if we have the URL
+    if linkedin_url:
+        # Extract company slug from URL
+        slug = linkedin_url.rstrip("/").split("/company/")[-1].split("/")[0]
+        queries.append(f'site:linkedin.com/company/{slug} {date_filter}')
+        queries.append(f'site:linkedin.com "{company_name}" {date_filter}')
+    else:
+        queries.append(f'site:linkedin.com "{company_name}" post {date_filter}')
+        queries.append(f'site:linkedin.com "{company_name}" {date_filter}')
+
+    # Then news and milestone searches
+    queries.extend([
         f'"{company_name}" news {date_filter}',
         f'"{company_name}" FDA OR funding OR partnership OR launch {date_filter}',
-        f'{keyword_str} latest development {date_filter}',
-    ]
+    ])
+
+    return queries
 
 
 def analyze_with_claude(company_name: str, search_results: list[dict]) -> dict:
@@ -95,9 +110,11 @@ def analyze_with_claude(company_name: str, search_results: list[dict]) -> dict:
     results_text = ""
     for i, r in enumerate(search_results, 1):
         linkedin_tag = " [LINKEDIN POST]" if r.get("is_linkedin") else ""
+        date_tag = f"   Date: {r['date']}\n" if r.get("date") else ""
         results_text += (
             f"\n{i}. **{r['title']}**{linkedin_tag}\n"
             f"   URL: {r['url']}\n"
+            f"{date_tag}"
             f"   Snippet: {r['snippet']}\n"
         )
 
@@ -106,7 +123,12 @@ def analyze_with_claude(company_name: str, search_results: list[dict]) -> dict:
         f"## Company: {company_name}\n\n"
         f"## Search Results\n{results_text}\n\n"
         "Analyze these search results. For each relevant article, extract:\n"
-        "- title, url, key_insight (one sentence), source_type, relevance_score (1-10)\n\n"
+        "- title, url, key_insight (one sentence), source_type (use 'LinkedIn' if the URL contains linkedin.com, otherwise use 'News', 'Press Release', 'Funding', or 'Regulatory'), relevance_score (1-10), published_date (YYYY-MM-DD format if available, otherwise empty string)\n\n"
+        "IMPORTANT RULES:\n"
+        "1. PRIORITIZE LinkedIn sources. If the same news/milestone appears on both LinkedIn and a website, KEEP THE LINKEDIN VERSION and drop the website version.\n"
+        "2. LinkedIn posts from the company itself are the highest quality source — give them +1 relevance_score boost.\n"
+        "3. Always include LinkedIn posts marked with [LINKEDIN POST] unless they are truly irrelevant.\n"
+        "4. For articles that exist on both LinkedIn and web, use the LinkedIn URL.\n\n"
         "Return your analysis as JSON with 'sources' array and 'synthesis' paragraph.\n"
         "Return ONLY valid JSON, no other text."
     )
@@ -130,7 +152,7 @@ def analyze_with_claude(company_name: str, search_results: list[dict]) -> dict:
 
 
 def search_company_news_serper(company_name: str, keywords: str,
-                               serper_api_key: str) -> dict:
+                               serper_api_key: str, linkedin_url: str = "") -> dict:
     """
     Full pipeline: generate queries → Serper search → Claude analysis.
 
@@ -138,7 +160,7 @@ def search_company_news_serper(company_name: str, keywords: str,
     """
     print(f"  [{company_name}", end="", flush=True)
 
-    queries = generate_search_queries_serper(company_name, keywords)
+    queries = generate_search_queries_serper(company_name, keywords, linkedin_url)
     print(".", end="", flush=True)
 
     results = serper_search(queries, serper_api_key)

@@ -133,7 +133,7 @@ def main():
             print(f"  Queries: {queries}")
             result = search_company_news(name, queries, moonshot_key)
         else:
-            result = search_company_news_serper(name, keywords, serper_key)
+            result = search_company_news_serper(name, keywords, serper_key, linkedin_url=brand.get("linkedin_url", ""))
 
         sources = result.get("sources", [])
         print(f"  Found {len(sources)} articles")
@@ -184,6 +184,9 @@ def main():
             skipped += 1
             continue
 
+        # Use published_date from article if available, otherwise today
+        article_date = article.get("published_date", "") or date_str
+
         notion_article = {
             "title": article.get("title", "Untitled"),
             "source_url": url,
@@ -192,7 +195,7 @@ def main():
             "relevance_score": article.get("relevance_score", 5),
             "ai_summary": article.get("key_insight", ""),
             "week": week_str,
-            "discovered_date": date_str,
+            "discovered_date": article_date,
         }
 
         add_article(notion_key, content_db_id, notion_article)
