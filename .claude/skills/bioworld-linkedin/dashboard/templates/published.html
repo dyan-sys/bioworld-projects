@@ -4,13 +4,13 @@
 {% block content %}
 <div class="mb-8">
   <h1 class="font-serif text-3xl text-bw-dark">Published</h1>
-  <p class="text-bw-muted text-sm mt-1.5">{{ articles|length }} published and approved article{{ 's' if articles|length != 1 }}</p>
+  <p class="text-bw-muted text-sm mt-1.5">{{ articles|length }} posted and scheduled article{{ 's' if articles|length != 1 }}</p>
 </div>
 
 {% if not articles %}
 <div class="bg-white border border-bw-border rounded-xl p-14 text-center">
-  <p class="text-bw-muted">No published articles yet.</p>
-  <p class="text-bw-muted text-sm mt-1">Approved articles will appear here once they are published.</p>
+  <p class="text-bw-muted">No published or scheduled articles yet.</p>
+  <p class="text-bw-muted text-sm mt-1">Articles will appear here once they are scheduled or posted.</p>
 </div>
 {% endif %}
 
@@ -21,8 +21,10 @@
     <!-- Top row: company, status, date -->
     <div class="flex items-center gap-3 mb-3">
       <span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-bw-indigo/10 text-bw-indigo">{{ article.company }}</span>
-      <span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium status-{{ article.status|lower|replace(' ', '-') }}">{{ article.status }}</span>
-      {% if article.date %}
+      <span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium status-{{ article.status|lower|replace(' ', '-')|replace(\"'\", '') }}">{{ article.status }}</span>
+      {% if article.status == 'Scheduled' %}
+      <span class="font-mono text-[11px] text-blue-600 font-medium">Going out {{ next_tuesday }}</span>
+      {% elif article.date %}
       <span class="font-mono text-[11px] text-bw-muted">{{ article.date }}</span>
       {% endif %}
       {% if article.score is not none %}

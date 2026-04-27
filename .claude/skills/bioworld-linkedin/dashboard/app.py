@@ -50,9 +50,24 @@ if _creds_json:
         pass
 
 STATUS_COLORS = {
-    "Discovered": "gray", "Shortlisted": "blue", "Draft Ready": "purple",
-    "Pending Approval": "yellow", "Approved": "green",
-    "Published": "emerald", "Rejected": "red",
+    # Internal (not shown in pipeline)
+    "Discovered": "gray", "Shortlisted": "blue", "Drafting": "purple",
+    # Pipeline (visible to Ivan)
+    "Ivan's Review": "amber", "Needs Edits": "rose", "Approved": "green",
+    "Scheduled": "sky", "Posted": "emerald", "Rejected": "red",
+    # Legacy (backward compat)
+    "Draft Ready": "purple", "Pending Approval": "yellow", "Published": "emerald",
+}
+
+PIPELINE_STATUSES = {"Ivan's Review", "Needs Edits", "Approved", "Scheduled", "Posted"}
+PIPELINE_SORT_ORDER = {"Scheduled": 0, "Approved": 1, "Ivan's Review": 2, "Needs Edits": 3, "Posted": 4}
+
+# Allowed transitions per status (for the clickable dropdown)
+STATUS_TRANSITIONS = {
+    "Ivan's Review": ["Approved", "Needs Edits", "Rejected"],
+    "Needs Edits": ["Ivan's Review"],
+    "Approved": ["Scheduled", "Ivan's Review"],
+    "Scheduled": ["Posted"],
 }
 
 # ── Team / Partners (sourced from bioworld-ventures website) ─────────────────
@@ -221,23 +236,26 @@ def dashboard():
         pages = notion_query(CONTENT_DB_ID)
         notion_articles = [extract_article(a) for a in pages]
 
-    notion_stats = {}
-    for status in STATUS_COLORS:
-        notion_stats[status] = len([a for a in notion_articles if a["status"] == status])
+    # Pipeline stats — only pipeline statuses
+    pipeline_stats = {}
+    for status in PIPELINE_STATUSES:
+        pipeline_stats[status] = len([a for a in notion_articles if a["status"] == status])
 
     # Items needing review
-    needs_review = notion_stats.get("Pending Approval", 0) + notion_stats.get("Draft Ready", 0)
+    needs_review = pipeline_stats.get("Ivan's Review", 0) + pipeline_stats.get("Needs Edits", 0)
 
-    # Recently published (last 5)
-    recently_published = [a for a in notion_articles if a["status"] == "Published"]
-    recently_published.sort(key=lambda a: a.get("date", ""), reverse=True)
-    recently_published = recently_published[:5]
+    # Pipeline table: only pipeline statuses
+    # Posted: only last 5
+    posted = [a for a in notion_articles if a["status"] == "Posted"]
+    posted.sort(key=lambda a: a.get("date", ""), reverse=True)
+    posted = posted[:5]
 
-    # Active pipeline: everything that's in progress (not Discovered, not Published, not Rejected)
-    active_pipeline = [a for a in notion_articles
-                       if a["status"] in ("Shortlisted", "Draft Ready", "Pending Approval", "Approved")]
+    non_posted = [a for a in notion_articles
+                  if a["status"] in PIPELINE_STATUSES and a["status"] != "Posted"]
+
+    active_pipeline = non_posted + posted
     active_pipeline.sort(key=lambda a: (
-        {"Approved": 0, "Pending Approval": 1, "Draft Ready": 2, "Shortlisted": 3}.get(a["status"], 9),
+        PIPELINE_SORT_ORDER.get(a["status"], 9),
         a.get("date", "") or "0000-00-00",
     ))
 
@@ -245,39 +263,39 @@ def dashboard():
     days_until_tuesday = (1 - now.weekday()) % 7
     if days_until_tuesday == 0 and now.hour >= 10:
         days_until_tuesday = 7
-    next_publish = (now + timedelta(days=days_until_tuesday)).strftime("%A, %B %d")
+    next_tuesday = (now + timedelta(days=days_until_tuesday)).strftime("%A, %B %d")
 
     return render_template(
         "dashboard.html",
-        notion_stats=notion_stats, status_colors=STATUS_COLORS,
+        pipeline_stats=pipeline_stats, status_colors=STATUS_COLORS,
+        status_transitions=STATUS_TRANSITIONS,
         needs_review=needs_review,
-        recently_published=recently_published,
         active_pipeline=active_pipeline,
-        next_publish=next_publish,
+        next_tuesday=next_tuesday,
     )
 
 
 @app.route("/review")
 def review_page():
-    """Review — articles waiting for Ivan's approval."""
+    """Review — articles waiting for Ivan's approval or needing edits."""
     notion_articles = []
     if CONTENT_DB_ID:
         pages = notion_query(CONTENT_DB_ID)
         notion_articles = [extract_article(a) for a in pages]
 
-    # Show articles needing review: Pending Approval, Draft Ready, Shortlisted
+    # Show articles Ivan acts on: Ivan's Review and Needs Edits
     pipeline = [a for a in notion_articles
-                if a["status"] in ("Pending Approval", "Draft Ready", "Shortlisted")]
+                if a["status"] in ("Ivan's Review", "Needs Edits")]
 
-    # Sort: newest date first, then highest score as tiebreaker
+    # Sort: Ivan's Review first, then Needs Edits; within each, newest date first
     pipeline.sort(key=lambda a: (
-        a.get("date", "") or "0000-00-00",
-        a.get("score", 0),
-    ), reverse=True)
+        0 if a["status"] == "Ivan's Review" else 1,
+        -(a.get("score", 0)),
+    ))
 
     # Stats for filter pills
     pipeline_stats = {}
-    for s in ("Pending Approval", "Draft Ready", "Shortlisted"):
+    for s in ("Ivan's Review", "Needs Edits"):
         pipeline_stats[s] = len([a for a in pipeline if a["status"] == s])
 
     return render_template("review.html", drafts=pipeline, pipeline_stats=pipeline_stats, status_colors=STATUS_COLORS)
@@ -285,24 +303,31 @@ def review_page():
 
 @app.route("/published")
 def published_page():
-    """Published — archive of approved and published articles."""
+    """Published — archive of posted and scheduled articles."""
     notion_articles = []
     if CONTENT_DB_ID:
         pages = notion_query(CONTENT_DB_ID)
         notion_articles = [extract_article(a) for a in pages]
 
-    # Show Published + Approved articles
+    # Show Posted + Scheduled articles
     archive = [a for a in notion_articles
-               if a["status"] in ("Approved", "Published")]
+               if a["status"] in ("Posted", "Scheduled")]
 
-    # Published first, then Approved; within each group sort by date descending
+    # Scheduled first (upcoming), then Posted; within each group sort by date descending
     archive.sort(key=lambda a: (
-        0 if a["status"] == "Published" else 1,
-        a.get("date", "") or "",
-    ), reverse=False)
+        0 if a["status"] == "Scheduled" else 1,
+        -(hash(a.get("date", "") or "")),
+    ))
     archive.sort(key=lambda a: a.get("date", "") or "", reverse=True)
 
-    return render_template("published.html", articles=archive, status_colors=STATUS_COLORS)
+    # Compute next Tuesday for scheduled display
+    now = datetime.now(HKT)
+    days_until_tuesday = (1 - now.weekday()) % 7
+    if days_until_tuesday == 0 and now.hour >= 10:
+        days_until_tuesday = 7
+    next_tuesday = (now + timedelta(days=days_until_tuesday)).strftime("%A, %B %d")
+
+    return render_template("published.html", articles=archive, status_colors=STATUS_COLORS, next_tuesday=next_tuesday)
 
 
 @app.route("/brands")
@@ -341,11 +366,14 @@ def api_send_for_approval():
 def update_status(page_id):
     data = request.get_json()
     new_status = data.get("status", "")
+    notes = data.get("notes", "")
     if new_status not in STATUS_COLORS:
         return jsonify({"error": "Invalid status"}), 400
     props = {"Status": {"status": {"name": new_status}}}
     if new_status == "Approved":
         props["Approved By"] = {"rich_text": [{"type": "text", "text": {"content": session.get("user_name", "Unknown")}}]}
+    if notes:
+        props["Notes"] = {"rich_text": [{"type": "text", "text": {"content": notes[:2000]}}]}
     ok = notion_update_page(page_id, props)
     return jsonify({"success": ok})
 

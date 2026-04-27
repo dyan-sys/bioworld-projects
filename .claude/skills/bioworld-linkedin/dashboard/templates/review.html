@@ -7,9 +7,6 @@
     <h1 class="font-serif text-3xl text-bw-dark">Review</h1>
     <p class="text-bw-muted text-sm mt-1.5">{{ drafts|length }} article{{ 's' if drafts|length != 1 }} waiting for your review</p>
   </div>
-  <button onclick="sendForApproval()" class="px-5 py-2.5 bg-bw-teal text-white text-[12px] font-semibold rounded-lg hover:bg-bw-teal-dark transition">
-    Send Draft Ready to Slack
-  </button>
 </div>
 
 <!-- Status filter pills -->
@@ -19,7 +16,7 @@
   </button>
   {% for status, count in pipeline_stats.items() %}
   {% if count > 0 %}
-  <button onclick="filterStatus('{{ status|lower|replace(' ', '-') }}')" id="filter-{{ status|lower|replace(' ', '-') }}" class="filter-btn px-3.5 py-1.5 text-[12px] font-medium rounded-full bg-white border border-bw-border text-bw-text-light hover:border-bw-teal transition">
+  <button onclick="filterStatus('{{ status|lower|replace(' ', '-')|replace(\"'\", '') }}')" id="filter-{{ status|lower|replace(' ', '-')|replace(\"'\", '') }}" class="filter-btn px-3.5 py-1.5 text-[12px] font-medium rounded-full bg-white border border-bw-border text-bw-text-light hover:border-bw-teal transition">
     {{ status }} ({{ count }})
   </button>
   {% endif %}
@@ -29,18 +26,18 @@
 {% if not drafts %}
 <div class="bg-white border border-bw-border rounded-xl p-14 text-center">
   <p class="text-bw-muted">No articles waiting for review.</p>
-  <p class="text-bw-muted text-sm mt-1">Articles will appear here when drafts are generated.</p>
+  <p class="text-bw-muted text-sm mt-1">Articles will appear here when drafts are sent for Ivan's review.</p>
 </div>
 {% endif %}
 
 <div class="space-y-5">
   {% for draft in drafts %}
-  <div class="pipeline-card bg-white border border-bw-border rounded-xl p-6" data-status="{{ draft.status|lower|replace(' ', '-') }}" id="draft-card-{{ draft.id }}">
+  <div class="pipeline-card bg-white border border-bw-border rounded-xl p-6" data-status="{{ draft.status|lower|replace(' ', '-')|replace(\"'\", '') }}" id="draft-card-{{ draft.id }}">
 
     <!-- Top row: company, status, score -->
     <div class="flex items-center gap-3 mb-3">
       <span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-bw-indigo/10 text-bw-indigo">{{ draft.company }}</span>
-      <span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium status-{{ draft.status|lower|replace(' ', '-') }}" id="status-badge-{{ draft.id }}">{{ draft.status }}</span>
+      <span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium status-{{ draft.status|lower|replace(' ', '-')|replace(\"'\", '') }}" id="status-badge-{{ draft.id }}">{{ draft.status }}</span>
       {% if draft.score is not none %}
       <span class="ml-auto font-mono text-[12px] text-bw-muted">Score: <span class="text-bw-dark font-semibold">{{ draft.score }}/10</span></span>
       {% endif %}
@@ -72,41 +69,34 @@
         <div class="text-bw-text text-[13px] leading-relaxed whitespace-pre-line max-h-48 overflow-y-auto">{{ draft.draft }}</div>
       </div>
     </div>
-    {% elif draft.status == 'Shortlisted' %}
-    <div class="mb-4 bg-bw-teal-50 border border-bw-teal/20 rounded-lg p-4">
-      <p class="text-[12px] text-bw-teal-deep">This article is shortlisted -- a LinkedIn draft will be generated soon.</p>
-    </div>
     {% endif %}
 
-    <!-- Action buttons (only for actionable statuses) -->
-    {% if draft.status in ('Draft Ready', 'Pending Approval', 'Shortlisted') %}
-    <div class="flex items-center gap-3 mb-4">
-      <button onclick="updateStatus('{{ draft.id }}', 'Approved')"
-        class="px-5 py-2 rounded-lg text-[12px] font-semibold bg-bw-teal hover:bg-bw-teal-dark text-white transition"
+    <!-- Feedback section (prominent) -->
+    <div class="bg-amber-50/50 border border-amber-200/60 rounded-xl p-5 mb-4">
+      <label class="font-serif text-[15px] text-bw-dark block mb-2">Feedback for Dyan</label>
+      <p class="text-[11px] text-bw-muted mb-3">Leave feedback if requesting edits. This will be saved and visible to Dyan.</p>
+      <textarea id="feedback-{{ draft.id }}" rows="3"
+        class="w-full bg-white border border-amber-200/80 rounded-lg px-4 py-3 text-[13px] text-bw-dark placeholder-bw-muted focus:outline-none focus:border-bw-teal focus:ring-1 focus:ring-bw-teal/20 resize-none transition"
+        placeholder="What should be changed? Be specific -- tone, angle, facts, length...">{{ draft.notes or '' }}</textarea>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="flex items-center gap-3">
+      <button onclick="approveArticle('{{ draft.id }}')"
+        class="px-6 py-2.5 rounded-lg text-[12px] font-semibold bg-bw-teal hover:bg-bw-teal-dark text-white transition"
         id="approve-btn-{{ draft.id }}">
         Approve
       </button>
-      <button onclick="updateStatus('{{ draft.id }}', 'Rejected')"
-        class="px-5 py-2 rounded-lg text-[12px] font-semibold bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition"
+      <button onclick="requestEdits('{{ draft.id }}')"
+        class="px-6 py-2.5 rounded-lg text-[12px] font-semibold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-300 transition"
+        id="edits-btn-{{ draft.id }}">
+        Request Edits
+      </button>
+      <button onclick="rejectArticle('{{ draft.id }}')"
+        class="px-6 py-2.5 rounded-lg text-[12px] font-semibold bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition"
         id="reject-btn-{{ draft.id }}">
         Reject
       </button>
-    </div>
-    {% endif %}
-
-    <!-- Notes -->
-    <div class="border-t border-bw-border pt-4">
-      <label class="font-mono text-[10px] text-bw-muted uppercase tracking-wider font-medium block mb-1.5">Notes</label>
-      <textarea id="notes-{{ draft.id }}" rows="2"
-        class="w-full bg-bw-bg border border-bw-border rounded-lg px-3 py-2 text-[13px] text-bw-dark placeholder-bw-muted focus:outline-none focus:border-bw-teal focus:ring-1 focus:ring-bw-teal/20 resize-none transition"
-        placeholder="Add review notes...">{{ draft.notes or '' }}</textarea>
-      <div class="flex items-center gap-2 mt-2">
-        <button onclick="saveNotes('{{ draft.id }}')"
-          class="px-3 py-1.5 rounded-lg text-[12px] font-medium bg-bw-hover hover:bg-bw-border/60 text-bw-dark border border-bw-border transition">
-          Save Notes
-        </button>
-        <span id="notes-feedback-{{ draft.id }}" class="text-[11px] text-bw-teal font-medium hidden">Saved</span>
-      </div>
     </div>
 
   </div>
@@ -140,9 +130,46 @@ function filterStatus(status) {
   }
 }
 
-async function updateStatus(id, status) {
-  const btn = document.getElementById(status === 'Approved' ? `approve-btn-${id}` : `reject-btn-${id}`);
-  const origText = btn.textContent;
+async function approveArticle(id) {
+  const btn = document.getElementById(`approve-btn-${id}`);
+  btn.textContent = 'Saving...';
+  btn.disabled = true;
+
+  try {
+    const feedback = document.getElementById(`feedback-${id}`).value;
+    const body = { status: 'Approved' };
+    if (feedback.trim()) body.notes = feedback;
+
+    const res = await fetch(`/api/article/${id}/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error('Request failed');
+
+    const badge = document.getElementById(`status-badge-${id}`);
+    badge.textContent = 'Approved';
+    badge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-medium status-approved';
+
+    const card = document.getElementById(`draft-card-${id}`);
+    card.dataset.status = 'approved';
+    btn.textContent = 'Approved';
+  } catch (err) {
+    btn.textContent = 'Approve';
+    btn.disabled = false;
+    alert('Failed to approve.');
+  }
+}
+
+async function requestEdits(id) {
+  const feedback = document.getElementById(`feedback-${id}`).value.trim();
+  if (!feedback) {
+    alert('Please add feedback for Dyan before requesting edits.');
+    document.getElementById(`feedback-${id}`).focus();
+    return;
+  }
+
+  const btn = document.getElementById(`edits-btn-${id}`);
   btn.textContent = 'Saving...';
   btn.disabled = true;
 
@@ -150,50 +177,55 @@ async function updateStatus(id, status) {
     const res = await fetch(`/api/article/${id}/status`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status })
+      body: JSON.stringify({ status: 'Needs Edits', notes: feedback })
     });
     if (!res.ok) throw new Error('Request failed');
 
     const badge = document.getElementById(`status-badge-${id}`);
-    badge.textContent = status;
-    badge.className = `px-2.5 py-0.5 rounded-full text-[11px] font-medium status-${status.toLowerCase().replace(/ /g, '-')}`;
+    badge.textContent = 'Needs Edits';
+    badge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-medium status-needs-edits';
 
     const card = document.getElementById(`draft-card-${id}`);
-    card.dataset.status = status.toLowerCase().replace(/ /g, '-');
-
-    btn.textContent = status === 'Approved' ? 'Approved' : 'Rejected';
+    card.dataset.status = 'needs-edits';
+    btn.textContent = 'Edits Requested';
   } catch (err) {
-    btn.textContent = origText;
+    btn.textContent = 'Request Edits';
     btn.disabled = false;
-    alert('Failed to update status.');
+    alert('Failed to request edits.');
   }
 }
 
-async function saveNotes(id) {
-  const textarea = document.getElementById(`notes-${id}`);
-  const feedback = document.getElementById(`notes-feedback-${id}`);
+async function rejectArticle(id) {
+  if (!confirm('Reject this article? It will be removed from the pipeline.')) return;
+
+  const btn = document.getElementById(`reject-btn-${id}`);
+  btn.textContent = 'Saving...';
+  btn.disabled = true;
 
   try {
-    const res = await fetch(`/api/article/${id}/notes`, {
+    const feedback = document.getElementById(`feedback-${id}`).value;
+    const body = { status: 'Rejected' };
+    if (feedback.trim()) body.notes = feedback;
+
+    const res = await fetch(`/api/article/${id}/status`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notes: textarea.value })
+      body: JSON.stringify(body)
     });
     if (!res.ok) throw new Error('Request failed');
 
-    feedback.classList.remove('hidden');
-    setTimeout(() => feedback.classList.add('hidden'), 2000);
-  } catch (err) {
-    alert('Failed to save notes.');
-  }
-}
+    const badge = document.getElementById(`status-badge-${id}`);
+    badge.textContent = 'Rejected';
+    badge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-medium status-rejected';
 
-async function sendForApproval() {
-  if (!confirm('Send all Draft Ready posts to Slack for Ivan\'s review?')) return;
-  const res = await fetch('/api/send-for-approval', { method: 'POST' });
-  const data = await res.json();
-  if (data.success) { alert(`Sent ${data.sent} draft(s) for approval.`); location.reload(); }
-  else { alert(data.error || 'Failed.'); }
+    const card = document.getElementById(`draft-card-${id}`);
+    card.dataset.status = 'rejected';
+    btn.textContent = 'Rejected';
+  } catch (err) {
+    btn.textContent = 'Reject';
+    btn.disabled = false;
+    alert('Failed to reject.');
+  }
 }
 </script>
 {% endblock %}

@@ -8,15 +8,14 @@
   <p class="text-bw-muted text-sm mt-1.5">Your LinkedIn content pipeline at a glance</p>
 </div>
 
-<!-- Pipeline Stats -->
-<div class="grid grid-cols-3 lg:grid-cols-6 gap-4 mb-10">
+<!-- Pipeline Stats (only pipeline statuses) -->
+<div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-10">
   {% set stat_items = [
-    ("Discovered", notion_stats.get("Discovered", 0), "status-discovered"),
-    ("Shortlisted", notion_stats.get("Shortlisted", 0), "status-shortlisted"),
-    ("Draft Ready", notion_stats.get("Draft Ready", 0), "status-draft-ready"),
-    ("Pending", notion_stats.get("Pending Approval", 0), "status-pending-approval"),
-    ("Approved", notion_stats.get("Approved", 0), "status-approved"),
-    ("Published", notion_stats.get("Published", 0), "status-published"),
+    ("Ivan's Review", pipeline_stats.get("Ivan's Review", 0), "status-ivans-review"),
+    ("Needs Edits", pipeline_stats.get("Needs Edits", 0), "status-needs-edits"),
+    ("Approved", pipeline_stats.get("Approved", 0), "status-approved"),
+    ("Scheduled", pipeline_stats.get("Scheduled", 0), "status-scheduled"),
+    ("Posted", pipeline_stats.get("Posted", 0), "status-posted"),
   ] %}
   {% for label, count, cls in stat_items %}
   <div class="bg-white border border-bw-border rounded-xl p-5">
@@ -34,7 +33,7 @@
     <div class="px-6 py-5 border-b border-bw-border flex items-center justify-between">
       <div>
         <h2 class="font-serif text-lg text-bw-dark">Needs Your Review</h2>
-        <p class="text-[12px] text-bw-muted mt-0.5">{{ needs_review }} article{{ 's' if needs_review != 1 }} waiting for approval</p>
+        <p class="text-[12px] text-bw-muted mt-0.5">{{ needs_review }} article{{ 's' if needs_review != 1 }} waiting for Ivan</p>
       </div>
       <a href="/review" class="text-[12px] text-bw-teal hover:text-bw-teal-dark font-medium transition">Review all &rarr;</a>
     </div>
@@ -45,8 +44,8 @@
           <span class="font-serif text-3xl text-bw-teal">{{ needs_review }}</span>
         </div>
         <div>
-          <p class="text-[14px] font-medium text-bw-dark">{{ needs_review }} post{{ 's' if needs_review != 1 }} ready for your review</p>
-          <p class="text-[12px] text-bw-muted mt-0.5">Pending Approval and Draft Ready articles need your attention</p>
+          <p class="text-[14px] font-medium text-bw-dark">{{ needs_review }} post{{ 's' if needs_review != 1 }} ready for Ivan's review</p>
+          <p class="text-[12px] text-bw-muted mt-0.5">Ivan's Review and Needs Edits articles need attention</p>
           <a href="/review" class="inline-block mt-3 px-5 py-2.5 bg-bw-teal text-white text-[12px] font-semibold rounded-lg hover:bg-bw-teal-dark transition">Go to Review</a>
         </div>
       </div>
@@ -69,7 +68,7 @@
           <div class="w-2 h-2 rounded-full bg-bw-teal mt-1.5 flex-shrink-0"></div>
           <div>
             <div class="font-medium text-bw-dark">Next publish</div>
-            <div class="font-mono text-bw-muted text-[11px]">{{ next_publish }} &middot; 10 AM HKT</div>
+            <div class="font-mono text-bw-muted text-[11px]">{{ next_tuesday }} &middot; 10 AM HKT</div>
           </div>
         </div>
         <div class="flex items-start gap-3">
@@ -95,12 +94,12 @@
   </div>
 </div>
 
-<!-- Active Pipeline -->
+<!-- Pipeline Table -->
 <div class="bg-white border border-bw-border rounded-xl mb-8">
   <div class="px-6 py-5 border-b border-bw-border flex items-center justify-between">
     <div>
       <h2 class="font-serif text-lg text-bw-dark">Pipeline</h2>
-      <p class="text-[12px] text-bw-muted mt-0.5">{{ active_pipeline|length }} active article{{ 's' if active_pipeline|length != 1 }} &middot; Approved posts go out next Tuesday</p>
+      <p class="text-[12px] text-bw-muted mt-0.5">{{ active_pipeline|length }} article{{ 's' if active_pipeline|length != 1 }} in pipeline &middot; Click status to change</p>
     </div>
     <a href="/review" class="text-[12px] text-bw-teal hover:text-bw-teal-dark font-medium transition">Review all &rarr;</a>
   </div>
@@ -119,9 +118,25 @@
       </thead>
       <tbody class="divide-y divide-bw-border/50">
         {% for article in active_pipeline %}
-        <tr class="hover:bg-bw-hover transition">
+        <tr class="hover:bg-bw-hover transition" id="pipeline-row-{{ article.id }}">
           <td class="px-6 py-3.5">
-            <span class="status-{{ article.status|lower|replace(' ', '-') }} px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap">{{ article.status }}</span>
+            <div class="status-dropdown">
+              <button onclick="toggleStatusDropdown('{{ article.id }}')" class="status-{{ article.status|lower|replace(' ', '-')|replace(\"'\", '') }} px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap cursor-pointer hover:opacity-80 transition" id="pipeline-status-{{ article.id }}">
+                {{ article.status }}
+              </button>
+              <div class="status-dropdown-menu" id="pipeline-dropdown-{{ article.id }}">
+                {% set transitions = status_transitions.get(article.status, []) %}
+                {% if transitions %}
+                {% for target in transitions %}
+                <button onclick="changeStatus('{{ article.id }}', '{{ target }}')" class="status-dropdown-item">
+                  <span class="status-{{ target|lower|replace(' ', '-')|replace(\"'\", '') }} px-1.5 py-0.5 rounded-full text-[10px] mr-1">{{ target }}</span>
+                </button>
+                {% endfor %}
+                {% else %}
+                <div class="px-3 py-2 text-[11px] text-bw-muted">No transitions available</div>
+                {% endif %}
+              </div>
+            </div>
           </td>
           <td class="px-6 py-3.5">
             <div class="font-medium text-bw-dark truncate max-w-[300px]" title="{{ article.title }}">{{ article.title }}</div>
@@ -131,15 +146,17 @@
           </td>
           <td class="px-6 py-3.5 text-[12px] text-bw-text-light">{{ article.company }}</td>
           <td class="px-6 py-3.5 font-mono text-[12px] text-bw-muted">{{ article.score }}/10</td>
-          <td class="px-6 py-3.5 font-mono text-[11px]">
-            {% if article.status == 'Approved' %}
-            <span class="text-green-600 font-medium">{{ next_publish }}</span>
-            {% elif article.status == 'Pending Approval' %}
+          <td class="px-6 py-3.5 font-mono text-[11px]" id="pipeline-schedule-{{ article.id }}">
+            {% if article.status == 'Scheduled' %}
+            <span class="text-blue-600 font-medium">{{ next_tuesday }}</span>
+            {% elif article.status == 'Approved' %}
+            <span class="text-green-600 font-medium">{{ next_tuesday }}</span>
+            {% elif article.status == "Ivan's Review" %}
             <span class="text-amber-600">Awaiting Ivan</span>
-            {% elif article.status == 'Draft Ready' %}
-            <span class="text-purple-600">Needs review</span>
-            {% elif article.status == 'Shortlisted' %}
-            <span class="text-bw-muted">Needs draft</span>
+            {% elif article.status == 'Needs Edits' %}
+            <span class="text-rose-600">Needs your update</span>
+            {% elif article.status == 'Posted' %}
+            <span class="text-bw-muted">{{ article.date }}</span>
             {% endif %}
           </td>
         </tr>
@@ -149,42 +166,70 @@
   </div>
   {% else %}
   <div class="px-6 py-12 text-center text-bw-muted text-sm">
-    No active articles in the pipeline. Run a scan to get started.
+    No articles in the pipeline. Run a scan to get started.
   </div>
   {% endif %}
 </div>
+{% endblock %}
 
-<!-- Recently Published -->
-{% if recently_published %}
-<div class="bg-white border border-bw-border rounded-xl mb-8">
-  <div class="px-6 py-5 border-b border-bw-border flex items-center justify-between">
-    <div>
-      <h2 class="font-serif text-lg text-bw-dark">Recently Published</h2>
-    </div>
-    <a href="/published" class="text-[12px] text-bw-teal hover:text-bw-teal-dark font-medium transition">View all &rarr;</a>
-  </div>
-  <div class="overflow-x-auto">
-    <table class="w-full text-[13px]">
-      <thead>
-        <tr class="border-b border-bw-border text-left">
-          <th class="px-6 py-3 font-mono text-[10px] uppercase tracking-wider text-bw-muted font-medium">Title</th>
-          <th class="px-6 py-3 font-mono text-[10px] uppercase tracking-wider text-bw-muted font-medium">Company</th>
-          <th class="px-6 py-3 font-mono text-[10px] uppercase tracking-wider text-bw-muted font-medium">Published</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-bw-border/50">
-        {% for article in recently_published %}
-        <tr class="hover:bg-bw-hover transition">
-          <td class="px-6 py-3.5">
-            <div class="font-medium text-bw-dark truncate max-w-[300px]">{{ article.title }}</div>
-          </td>
-          <td class="px-6 py-3.5 text-[12px] text-bw-text-light">{{ article.company }}</td>
-          <td class="px-6 py-3.5 font-mono text-[11px] text-bw-muted">{{ article.date }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-{% endif %}
+{% block scripts %}
+<script>
+// Close all dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.status-dropdown')) {
+    document.querySelectorAll('.status-dropdown-menu').forEach(m => m.classList.remove('open'));
+  }
+});
+
+function toggleStatusDropdown(id) {
+  const menu = document.getElementById(`pipeline-dropdown-${id}`);
+  const wasOpen = menu.classList.contains('open');
+  // Close all first
+  document.querySelectorAll('.status-dropdown-menu').forEach(m => m.classList.remove('open'));
+  if (!wasOpen) menu.classList.add('open');
+}
+
+async function changeStatus(id, newStatus) {
+  // Close dropdown immediately
+  document.querySelectorAll('.status-dropdown-menu').forEach(m => m.classList.remove('open'));
+
+  const btn = document.getElementById(`pipeline-status-${id}`);
+  const origText = btn.textContent.trim();
+  btn.textContent = 'Saving...';
+
+  try {
+    const res = await fetch(`/api/article/${id}/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus })
+    });
+    if (!res.ok) throw new Error('Request failed');
+
+    // Update the badge
+    btn.textContent = newStatus;
+    const cssClass = 'status-' + newStatus.toLowerCase().replace(/ /g, '-').replace(/'/g, '');
+    btn.className = `${cssClass} px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap cursor-pointer hover:opacity-80 transition`;
+
+    // Update schedule column
+    const scheduleCell = document.getElementById(`pipeline-schedule-${id}`);
+    if (newStatus === 'Scheduled') {
+      scheduleCell.innerHTML = '<span class="text-blue-600 font-medium">{{ next_tuesday }}</span>';
+    } else if (newStatus === 'Approved') {
+      scheduleCell.innerHTML = '<span class="text-green-600 font-medium">{{ next_tuesday }}</span>';
+    } else if (newStatus === "Ivan's Review") {
+      scheduleCell.innerHTML = '<span class="text-amber-600">Awaiting Ivan</span>';
+    } else if (newStatus === 'Needs Edits') {
+      scheduleCell.innerHTML = '<span class="text-rose-600">Needs your update</span>';
+    } else if (newStatus === 'Posted') {
+      scheduleCell.innerHTML = '<span class="text-bw-muted">Just now</span>';
+    }
+
+    // Reload after brief delay to update dropdown options and sort
+    setTimeout(() => location.reload(), 800);
+  } catch (err) {
+    btn.textContent = origText;
+    alert('Failed to update status.');
+  }
+}
+</script>
 {% endblock %}

@@ -45,11 +45,24 @@ tailwind.config = {
 
   .status-discovered { background: #f0fbfb; color: #1a8a91; border: 1px solid #d1f0f2; }
   .status-shortlisted { background: #eef0ff; color: #5b5bd6; border: 1px solid #d8daff; }
+  .status-drafting { background: #f3eeff; color: #7c5cc4; border: 1px solid #e2d8f5; }
+  .status-ivans-review { background: #fef8ee; color: #b8860b; border: 1px solid #f5e6c8; }
+  .status-needs-edits { background: #fef2f2; color: #be123c; border: 1px solid #fbd5d5; }
+  .status-approved { background: #eefbf3; color: #16794a; border: 1px solid #c8f0d8; }
+  .status-scheduled { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+  .status-posted { background: #e8f8f9; color: #0e7e86; border: 1px solid #b8edf0; }
+  .status-rejected { background: #fef2f2; color: #b91c1c; border: 1px solid #fbd5d5; }
+  /* Legacy compat */
   .status-draft-ready { background: #f3eeff; color: #7c5cc4; border: 1px solid #e2d8f5; }
   .status-pending-approval { background: #fef8ee; color: #b8860b; border: 1px solid #f5e6c8; }
-  .status-approved { background: #eefbf3; color: #16794a; border: 1px solid #c8f0d8; }
   .status-published { background: #e8f8f9; color: #0e7e86; border: 1px solid #b8edf0; }
-  .status-rejected { background: #fef2f2; color: #b91c1c; border: 1px solid #fbd5d5; }
+
+  /* Status dropdown */
+  .status-dropdown { position: relative; display: inline-block; }
+  .status-dropdown-menu { display: none; position: absolute; top: 100%; left: 0; z-index: 50; margin-top: 4px; min-width: 160px; background: white; border: 1px solid #e8e4de; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 4px; }
+  .status-dropdown-menu.open { display: block; }
+  .status-dropdown-item { display: block; width: 100%; padding: 6px 12px; text-align: left; font-size: 12px; font-weight: 500; border-radius: 6px; cursor: pointer; border: none; background: none; transition: background 0.15s; }
+  .status-dropdown-item:hover { background: #f5f2ec; }
 
   .nav-link { transition: all 0.15s; color: rgba(255,255,255,0.5); }
   .nav-link:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.85); }
