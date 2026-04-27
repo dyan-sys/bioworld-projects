@@ -3,13 +3,13 @@
 
 {% block content %}
 <!-- Header -->
-<div class="mb-8">
-  <h1 class="text-2xl font-bold text-bw-dark">Dashboard</h1>
-  <p class="text-bw-muted text-sm mt-1">Your LinkedIn content pipeline at a glance</p>
+<div class="mb-10">
+  <h1 class="font-serif text-3xl text-bw-dark">Content Hub</h1>
+  <p class="text-bw-muted text-sm mt-1.5">Your LinkedIn content pipeline at a glance</p>
 </div>
 
 <!-- Pipeline Stats -->
-<div class="grid grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
+<div class="grid grid-cols-3 lg:grid-cols-6 gap-4 mb-10">
   {% set stat_items = [
     ("Discovered", notion_stats.get("Discovered", 0), "status-discovered"),
     ("Shortlisted", notion_stats.get("Shortlisted", 0), "status-shortlisted"),
@@ -19,40 +19,40 @@
     ("Published", notion_stats.get("Published", 0), "status-published"),
   ] %}
   {% for label, count, cls in stat_items %}
-  <div class="bg-white border border-bw-border rounded-xl p-4 shadow-sm">
-    <div class="text-2xl font-bold text-bw-dark mb-1">{{ count }}</div>
-    <div class="text-[11px]"><span class="{{ cls }} px-2 py-0.5 rounded-full font-medium">{{ label }}</span></div>
+  <div class="bg-white border border-bw-border rounded-xl p-5">
+    <div class="font-serif text-3xl text-bw-dark mb-2">{{ count }}</div>
+    <div class="font-mono text-[10px] uppercase tracking-wider"><span class="{{ cls }} px-2 py-0.5 rounded-full">{{ label }}</span></div>
   </div>
   {% endfor %}
 </div>
 
 <!-- Main grid -->
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
 
   <!-- Needs Your Review (2/3) -->
-  <div class="lg:col-span-2 bg-white border border-bw-border rounded-xl shadow-sm">
-    <div class="px-5 py-4 border-b border-bw-border flex items-center justify-between">
+  <div class="lg:col-span-2 bg-white border border-bw-border rounded-xl">
+    <div class="px-6 py-5 border-b border-bw-border flex items-center justify-between">
       <div>
-        <h2 class="text-sm font-semibold text-bw-dark">Needs Your Review</h2>
-        <p class="text-[11px] text-bw-muted mt-0.5">{{ needs_review }} article{{ 's' if needs_review != 1 }} waiting for approval</p>
+        <h2 class="font-serif text-lg text-bw-dark">Needs Your Review</h2>
+        <p class="text-[12px] text-bw-muted mt-0.5">{{ needs_review }} article{{ 's' if needs_review != 1 }} waiting for approval</p>
       </div>
       <a href="/review" class="text-[12px] text-bw-teal hover:text-bw-teal-dark font-medium transition">Review all &rarr;</a>
     </div>
-    <div class="px-5 py-6">
+    <div class="px-6 py-6">
       {% if needs_review > 0 %}
-      <div class="flex items-center gap-4">
-        <div class="w-16 h-16 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center">
-          <span class="text-2xl font-bold text-amber-600">{{ needs_review }}</span>
+      <div class="flex items-center gap-5">
+        <div class="w-16 h-16 rounded-xl bg-bw-teal-50 border border-bw-teal/20 flex items-center justify-center">
+          <span class="font-serif text-3xl text-bw-teal">{{ needs_review }}</span>
         </div>
         <div>
           <p class="text-[14px] font-medium text-bw-dark">{{ needs_review }} post{{ 's' if needs_review != 1 }} ready for your review</p>
           <p class="text-[12px] text-bw-muted mt-0.5">Pending Approval and Draft Ready articles need your attention</p>
-          <a href="/review" class="inline-block mt-2 px-4 py-2 bg-bw-teal text-white text-[12px] font-semibold rounded-lg hover:bg-bw-teal-dark transition">Go to Review</a>
+          <a href="/review" class="inline-block mt-3 px-5 py-2.5 bg-bw-teal text-white text-[12px] font-semibold rounded-lg hover:bg-bw-teal-dark transition">Go to Review</a>
         </div>
       </div>
       {% else %}
-      <div class="text-center py-4">
-        <p class="text-bw-muted text-sm">All caught up — nothing to review right now.</p>
+      <div class="text-center py-6">
+        <p class="text-bw-muted text-sm">All caught up -- nothing to review right now.</p>
       </div>
       {% endif %}
     </div>
@@ -62,30 +62,30 @@
   <div class="space-y-4">
 
     <!-- Schedule -->
-    <div class="bg-white border border-bw-border rounded-xl p-5 shadow-sm">
-      <h3 class="text-sm font-semibold text-bw-dark mb-3">Schedule</h3>
-      <div class="space-y-3 text-[13px]">
+    <div class="bg-white border border-bw-border rounded-xl p-5">
+      <h3 class="font-serif text-base text-bw-dark mb-4">Schedule</h3>
+      <div class="space-y-3.5 text-[13px]">
         <div class="flex items-start gap-3">
           <div class="w-2 h-2 rounded-full bg-bw-teal mt-1.5 flex-shrink-0"></div>
           <div>
             <div class="font-medium text-bw-dark">Next publish</div>
-            <div class="text-bw-muted text-[12px]">{{ next_publish }} &middot; 10 AM HKT</div>
+            <div class="font-mono text-bw-muted text-[11px]">{{ next_publish }} &middot; 10 AM HKT</div>
           </div>
         </div>
         <div class="flex items-start gap-3">
           <div class="w-2 h-2 rounded-full bg-bw-border mt-1.5 flex-shrink-0"></div>
           <div>
             <div class="font-medium text-bw-dark">Weekly cadence</div>
-            <div class="text-bw-muted text-[12px]">Mon scan &rarr; Tue publish</div>
+            <div class="font-mono text-bw-muted text-[11px]">Mon scan &rarr; Tue publish</div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Quick actions -->
-    <div class="bg-white border border-bw-border rounded-xl p-5 shadow-sm">
-      <h3 class="text-sm font-semibold text-bw-dark mb-3">Quick Actions</h3>
-      <div class="space-y-1.5">
+    <div class="bg-white border border-bw-border rounded-xl p-5">
+      <h3 class="font-serif text-base text-bw-dark mb-3">Quick Actions</h3>
+      <div class="space-y-1">
         <a href="/review" class="block px-3 py-2 text-[12px] font-medium text-bw-text-light hover:text-bw-teal hover:bg-bw-teal-50 rounded-lg transition">Review articles &rarr;</a>
         <a href="/published" class="block px-3 py-2 text-[12px] font-medium text-bw-text-light hover:text-bw-teal hover:bg-bw-teal-50 rounded-lg transition">View published &rarr;</a>
         <a href="/brands" class="block px-3 py-2 text-[12px] font-medium text-bw-text-light hover:text-bw-teal hover:bg-bw-teal-50 rounded-lg transition">Manage portfolio &rarr;</a>
@@ -96,11 +96,11 @@
 </div>
 
 <!-- Recently Published -->
-<div class="bg-white border border-bw-border rounded-xl shadow-sm mb-8">
-  <div class="px-5 py-4 border-b border-bw-border flex items-center justify-between">
+<div class="bg-white border border-bw-border rounded-xl mb-8">
+  <div class="px-6 py-5 border-b border-bw-border flex items-center justify-between">
     <div>
-      <h2 class="text-sm font-semibold text-bw-dark">Recently Published</h2>
-      <p class="text-[11px] text-bw-muted mt-0.5">Last {{ recently_published|length }} published post{{ 's' if recently_published|length != 1 }}</p>
+      <h2 class="font-serif text-lg text-bw-dark">Recently Published</h2>
+      <p class="text-[12px] text-bw-muted mt-0.5">Last {{ recently_published|length }} published post{{ 's' if recently_published|length != 1 }}</p>
     </div>
     <a href="/published" class="text-[12px] text-bw-teal hover:text-bw-teal-dark font-medium transition">View all &rarr;</a>
   </div>
@@ -109,29 +109,29 @@
   <div class="overflow-x-auto">
     <table class="w-full text-[13px]">
       <thead>
-        <tr class="border-b border-bw-border text-left text-[11px] uppercase tracking-wider text-bw-muted">
-          <th class="px-5 py-3 font-medium">Title</th>
-          <th class="px-5 py-3 font-medium">Company</th>
-          <th class="px-5 py-3 font-medium">Date</th>
-          <th class="px-5 py-3 font-medium">Score</th>
+        <tr class="border-b border-bw-border text-left">
+          <th class="px-6 py-3 font-mono text-[10px] uppercase tracking-wider text-bw-muted font-medium">Title</th>
+          <th class="px-6 py-3 font-mono text-[10px] uppercase tracking-wider text-bw-muted font-medium">Company</th>
+          <th class="px-6 py-3 font-mono text-[10px] uppercase tracking-wider text-bw-muted font-medium">Date</th>
+          <th class="px-6 py-3 font-mono text-[10px] uppercase tracking-wider text-bw-muted font-medium">Score</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-bw-border/50">
         {% for article in recently_published %}
-        <tr class="hover:bg-bw-teal-50 transition">
-          <td class="px-5 py-3">
+        <tr class="hover:bg-bw-hover transition">
+          <td class="px-6 py-3.5">
             <div class="font-medium text-bw-dark truncate max-w-[280px]" title="{{ article.title }}">{{ article.title }}</div>
           </td>
-          <td class="px-5 py-3 text-[12px] text-bw-text-light">{{ article.company }}</td>
-          <td class="px-5 py-3 text-[12px] text-bw-muted">{{ article.date }}</td>
-          <td class="px-5 py-3 text-bw-muted">{{ article.score }}/10</td>
+          <td class="px-6 py-3.5 text-[12px] text-bw-text-light">{{ article.company }}</td>
+          <td class="px-6 py-3.5 font-mono text-[11px] text-bw-muted">{{ article.date }}</td>
+          <td class="px-6 py-3.5 font-mono text-[12px] text-bw-muted">{{ article.score }}/10</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
   {% else %}
-  <div class="px-5 py-10 text-center text-bw-muted text-sm">
+  <div class="px-6 py-12 text-center text-bw-muted text-sm">
     No published posts yet.
   </div>
   {% endif %}

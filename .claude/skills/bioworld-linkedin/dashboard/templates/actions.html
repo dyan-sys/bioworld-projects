@@ -1,40 +1,40 @@
 {% extends "base.html" %}
-{% block title %}Actions — Bioworld LinkedIn Hub{% endblock %}
+{% block title %}Actions — Bioworld Content Hub{% endblock %}
 
 {% block content %}
 <div class="mb-8">
-  <h1 class="text-2xl font-bold">Actions</h1>
-  <p class="text-bio-muted text-sm mt-1">Trigger and monitor workflows</p>
+  <h1 class="font-serif text-3xl text-bw-dark">Actions</h1>
+  <p class="text-bw-muted text-sm mt-1.5">Trigger and monitor workflows</p>
 </div>
 
 <div class="space-y-6">
 
   <!-- Step 1: Scan for News -->
-  <div class="bg-bio-card border border-bio-border rounded-xl p-6" id="card-scan">
+  <div class="bg-white border border-bw-border rounded-xl p-6" id="card-scan">
     <div class="flex items-start justify-between mb-2">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-          <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <div class="w-10 h-10 rounded-lg bg-bw-teal/10 flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-bw-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
         </div>
         <div>
-          <h3 class="font-semibold">Step 1: Scan for News</h3>
-          <p class="text-xs text-bio-muted">Search portfolio companies and biotech industry for recent articles</p>
+          <h3 class="font-serif text-base text-bw-dark">Step 1: Scan for News</h3>
+          <p class="text-xs text-bw-muted">Search portfolio companies and biotech industry for recent articles</p>
         </div>
       </div>
       <span id="indicator-scan" class="flex-shrink-0 mt-1">
         {% if workflow_status.get('scan', {}).get('running') %}
-          <span class="flex h-3 w-3 relative"><span class="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-blue-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span></span>
+          <span class="flex h-3 w-3 relative"><span class="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-bw-teal opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-bw-teal"></span></span>
         {% elif workflow_status.get('scan', {}).get('status') == 'error' %}
           <span class="inline-flex rounded-full h-3 w-3 bg-red-500"></span>
         {% elif workflow_status.get('scan', {}).get('status') == 'complete' %}
           <span class="inline-flex rounded-full h-3 w-3 bg-green-500"></span>
         {% else %}
-          <span class="inline-flex rounded-full h-3 w-3 bg-bio-border"></span>
+          <span class="inline-flex rounded-full h-3 w-3 bg-bw-border"></span>
         {% endif %}
       </span>
     </div>
 
-    <div id="meta-scan" class="text-xs text-bio-muted mb-4">
+    <div id="meta-scan" class="font-mono text-[11px] text-bw-muted mb-4">
       {% if workflow_status.get('scan', {}).get('finished') %}
         Last run: {{ workflow_status.scan.finished }} — {{ workflow_status.scan.status }}{% if workflow_status.scan.engine %} ({{ workflow_status.scan.engine }}){% endif %}
       {% elif workflow_status.get('scan', {}).get('started') %}
@@ -46,88 +46,88 @@
 
     <div class="flex flex-wrap gap-3 mb-3">
       <button onclick="triggerScan('serper')" id="btn-scan-serper"
-        class="px-5 py-2.5 rounded-lg text-sm font-medium bg-sky-600 hover:bg-sky-700 text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
+        class="px-5 py-2.5 rounded-lg text-sm font-medium bg-bw-teal hover:bg-bw-teal-dark text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
         {{ 'disabled' if workflow_status.get('scan', {}).get('running') }}>
         Serper (Google+Claude)
       </button>
       <button onclick="triggerScan('tavily')" id="btn-scan-tavily"
-        class="px-5 py-2.5 rounded-lg text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
+        class="px-5 py-2.5 rounded-lg text-sm font-medium bg-bw-indigo hover:bg-bw-indigo/90 text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
         {{ 'disabled' if workflow_status.get('scan', {}).get('running') }}>
         Tavily (AI Search)
       </button>
     </div>
 
-    <p class="text-xs text-bio-muted">Results appear in the Workspace tab for review</p>
+    <p class="text-xs text-bw-muted">Results appear in the Workspace tab for review</p>
 
-    <pre id="log-scan" class="mt-3 text-xs text-bio-muted bg-bio-bg rounded-lg p-3 max-h-40 overflow-auto whitespace-pre-wrap {{ '' if workflow_status.get('scan', {}).get('log') else 'hidden' }}">{{ workflow_status.get('scan', {}).get('log', '') }}</pre>
+    <pre id="log-scan" class="mt-3 font-mono text-[11px] text-bw-muted bg-bw-bg rounded-lg p-3 max-h-40 overflow-auto whitespace-pre-wrap border border-bw-border {{ '' if workflow_status.get('scan', {}).get('log') else 'hidden' }}">{{ workflow_status.get('scan', {}).get('log', '') }}</pre>
   </div>
 
   <!-- Step 2: Review & Draft -->
-  <div class="bg-bio-card border border-bio-border rounded-xl p-6" id="card-review">
+  <div class="bg-white border border-bw-border rounded-xl p-6" id="card-review">
     <div class="flex items-center gap-3 mb-2">
-      <div class="w-10 h-10 rounded-lg bg-purple-900/30 flex items-center justify-center flex-shrink-0">
-        <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+      <div class="w-10 h-10 rounded-lg bg-bw-indigo/10 flex items-center justify-center flex-shrink-0">
+        <svg class="w-5 h-5 text-bw-indigo" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
       </div>
       <div>
-        <h3 class="font-semibold">Step 2: Review & Draft</h3>
-        <p class="text-xs text-bio-muted">Review scan results in Workspace, generate drafts for promising articles, select your picks</p>
+        <h3 class="font-serif text-base text-bw-dark">Step 2: Review & Draft</h3>
+        <p class="text-xs text-bw-muted">Review scan results in Workspace, generate drafts for promising articles, select your picks</p>
       </div>
     </div>
 
     <a href="/articles"
-      class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium bg-purple-600 hover:bg-purple-700 text-white transition mt-2">
+      class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium bg-bw-indigo hover:bg-bw-indigo/90 text-white transition mt-2">
       Go to Workspace
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
     </a>
   </div>
 
   <!-- Step 3: Send to Notion -->
-  <div class="bg-bio-card border border-bio-border rounded-xl p-6" id="card-notion">
+  <div class="bg-white border border-bw-border rounded-xl p-6" id="card-notion">
     <div class="flex items-center gap-3 mb-2">
-      <div class="w-10 h-10 rounded-lg bg-indigo-900/30 flex items-center justify-center flex-shrink-0">
-        <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+      <div class="w-10 h-10 rounded-lg bg-bw-dark/5 flex items-center justify-center flex-shrink-0">
+        <svg class="w-5 h-5 text-bw-dark" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
       </div>
       <div>
-        <h3 class="font-semibold">Step 3: Send to Notion</h3>
-        <p class="text-xs text-bio-muted">Push selected articles with drafts to the clean Notion pipeline</p>
+        <h3 class="font-serif text-base text-bw-dark">Step 3: Send to Notion</h3>
+        <p class="text-xs text-bw-muted">Push selected articles with drafts to the clean Notion pipeline</p>
       </div>
     </div>
 
-    <p class="text-xs text-bio-muted mb-3">Select articles in the Workspace tab first, then use the Send to Notion button there</p>
+    <p class="text-xs text-bw-muted mb-3">Select articles in the Workspace tab first, then use the Send to Notion button there</p>
 
     <a href="/articles"
-      class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white transition">
+      class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium bg-bw-dark hover:bg-bw-navy text-white transition">
       Open Workspace
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
     </a>
   </div>
 
   <!-- Step 4: Send for Approval -->
-  <div class="bg-bio-card border border-bio-border rounded-xl p-6" id="card-approval">
+  <div class="bg-white border border-bw-border rounded-xl p-6" id="card-approval">
     <div class="flex items-start justify-between mb-2">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-yellow-900/30 flex items-center justify-center flex-shrink-0">
-          <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+        <div class="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
         </div>
         <div>
-          <h3 class="font-semibold">Step 4: Send for Approval</h3>
-          <p class="text-xs text-bio-muted">Send Draft Ready posts to #bioworld-linkedin for Ivan to review</p>
+          <h3 class="font-serif text-base text-bw-dark">Step 4: Send for Approval</h3>
+          <p class="text-xs text-bw-muted">Send Draft Ready posts to #bioworld-linkedin for Ivan to review</p>
         </div>
       </div>
       <span id="indicator-approval" class="flex-shrink-0 mt-1">
         {% if workflow_status.get('approval', {}).get('running') %}
-          <span class="flex h-3 w-3 relative"><span class="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-yellow-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-yellow-500"></span></span>
+          <span class="flex h-3 w-3 relative"><span class="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-amber-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span></span>
         {% elif workflow_status.get('approval', {}).get('status') == 'error' %}
           <span class="inline-flex rounded-full h-3 w-3 bg-red-500"></span>
         {% elif workflow_status.get('approval', {}).get('status') == 'complete' %}
           <span class="inline-flex rounded-full h-3 w-3 bg-green-500"></span>
         {% else %}
-          <span class="inline-flex rounded-full h-3 w-3 bg-bio-border"></span>
+          <span class="inline-flex rounded-full h-3 w-3 bg-bw-border"></span>
         {% endif %}
       </span>
     </div>
 
-    <div id="meta-approval" class="text-xs text-bio-muted mb-4">
+    <div id="meta-approval" class="font-mono text-[11px] text-bw-muted mb-4">
       {% if workflow_status.get('approval', {}).get('finished') %}
         Last run: {{ workflow_status.approval.finished }} — {{ workflow_status.approval.status }}
       {% elif workflow_status.get('approval', {}).get('started') %}
@@ -138,40 +138,40 @@
     </div>
 
     <button onclick="triggerAction('approval', '/api/send-for-approval')" id="btn-approval"
-      class="px-5 py-2.5 rounded-lg text-sm font-medium bg-yellow-600 hover:bg-yellow-700 text-gray-900 transition disabled:opacity-50 disabled:cursor-not-allowed"
+      class="px-5 py-2.5 rounded-lg text-sm font-medium bg-amber-500 hover:bg-amber-600 text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
       {{ 'disabled' if workflow_status.get('approval', {}).get('running') }}>
       {{ 'Running...' if workflow_status.get('approval', {}).get('running') else 'Send for Approval' }}
     </button>
 
-    <pre id="log-approval" class="mt-3 text-xs text-bio-muted bg-bio-bg rounded-lg p-3 max-h-40 overflow-auto whitespace-pre-wrap {{ '' if workflow_status.get('approval', {}).get('log') else 'hidden' }}">{{ workflow_status.get('approval', {}).get('log', '') }}</pre>
+    <pre id="log-approval" class="mt-3 font-mono text-[11px] text-bw-muted bg-bw-bg rounded-lg p-3 max-h-40 overflow-auto whitespace-pre-wrap border border-bw-border {{ '' if workflow_status.get('approval', {}).get('log') else 'hidden' }}">{{ workflow_status.get('approval', {}).get('log', '') }}</pre>
   </div>
 
   <!-- Step 5: Publish to LinkedIn -->
-  <div class="bg-bio-card border border-bio-border rounded-xl p-6" id="card-publish">
+  <div class="bg-white border border-bw-border rounded-xl p-6" id="card-publish">
     <div class="flex items-start justify-between mb-2">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-green-900/30 flex items-center justify-center flex-shrink-0">
-          <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+        <div class="w-10 h-10 rounded-lg bg-bw-teal/10 flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-bw-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
         </div>
         <div>
-          <h3 class="font-semibold">Step 5: Publish to LinkedIn</h3>
-          <p class="text-xs text-bio-muted">Post approved articles to Bioworld Ventures company page</p>
+          <h3 class="font-serif text-base text-bw-dark">Step 5: Publish to LinkedIn</h3>
+          <p class="text-xs text-bw-muted">Post approved articles to Bioworld Ventures company page</p>
         </div>
       </div>
       <span id="indicator-publish" class="flex-shrink-0 mt-1">
         {% if workflow_status.get('publish', {}).get('running') %}
-          <span class="flex h-3 w-3 relative"><span class="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-green-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span></span>
+          <span class="flex h-3 w-3 relative"><span class="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-bw-teal opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-bw-teal"></span></span>
         {% elif workflow_status.get('publish', {}).get('status') == 'error' %}
           <span class="inline-flex rounded-full h-3 w-3 bg-red-500"></span>
         {% elif workflow_status.get('publish', {}).get('status') == 'complete' %}
           <span class="inline-flex rounded-full h-3 w-3 bg-green-500"></span>
         {% else %}
-          <span class="inline-flex rounded-full h-3 w-3 bg-bio-border"></span>
+          <span class="inline-flex rounded-full h-3 w-3 bg-bw-border"></span>
         {% endif %}
       </span>
     </div>
 
-    <div id="meta-publish" class="text-xs text-bio-muted mb-4">
+    <div id="meta-publish" class="font-mono text-[11px] text-bw-muted mb-4">
       {% if workflow_status.get('publish', {}).get('finished') %}
         Last run: {{ workflow_status.publish.finished }} — {{ workflow_status.publish.status }}
       {% elif workflow_status.get('publish', {}).get('started') %}
@@ -182,32 +182,32 @@
     </div>
 
     <button onclick="triggerAction('publish', '/api/trigger/publish')" id="btn-publish"
-      class="px-5 py-2.5 rounded-lg text-sm font-medium bg-green-600 hover:bg-green-700 text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
+      class="px-5 py-2.5 rounded-lg text-sm font-medium bg-bw-teal hover:bg-bw-teal-dark text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
       {{ 'disabled' if workflow_status.get('publish', {}).get('running') }}>
       {{ 'Running...' if workflow_status.get('publish', {}).get('running') else 'Publish' }}
     </button>
 
-    <p class="text-xs text-bio-muted mt-3">Requires LinkedIn API credentials</p>
+    <p class="text-xs text-bw-muted mt-3">Requires LinkedIn API credentials</p>
 
-    <pre id="log-publish" class="mt-3 text-xs text-bio-muted bg-bio-bg rounded-lg p-3 max-h-40 overflow-auto whitespace-pre-wrap {{ '' if workflow_status.get('publish', {}).get('log') else 'hidden' }}">{{ workflow_status.get('publish', {}).get('log', '') }}</pre>
+    <pre id="log-publish" class="mt-3 font-mono text-[11px] text-bw-muted bg-bw-bg rounded-lg p-3 max-h-40 overflow-auto whitespace-pre-wrap border border-bw-border {{ '' if workflow_status.get('publish', {}).get('log') else 'hidden' }}">{{ workflow_status.get('publish', {}).get('log', '') }}</pre>
   </div>
 
   <!-- Weekly Schedule -->
-  <div class="bg-bio-card border border-bio-border rounded-xl p-6">
-    <h2 class="text-sm font-semibold uppercase tracking-wider text-bio-muted mb-4">Weekly Schedule</h2>
+  <div class="bg-white border border-bw-border rounded-xl p-6">
+    <h2 class="font-mono text-[10px] font-medium uppercase tracking-wider text-bw-muted mb-4">Weekly Schedule</h2>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div class="flex items-center gap-3">
-        <div class="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0"></div>
+        <div class="w-2 h-2 rounded-full bg-bw-teal flex-shrink-0"></div>
         <div>
-          <div class="text-sm font-medium">Monday 8 AM HKT</div>
-          <div class="text-xs text-bio-muted">Scan + Draft + Review</div>
+          <div class="text-sm font-medium text-bw-dark">Monday 8 AM HKT</div>
+          <div class="font-mono text-[11px] text-bw-muted">Scan + Draft + Review</div>
         </div>
       </div>
       <div class="flex items-center gap-3">
-        <div class="w-2 h-2 rounded-full bg-green-400 flex-shrink-0"></div>
+        <div class="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></div>
         <div>
-          <div class="text-sm font-medium">Tuesday 10 AM HKT</div>
-          <div class="text-xs text-bio-muted">Publish to LinkedIn</div>
+          <div class="text-sm font-medium text-bw-dark">Tuesday 10 AM HKT</div>
+          <div class="font-mono text-[11px] text-bw-muted">Publish to LinkedIn</div>
         </div>
       </div>
     </div>
@@ -351,7 +351,7 @@ function updateCard(action, ws) {
   // Update indicator
   if (indicator) {
     if (ws.running) {
-      indicator.innerHTML = '<span class="flex h-3 w-3 relative"><span class="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-blue-400 opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span></span>';
+      indicator.innerHTML = '<span class="flex h-3 w-3 relative"><span class="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-bw-teal opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-bw-teal"></span></span>';
     } else if (ws.status === 'error') {
       indicator.innerHTML = '<span class="inline-flex rounded-full h-3 w-3 bg-red-500"></span>';
     } else if (ws.status === 'complete') {

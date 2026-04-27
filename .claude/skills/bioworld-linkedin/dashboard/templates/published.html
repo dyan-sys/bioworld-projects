@@ -2,40 +2,40 @@
 {% block title %}Published — Bioworld Content Hub{% endblock %}
 
 {% block content %}
-<div class="mb-6">
-  <h1 class="text-2xl font-bold text-bw-dark">Published</h1>
-  <p class="text-bw-muted text-sm mt-1">{{ articles|length }} published and approved article{{ 's' if articles|length != 1 }}</p>
+<div class="mb-8">
+  <h1 class="font-serif text-3xl text-bw-dark">Published</h1>
+  <p class="text-bw-muted text-sm mt-1.5">{{ articles|length }} published and approved article{{ 's' if articles|length != 1 }}</p>
 </div>
 
 {% if not articles %}
-<div class="bg-white border border-bw-border rounded-xl p-12 text-center shadow-sm">
+<div class="bg-white border border-bw-border rounded-xl p-14 text-center">
   <p class="text-bw-muted">No published articles yet.</p>
   <p class="text-bw-muted text-sm mt-1">Approved articles will appear here once they are published.</p>
 </div>
 {% endif %}
 
-<div class="space-y-4">
+<div class="space-y-5">
   {% for article in articles %}
-  <div class="bg-white border border-bw-border rounded-xl p-6 shadow-sm">
+  <div class="bg-white border border-bw-border rounded-xl p-6">
 
     <!-- Top row: company, status, date -->
     <div class="flex items-center gap-3 mb-3">
-      <span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-600">{{ article.company }}</span>
+      <span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-bw-indigo/10 text-bw-indigo">{{ article.company }}</span>
       <span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium status-{{ article.status|lower|replace(' ', '-') }}">{{ article.status }}</span>
       {% if article.date %}
-      <span class="text-[11px] text-bw-muted">{{ article.date }}</span>
+      <span class="font-mono text-[11px] text-bw-muted">{{ article.date }}</span>
       {% endif %}
       {% if article.score is not none %}
-      <span class="ml-auto text-[12px] text-bw-muted">Score: <span class="text-bw-dark font-semibold">{{ article.score }}/10</span></span>
+      <span class="ml-auto font-mono text-[12px] text-bw-muted">Score: <span class="text-bw-dark font-semibold">{{ article.score }}/10</span></span>
       {% endif %}
     </div>
 
     <!-- Title -->
-    <h2 class="text-[15px] font-bold text-bw-dark mb-2">{{ article.title }}</h2>
+    <h2 class="font-serif text-lg text-bw-dark mb-2">{{ article.title }}</h2>
 
     <!-- Source -->
     {% if article.source_url %}
-    <a href="{{ article.source_url }}" target="_blank" rel="noopener" class="text-[12px] text-bw-teal hover:underline inline-flex items-center gap-1 mb-3">
+    <a href="{{ article.source_url }}" target="_blank" rel="noopener" class="text-[12px] text-bw-teal hover:text-bw-teal-dark hover:underline inline-flex items-center gap-1 mb-3">
       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
       {{ article.source_type or 'Source' }}
     </a>
@@ -44,16 +44,16 @@
     <!-- LinkedIn Preview -->
     {% if article.draft %}
     <div class="mb-3">
-      <p class="text-[11px] text-bw-muted uppercase tracking-wider mb-2 font-medium">LinkedIn Post</p>
-      <div class="bg-gray-50 rounded-lg border border-gray-200 p-4 max-w-xl">
+      <p class="font-mono text-[10px] text-bw-muted uppercase tracking-wider mb-2 font-medium">LinkedIn Post</p>
+      <div class="bg-bw-bg rounded-lg border border-bw-border p-4 max-w-xl">
         <div class="flex items-center gap-3 mb-3">
-          <div class="w-8 h-8 rounded-full bg-[#274060] flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0">B</div>
+          <div class="w-8 h-8 rounded-full bg-bw-teal flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0">B</div>
           <div>
-            <div class="text-[13px] font-semibold text-gray-900">Bioworld Ventures</div>
-            <div class="text-[11px] text-gray-500">Venture Capital & Private Equity</div>
+            <div class="text-[13px] font-semibold text-bw-dark">Bioworld Ventures</div>
+            <div class="text-[11px] text-bw-muted">Venture Capital & Private Equity</div>
           </div>
         </div>
-        <div class="text-gray-800 text-[13px] leading-relaxed whitespace-pre-line max-h-48 overflow-y-auto">{{ article.draft }}</div>
+        <div class="text-bw-text text-[13px] leading-relaxed whitespace-pre-line max-h-48 overflow-y-auto">{{ article.draft }}</div>
       </div>
     </div>
     {% endif %}

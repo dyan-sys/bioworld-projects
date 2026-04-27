@@ -2,24 +2,24 @@
 {% block title %}Review — Bioworld Content Hub{% endblock %}
 
 {% block content %}
-<div class="flex items-center justify-between mb-6">
+<div class="flex items-center justify-between mb-8">
   <div>
-    <h1 class="text-2xl font-bold text-bw-dark">Review</h1>
-    <p class="text-bw-muted text-sm mt-1">{{ drafts|length }} article{{ 's' if drafts|length != 1 }} waiting for your review</p>
+    <h1 class="font-serif text-3xl text-bw-dark">Review</h1>
+    <p class="text-bw-muted text-sm mt-1.5">{{ drafts|length }} article{{ 's' if drafts|length != 1 }} waiting for your review</p>
   </div>
-  <button onclick="sendForApproval()" class="px-4 py-2 bg-bw-teal text-white text-[12px] font-semibold rounded-lg hover:bg-bw-teal-dark transition">
+  <button onclick="sendForApproval()" class="px-5 py-2.5 bg-bw-teal text-white text-[12px] font-semibold rounded-lg hover:bg-bw-teal-dark transition">
     Send Draft Ready to Slack
   </button>
 </div>
 
 <!-- Status filter pills -->
-<div class="flex flex-wrap gap-2 mb-6">
-  <button onclick="filterStatus('all')" id="filter-all" class="filter-btn px-3 py-1.5 text-[12px] font-medium rounded-full bg-bw-teal text-white">
+<div class="flex flex-wrap gap-2 mb-8">
+  <button onclick="filterStatus('all')" id="filter-all" class="filter-btn px-3.5 py-1.5 text-[12px] font-medium rounded-full bg-bw-teal text-white transition">
     All ({{ drafts|length }})
   </button>
   {% for status, count in pipeline_stats.items() %}
   {% if count > 0 %}
-  <button onclick="filterStatus('{{ status|lower|replace(' ', '-') }}')" id="filter-{{ status|lower|replace(' ', '-') }}" class="filter-btn px-3 py-1.5 text-[12px] font-medium rounded-full bg-white border border-bw-border text-bw-text-light hover:border-bw-teal">
+  <button onclick="filterStatus('{{ status|lower|replace(' ', '-') }}')" id="filter-{{ status|lower|replace(' ', '-') }}" class="filter-btn px-3.5 py-1.5 text-[12px] font-medium rounded-full bg-white border border-bw-border text-bw-text-light hover:border-bw-teal transition">
     {{ status }} ({{ count }})
   </button>
   {% endif %}
@@ -27,31 +27,31 @@
 </div>
 
 {% if not drafts %}
-<div class="bg-white border border-bw-border rounded-xl p-12 text-center shadow-sm">
+<div class="bg-white border border-bw-border rounded-xl p-14 text-center">
   <p class="text-bw-muted">No articles waiting for review.</p>
   <p class="text-bw-muted text-sm mt-1">Articles will appear here when drafts are generated.</p>
 </div>
 {% endif %}
 
-<div class="space-y-4">
+<div class="space-y-5">
   {% for draft in drafts %}
-  <div class="pipeline-card bg-white border border-bw-border rounded-xl p-6 shadow-sm" data-status="{{ draft.status|lower|replace(' ', '-') }}" id="draft-card-{{ draft.id }}">
+  <div class="pipeline-card bg-white border border-bw-border rounded-xl p-6" data-status="{{ draft.status|lower|replace(' ', '-') }}" id="draft-card-{{ draft.id }}">
 
     <!-- Top row: company, status, score -->
     <div class="flex items-center gap-3 mb-3">
-      <span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-600">{{ draft.company }}</span>
+      <span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-bw-indigo/10 text-bw-indigo">{{ draft.company }}</span>
       <span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium status-{{ draft.status|lower|replace(' ', '-') }}" id="status-badge-{{ draft.id }}">{{ draft.status }}</span>
       {% if draft.score is not none %}
-      <span class="ml-auto text-[12px] text-bw-muted">Score: <span class="text-bw-dark font-semibold">{{ draft.score }}/10</span></span>
+      <span class="ml-auto font-mono text-[12px] text-bw-muted">Score: <span class="text-bw-dark font-semibold">{{ draft.score }}/10</span></span>
       {% endif %}
     </div>
 
     <!-- Title -->
-    <h2 class="text-[15px] font-bold text-bw-dark mb-2">{{ draft.title }}</h2>
+    <h2 class="font-serif text-lg text-bw-dark mb-2">{{ draft.title }}</h2>
 
     <!-- Source -->
     {% if draft.source_url %}
-    <a href="{{ draft.source_url }}" target="_blank" rel="noopener" class="text-[12px] text-bw-teal hover:underline inline-flex items-center gap-1 mb-3">
+    <a href="{{ draft.source_url }}" target="_blank" rel="noopener" class="text-[12px] text-bw-teal hover:text-bw-teal-dark hover:underline inline-flex items-center gap-1 mb-3">
       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
       {{ draft.source_type or 'Source' }}
     </a>
@@ -60,21 +60,21 @@
     <!-- LinkedIn Preview -->
     {% if draft.draft %}
     <div class="mb-4">
-      <p class="text-[11px] text-bw-muted uppercase tracking-wider mb-2 font-medium">LinkedIn Preview</p>
-      <div class="bg-gray-50 rounded-lg border border-gray-200 p-4 max-w-xl">
+      <p class="font-mono text-[10px] text-bw-muted uppercase tracking-wider mb-2 font-medium">LinkedIn Preview</p>
+      <div class="bg-bw-bg rounded-lg border border-bw-border p-4 max-w-xl">
         <div class="flex items-center gap-3 mb-3">
-          <div class="w-8 h-8 rounded-full bg-[#274060] flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0">B</div>
+          <div class="w-8 h-8 rounded-full bg-bw-teal flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0">B</div>
           <div>
-            <div class="text-[13px] font-semibold text-gray-900">Bioworld Ventures</div>
-            <div class="text-[11px] text-gray-500">Venture Capital & Private Equity</div>
+            <div class="text-[13px] font-semibold text-bw-dark">Bioworld Ventures</div>
+            <div class="text-[11px] text-bw-muted">Venture Capital & Private Equity</div>
           </div>
         </div>
-        <div class="text-gray-800 text-[13px] leading-relaxed whitespace-pre-line max-h-48 overflow-y-auto">{{ draft.draft }}</div>
+        <div class="text-bw-text text-[13px] leading-relaxed whitespace-pre-line max-h-48 overflow-y-auto">{{ draft.draft }}</div>
       </div>
     </div>
     {% elif draft.status == 'Shortlisted' %}
-    <div class="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-      <p class="text-[12px] text-blue-700">This article is shortlisted — a LinkedIn draft will be generated soon.</p>
+    <div class="mb-4 bg-bw-teal-50 border border-bw-teal/20 rounded-lg p-4">
+      <p class="text-[12px] text-bw-teal-deep">This article is shortlisted -- a LinkedIn draft will be generated soon.</p>
     </div>
     {% endif %}
 
@@ -82,12 +82,12 @@
     {% if draft.status in ('Draft Ready', 'Pending Approval', 'Shortlisted') %}
     <div class="flex items-center gap-3 mb-4">
       <button onclick="updateStatus('{{ draft.id }}', 'Approved')"
-        class="px-4 py-2 rounded-lg text-[12px] font-medium bg-green-600 hover:bg-green-700 text-white transition"
+        class="px-5 py-2 rounded-lg text-[12px] font-semibold bg-bw-teal hover:bg-bw-teal-dark text-white transition"
         id="approve-btn-{{ draft.id }}">
         Approve
       </button>
       <button onclick="updateStatus('{{ draft.id }}', 'Rejected')"
-        class="px-4 py-2 rounded-lg text-[12px] font-medium bg-red-500 hover:bg-red-600 text-white transition"
+        class="px-5 py-2 rounded-lg text-[12px] font-semibold bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 transition"
         id="reject-btn-{{ draft.id }}">
         Reject
       </button>
@@ -95,17 +95,17 @@
     {% endif %}
 
     <!-- Notes -->
-    <div class="border-t border-bw-border pt-3">
-      <label class="text-[11px] text-bw-muted uppercase tracking-wider font-medium block mb-1.5">Notes</label>
+    <div class="border-t border-bw-border pt-4">
+      <label class="font-mono text-[10px] text-bw-muted uppercase tracking-wider font-medium block mb-1.5">Notes</label>
       <textarea id="notes-{{ draft.id }}" rows="2"
-        class="w-full bg-gray-50 border border-bw-border rounded-lg px-3 py-2 text-[13px] text-bw-dark placeholder-bw-muted focus:outline-none focus:border-bw-teal resize-none"
+        class="w-full bg-bw-bg border border-bw-border rounded-lg px-3 py-2 text-[13px] text-bw-dark placeholder-bw-muted focus:outline-none focus:border-bw-teal focus:ring-1 focus:ring-bw-teal/20 resize-none transition"
         placeholder="Add review notes...">{{ draft.notes or '' }}</textarea>
       <div class="flex items-center gap-2 mt-2">
         <button onclick="saveNotes('{{ draft.id }}')"
-          class="px-3 py-1.5 rounded-lg text-[12px] font-medium bg-gray-100 hover:bg-gray-200 text-bw-dark transition">
+          class="px-3 py-1.5 rounded-lg text-[12px] font-medium bg-bw-hover hover:bg-bw-border/60 text-bw-dark border border-bw-border transition">
           Save Notes
         </button>
-        <span id="notes-feedback-{{ draft.id }}" class="text-[11px] text-green-600 hidden">Saved</span>
+        <span id="notes-feedback-{{ draft.id }}" class="text-[11px] text-bw-teal font-medium hidden">Saved</span>
       </div>
     </div>
 
