@@ -233,6 +233,14 @@ def dashboard():
     recently_published.sort(key=lambda a: a.get("date", ""), reverse=True)
     recently_published = recently_published[:5]
 
+    # Active pipeline: everything that's in progress (not Discovered, not Published, not Rejected)
+    active_pipeline = [a for a in notion_articles
+                       if a["status"] in ("Shortlisted", "Draft Ready", "Pending Approval", "Approved")]
+    active_pipeline.sort(key=lambda a: (
+        {"Approved": 0, "Pending Approval": 1, "Draft Ready": 2, "Shortlisted": 3}.get(a["status"], 9),
+        a.get("date", "") or "0000-00-00",
+    ))
+
     now = datetime.now(HKT)
     days_until_tuesday = (1 - now.weekday()) % 7
     if days_until_tuesday == 0 and now.hour >= 10:
@@ -244,6 +252,7 @@ def dashboard():
         notion_stats=notion_stats, status_colors=STATUS_COLORS,
         needs_review=needs_review,
         recently_published=recently_published,
+        active_pipeline=active_pipeline,
         next_publish=next_publish,
     )
 

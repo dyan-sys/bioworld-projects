@@ -95,36 +95,53 @@
   </div>
 </div>
 
-<!-- Recently Published -->
+<!-- Active Pipeline -->
 <div class="bg-white border border-bw-border rounded-xl mb-8">
   <div class="px-6 py-5 border-b border-bw-border flex items-center justify-between">
     <div>
-      <h2 class="font-serif text-lg text-bw-dark">Recently Published</h2>
-      <p class="text-[12px] text-bw-muted mt-0.5">Last {{ recently_published|length }} published post{{ 's' if recently_published|length != 1 }}</p>
+      <h2 class="font-serif text-lg text-bw-dark">Pipeline</h2>
+      <p class="text-[12px] text-bw-muted mt-0.5">{{ active_pipeline|length }} active article{{ 's' if active_pipeline|length != 1 }} &middot; Approved posts go out next Tuesday</p>
     </div>
-    <a href="/published" class="text-[12px] text-bw-teal hover:text-bw-teal-dark font-medium transition">View all &rarr;</a>
+    <a href="/review" class="text-[12px] text-bw-teal hover:text-bw-teal-dark font-medium transition">Review all &rarr;</a>
   </div>
 
-  {% if recently_published %}
+  {% if active_pipeline %}
   <div class="overflow-x-auto">
     <table class="w-full text-[13px]">
       <thead>
         <tr class="border-b border-bw-border text-left">
+          <th class="px-6 py-3 font-mono text-[10px] uppercase tracking-wider text-bw-muted font-medium">Status</th>
           <th class="px-6 py-3 font-mono text-[10px] uppercase tracking-wider text-bw-muted font-medium">Title</th>
           <th class="px-6 py-3 font-mono text-[10px] uppercase tracking-wider text-bw-muted font-medium">Company</th>
-          <th class="px-6 py-3 font-mono text-[10px] uppercase tracking-wider text-bw-muted font-medium">Date</th>
           <th class="px-6 py-3 font-mono text-[10px] uppercase tracking-wider text-bw-muted font-medium">Score</th>
+          <th class="px-6 py-3 font-mono text-[10px] uppercase tracking-wider text-bw-muted font-medium">Schedule</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-bw-border/50">
-        {% for article in recently_published %}
+        {% for article in active_pipeline %}
         <tr class="hover:bg-bw-hover transition">
           <td class="px-6 py-3.5">
-            <div class="font-medium text-bw-dark truncate max-w-[280px]" title="{{ article.title }}">{{ article.title }}</div>
+            <span class="status-{{ article.status|lower|replace(' ', '-') }} px-2 py-0.5 rounded-full text-[10px] font-medium whitespace-nowrap">{{ article.status }}</span>
+          </td>
+          <td class="px-6 py-3.5">
+            <div class="font-medium text-bw-dark truncate max-w-[300px]" title="{{ article.title }}">{{ article.title }}</div>
+            {% if article.draft %}
+            <div class="text-[10px] text-bw-teal mt-0.5 font-mono">HAS DRAFT</div>
+            {% endif %}
           </td>
           <td class="px-6 py-3.5 text-[12px] text-bw-text-light">{{ article.company }}</td>
-          <td class="px-6 py-3.5 font-mono text-[11px] text-bw-muted">{{ article.date }}</td>
           <td class="px-6 py-3.5 font-mono text-[12px] text-bw-muted">{{ article.score }}/10</td>
+          <td class="px-6 py-3.5 font-mono text-[11px]">
+            {% if article.status == 'Approved' %}
+            <span class="text-green-600 font-medium">{{ next_publish }}</span>
+            {% elif article.status == 'Pending Approval' %}
+            <span class="text-amber-600">Awaiting Ivan</span>
+            {% elif article.status == 'Draft Ready' %}
+            <span class="text-purple-600">Needs review</span>
+            {% elif article.status == 'Shortlisted' %}
+            <span class="text-bw-muted">Needs draft</span>
+            {% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -132,8 +149,42 @@
   </div>
   {% else %}
   <div class="px-6 py-12 text-center text-bw-muted text-sm">
-    No published posts yet.
+    No active articles in the pipeline. Run a scan to get started.
   </div>
   {% endif %}
 </div>
+
+<!-- Recently Published -->
+{% if recently_published %}
+<div class="bg-white border border-bw-border rounded-xl mb-8">
+  <div class="px-6 py-5 border-b border-bw-border flex items-center justify-between">
+    <div>
+      <h2 class="font-serif text-lg text-bw-dark">Recently Published</h2>
+    </div>
+    <a href="/published" class="text-[12px] text-bw-teal hover:text-bw-teal-dark font-medium transition">View all &rarr;</a>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-[13px]">
+      <thead>
+        <tr class="border-b border-bw-border text-left">
+          <th class="px-6 py-3 font-mono text-[10px] uppercase tracking-wider text-bw-muted font-medium">Title</th>
+          <th class="px-6 py-3 font-mono text-[10px] uppercase tracking-wider text-bw-muted font-medium">Company</th>
+          <th class="px-6 py-3 font-mono text-[10px] uppercase tracking-wider text-bw-muted font-medium">Published</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-bw-border/50">
+        {% for article in recently_published %}
+        <tr class="hover:bg-bw-hover transition">
+          <td class="px-6 py-3.5">
+            <div class="font-medium text-bw-dark truncate max-w-[300px]">{{ article.title }}</div>
+          </td>
+          <td class="px-6 py-3.5 text-[12px] text-bw-text-light">{{ article.company }}</td>
+          <td class="px-6 py-3.5 font-mono text-[11px] text-bw-muted">{{ article.date }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
 {% endblock %}
