@@ -37,7 +37,7 @@
     <!-- Top row: company, status, score -->
     <div class="flex items-center gap-3 mb-3">
       <span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-bw-indigo/10 text-bw-indigo">{{ draft.company }}</span>
-      <span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium status-{{ draft.status|lower|replace(' ', '-') }}" id="status-badge-{{ draft.id }}">{{ draft.status }}</span>
+      <span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium status-{{ draft.status|lower|replace(' ', '-') }}" id="status-badge-{{ draft.id }}">{{ draft.status|replace("For Ivans Review", "For Ivan's Review") }}</span>
       {% if draft.score is not none %}
       <span class="ml-auto font-mono text-[12px] text-bw-muted">Score: <span class="text-bw-dark font-semibold">{{ draft.score }}/10</span></span>
       {% endif %}
@@ -74,10 +74,18 @@
     <!-- Feedback section (prominent) -->
     <div class="bg-amber-50/50 border border-amber-200/60 rounded-xl p-5 mb-4">
       <label class="font-serif text-[15px] text-bw-dark block mb-2">Feedback for Dyan</label>
-      <p class="text-[11px] text-bw-muted mb-3">Leave feedback if requesting edits. This will be saved and visible to Dyan.</p>
+      <p class="text-[11px] text-bw-muted mb-3">Leave a comment or feedback. This will be saved to Notion and visible to Dyan.</p>
       <textarea id="feedback-{{ draft.id }}" rows="3"
         class="w-full bg-white border border-amber-200/80 rounded-lg px-4 py-3 text-[13px] text-bw-dark placeholder-bw-muted focus:outline-none focus:border-bw-teal focus:ring-1 focus:ring-bw-teal/20 resize-none transition"
-        placeholder="What should be changed? Be specific -- tone, angle, facts, length...">{{ draft.notes or '' }}</textarea>
+        placeholder="Type your feedback here...">{{ draft.notes or '' }}</textarea>
+      <div class="flex items-center gap-2 mt-3">
+        <button onclick="saveFeedback('{{ draft.id }}')"
+          class="px-4 py-2 rounded-lg text-[12px] font-medium bg-gray-100 hover:bg-gray-200 text-bw-dark border border-bw-border transition"
+          id="save-feedback-btn-{{ draft.id }}">
+          Save Feedback
+        </button>
+        <span id="feedback-saved-{{ draft.id }}" class="text-[11px] text-green-600 hidden">Saved to Notion</span>
+      </div>
     </div>
 
     <!-- Action buttons -->
@@ -225,6 +233,38 @@ async function rejectArticle(id) {
     btn.textContent = 'Reject';
     btn.disabled = false;
     alert('Failed to reject.');
+  }
+}
+
+async function saveFeedback(id) {
+  const textarea = document.getElementById(`feedback-${id}`);
+  const feedback = textarea.value.trim();
+  if (!feedback) {
+    textarea.focus();
+    return;
+  }
+
+  const btn = document.getElementById(`save-feedback-btn-${id}`);
+  btn.textContent = 'Saving...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`/api/article/${id}/notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: feedback })
+    });
+    if (!res.ok) throw new Error('Request failed');
+
+    const saved = document.getElementById(`feedback-saved-${id}`);
+    saved.classList.remove('hidden');
+    btn.textContent = 'Save Feedback';
+    btn.disabled = false;
+    setTimeout(() => saved.classList.add('hidden'), 3000);
+  } catch (err) {
+    btn.textContent = 'Save Feedback';
+    btn.disabled = false;
+    alert('Failed to save feedback.');
   }
 }
 </script>
